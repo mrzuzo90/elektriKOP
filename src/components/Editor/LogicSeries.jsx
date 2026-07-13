@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { T, INPUT_ADDR, OUTPUT_ADDR } from "../../utils/constants";
 import { TiaLine, TiaContact } from "./TiaGraphics";
 import { TiaSelect, TiaMiniBtn } from "./TiaControls";
@@ -19,7 +19,88 @@ function contactModeTitle(n) {
   return "Normalmente abierto (NA) — clic para pasar a NC";
 }
 
-export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols }) {
+// Zona de aterrizaje entre dos posiciones de un contenedor (o al principio
+// de uno). Dibuja SIEMPRE el cable que le corresponde (activo/inactivo
+// según currentFlow) para que la línea nunca se interrumpa; el marco
+// discontinuo solo aparece mientras hay un arrastre en curso, y se resalta
+// en verde justo encima de la zona sobre la que está el puntero.
+function DropSlot({ dnd, containerId, index, energized, idleSize = 16 }) {
+  const [over, setOver] = useState(false);
+  if (!dnd.active) {
+    return <TiaLine active={energized} size={idleSize} />;
+  }
+  const width = Math.max(idleSize, 18);
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => { e.preventDefault(); setOver(false); dnd.dropAt(containerId, index); }}
+      style={{ position: "relative", display: "flex", alignItems: "center", height: 30, width, transition: "width 0.1s" }}
+    >
+      <TiaLine active={energized} size={width} />
+      <div
+        style={{
+          position: "absolute", inset: "4px 1px",
+          border: `2px dashed ${over ? T.tiaLineActive : T.dwGrey}`,
+          backgroundColor: over ? "rgba(0,176,80,0.15)" : "rgba(0,0,0,0.03)",
+          pointerEvents: "none",
+        }}
+      />
+    </div>
+  );
+}
+
+// Cola de un contenedor: botones +C/+P (arrastrables como origen de un
+// "insertar nuevo") + zona de aterrizaje para "insertar al final". Dibuja
+// el cable a todo lo ancho de su propio hueco SIEMPRE (arreglo del bug
+// visual: antes esta franja se quedaba sin cable, rompiendo la línea
+// continua del segmento en cuanto había sitio para +C/+P).
+function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
+  const [over, setOver] = useState(false);
+  const atLimit = actions.totalContacts() >= 8;
+
+  return (
+    <div
+      onDragOver={dnd.active ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(true); } : undefined}
+      onDragLeave={dnd.active ? () => setOver(false) : undefined}
+      onDrop={dnd.active ? (e) => { e.preventDefault(); setOver(false); dnd.dropAt(containerId, nodes.length); } : undefined}
+      style={{
+        position: "relative", display: "flex", alignItems: "center", marginLeft: 4,
+        minHeight: 30, minWidth: dnd.active ? 36 : 0, transition: "min-width 0.1s",
+      }}
+    >
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center" }}>
+        <div style={{ width: "100%", height: 3, backgroundColor: energized ? T.tiaLineActive : T.tiaLine, transition: "background-color 0.1s" }} />
+      </div>
+      {dnd.active && (
+        <div
+          style={{
+            position: "absolute", inset: "4px 1px",
+            border: `2px dashed ${over ? T.tiaLineActive : T.dwGrey}`,
+            backgroundColor: over ? "rgba(0,176,80,0.15)" : "rgba(0,0,0,0.03)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4, zIndex: 1, padding: "0 2px" }}>
+        <TiaMiniBtn
+          onClick={() => actions.addContact(containerId)} disabled={atLimit}
+          draggable={!atLimit} onDragStart={dnd.startNewDrag("contact")} onDragEnd={dnd.endDrag}
+          title="Añadir contacto (o arrastrar hasta cualquier posición del esquema)"
+        >+C</TiaMiniBtn>
+        {depth === 0 && (
+          <TiaMiniBtn
+            onClick={() => actions.addParallel(containerId)} disabled={atLimit}
+            draggable={!atLimit} onDragStart={dnd.startNewDrag("parallel")} onDragEnd={dnd.endDrag}
+            title="Añadir bloque paralelo (o arrastrar hasta cualquier posición del esquema)"
+          >+P</TiaMiniBtn>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols, dnd }) {
   let currentFlow = flowIn;
 
   return (
@@ -28,6 +109,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
     // que alineando arriba todo cae en la misma Y sin importar cuánto
     // crezca verticalmente un bloque paralelo con varias ramas.
     <div style={{ display: "flex", alignItems: "flex-start" }}>
+      <DropSlot dnd={dnd} containerId={containerId} index={0} energized={flowIn} idleSize={0} />
       {nodes.map((n, idx) => {
         const nodeState = states[n.id];
         const prevFlow = currentFlow;
@@ -35,9 +117,18 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
 
         return (
           <React.Fragment key={n.id}>
-            {idx > 0 && <TiaLine active={prevFlow} size={16} />}
+            {idx > 0 && <DropSlot dnd={dnd} containerId={containerId} index={idx} energized={prevFlow} idleSize={16} />}
             {n.kind === "contact" ? (
-              <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", margin: "0 4px" }}>
+              <div
+                draggable
+                onDragStart={dnd.startNodeDrag(n.id)}
+                onDragEnd={dnd.endDrag}
+                style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", margin: "0 4px", cursor: "grab" }}
+              >
+                <span
+                  style={{ position: "absolute", top: 8, left: -11, fontSize: 11, lineHeight: 1, color: "#AAA", userSelect: "none" }}
+                  title="Arrastrar para mover este contacto"
+                >⠿</span>
                 <TiaSelect value={n.addr} onChange={(v) => actions.updateContact(n.id, { addr: v })} options={[...INPUT_ADDR, ...OUTPUT_ADDR]} symbols={symbols} />
                 <div
                   onClick={() => actions.updateContact(n.id, cycleContactMode(n))}
@@ -56,23 +147,18 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                 )}
               </div>
             ) : (
-              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} />
+              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} dnd={dnd} />
             )}
           </React.Fragment>
         );
       })}
 
-      <div style={{ display: "flex", alignSelf: "center", marginLeft: 8 }}>
-        <TiaMiniBtn onClick={() => actions.addContact(containerId)} disabled={actions.totalContacts() >= 8}>+C</TiaMiniBtn>
-        {depth === 0 && (
-          <TiaMiniBtn onClick={() => actions.addParallel(containerId)} disabled={actions.totalContacts() >= 8}>+P</TiaMiniBtn>
-        )}
-      </div>
+      <TailSlot containerId={containerId} nodes={nodes} depth={depth} actions={actions} dnd={dnd} energized={currentFlow} />
     </div>
   );
 }
 
-export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols }) {
+export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols, dnd }) {
   const branches = node.branches;
   // Recorrido vertical de los rieles: de la rama 0 (arriba) a la última.
   const railHeight = (branches.length - 1) * STEP;
@@ -96,7 +182,7 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
         {branches.map((br, i) => (
           <div key={br.id} style={{ display: "flex", alignItems: "flex-start", position: "relative", marginTop: i === 0 ? 0 : BRANCH_GAP }}>
             <TiaLine active={flowIn} size={12} />
-            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} />
+            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} dnd={dnd} />
             <TiaLine active={states[br.id]?.flowOut || false} size={12} />
             {branches.length > 2 && (
               <button onClick={() => actions.removeBranch(node.id, br.id)} style={{ alignSelf: "center", color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>✕</button>
@@ -108,8 +194,15 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
           <div style={{ position: "absolute", right: 0, top: BRANCH_H / 2, height: railHeight, width: 2, backgroundColor: T.tiaLine }} />
         )}
 
-        <div style={{ paddingLeft: 12, marginTop: 4 }}>
+        <div style={{ paddingLeft: 12, marginTop: 4, display: "flex", alignItems: "center", gap: 10 }}>
           <TiaMiniBtn onClick={() => actions.addBranch(node.id)} disabled={branches.length >= 4}>+Rama</TiaMiniBtn>
+          <span
+            draggable
+            onDragStart={dnd.startNodeDrag(node.id)}
+            onDragEnd={dnd.endDrag}
+            title="Arrastrar para mover todo el bloque paralelo"
+            style={{ cursor: "grab", fontSize: 12, color: "#999", userSelect: "none" }}
+          >⠿ mover bloque</span>
         </div>
       </div>
       {removable && (

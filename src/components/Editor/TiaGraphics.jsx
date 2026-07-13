@@ -43,9 +43,15 @@ export function TiaContact({ neg, edge, stateObj }) {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <TiaLine active={hasFlow} size={8} />
+      {/* display:"block" en el svg: por defecto un <svg> es inline, y como
+          elemento inline-reemplazado dentro de una fuente con line-height
+          alto (la pixel font del proyecto) deja un hueco fantasma debajo de
+          su línea base — el contenedor medía ~36px de alto en vez de los
+          30 reales del svg, descolgando 3px cualquier hermano centrado con
+          alignItems:"center" en esta misma fila. */}
       <div style={{ position: "relative" }}>
         {sparking && <span className="dw-spark" />}
-        <svg width="24" height="30" viewBox="0 0 24 30" style={{ overflow: 'visible' }}>
+        <svg width="24" height="30" viewBox="0 0 24 30" style={{ overflow: 'visible', display: 'block' }}>
           <line x1="0" y1="15" x2="8" y2="15" stroke={hasFlow ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="16" y1="15" x2="24" y2="15" stroke={active ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="8" y1="5" x2="8" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
@@ -71,7 +77,7 @@ export function TiaCoil({ active, flowIn }) {
       <TiaLine active={flowIn} size={12} />
       <div style={{ position: "relative" }}>
         {sparking && <span className="dw-spark" />}
-        <svg width="28" height="30" viewBox="0 0 28 30">
+        <svg width="28" height="30" viewBox="0 0 28 30" style={{ display: "block" }}>
           <line x1="0" y1="15" x2="6" y2="15" stroke={flowIn ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="22" y1="15" x2="28" y2="15" stroke={color} strokeWidth="3" strokeLinecap="square" />
           <path d="M 10 5 A 10 10 0 0 0 10 25" fill="none" stroke={color} strokeWidth="3" />
@@ -89,7 +95,7 @@ export function TiaSetReset({ active, flowIn, type }) {
     <div style={{ display: "flex", alignItems: "center" }}>
       <TiaLine active={flowIn} size={12} />
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <svg width="28" height="30" viewBox="0 0 28 30">
+        <svg width="28" height="30" viewBox="0 0 28 30" style={{ display: "block" }}>
           <line x1="0" y1="15" x2="6" y2="15" stroke={flowIn ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="22" y1="15" x2="28" y2="15" stroke={color} strokeWidth="3" strokeLinecap="square" />
           <path d="M 10 5 A 10 10 0 0 0 10 25" fill="none" stroke={color} strokeWidth="3" />
