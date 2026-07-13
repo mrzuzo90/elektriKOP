@@ -48,7 +48,8 @@ export default function SymbolsPanel({ addresses, symbols, onChangeSymbol, visib
                       boxSizing: "border-box",
                       border: `1px solid ${T.dwGrey}`,
                       padding: "3px 6px",
-                      color: T.tiaText,
+                      backgroundColor: T.dwDark,
+                      color: "#FFFFFF",
                     }}
                   />
                 </div>
