@@ -4,6 +4,8 @@
 
 ![Licencia](https://img.shields.io/badge/licencia-MIT-yellow) ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-orange) ![Hecho con](https://img.shields.io/badge/hecho%20con-React-blue)
 
+### 🔗 [Pruébalo ahora en kop.elektrizia.com](https://kop.elektrizia.com) — sin instalar nada
+
 ---
 
 ## ¿Qué es ElektriKOP?
@@ -66,6 +68,10 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 ![Editor KOP con el Proceso simulado y el panel HMI](docs/images/editor.png)
 
 ## Instalación
+
+La forma más rápida de usar ElektriKOP es entrar directamente en **[kop.elektrizia.com](https://kop.elektrizia.com)** — no hace falta clonar el repo, instalar nada, ni saber nada de React. Se ejecuta entero en tu navegador, no envía datos a ningún servidor, y tu proyecto se autoguarda localmente en tu propio navegador.
+
+Si prefieres ejecutarlo en local (por ejemplo, para modificar el código):
 
 ElektriKOP es un componente de React sin dependencias de backend. Para ejecutarlo en local:
 
