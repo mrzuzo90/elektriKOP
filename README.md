@@ -63,8 +63,8 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 ElektriKOP es un componente de React sin dependencias de backend. Para ejecutarlo en local:
 
 ```bash
-git clone https://github.com/mrzuzo90/elektrikop.git
-cd elektrikop
+git clone https://github.com/mrzuzo90/elektriKOP.git
+cd elektriKOP
 npm install
 npm run dev
 ```
