@@ -46,7 +46,13 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                   <TiaContact neg={n.neg} edge={n.edge} stateObj={{ ...nodeState, flowIn: prevFlow }} />
                 </div>
                 {nodes.length > 1 && (
-                  <button onClick={() => actions.removeNode(n.id)} style={{ position: "absolute", bottom: -15, fontSize: 10, color: "red", border: "none", background: "none", cursor: "pointer" }}>✕</button>
+                  // top/right en vez de bottom: dentro de un bloque paralelo las
+                  // ramas van pegadas (BRANCH_GAP=2px) — un botón "bottom:-15"
+                  // se cuela en la rama de abajo y queda tapado por sus
+                  // elementos. Quedándose dentro de los 30px de alto del propio
+                  // contacto (y solo asomando un poco a la derecha, donde sí
+                  // sobra hueco horizontal) no invade la fila vecina.
+                  <button onClick={() => actions.removeNode(n.id)} title="Eliminar contacto" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
                 )}
               </div>
             ) : (
@@ -107,7 +113,14 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
         </div>
       </div>
       {removable && (
-         <button onClick={() => actions.removeNode(node.id)} style={{ position: "absolute", top: -6, left: -6, color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>✕</button>
+         // top:6/left:-14 en vez de top:-6/left:-6: ese hueco de arriba es
+         // justo donde cae el desplegable de dirección (top:-20) del primer
+         // contacto de CUALQUIER rama, incluida la segunda (que por el
+         // BRANCH_GAP tan ajustado queda casi a la misma altura que el
+         // borde superior del bloque) — se solapaban. Metiéndolo dentro de
+         // la fila de la rama 1 pero más a la izquierda (antes de donde
+         // empieza el primer contacto) no coincide con ningún desplegable.
+         <button onClick={() => actions.removeNode(node.id)} title="Eliminar bloque paralelo" style={{ position: "absolute", top: 6, left: -14, color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
       )}
     </div>
   );
