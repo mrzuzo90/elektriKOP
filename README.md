@@ -28,8 +28,9 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 
 **Editor KOP**
 - Segmentos con contactos en serie y en paralelo (ramas anidadas, sin límite artificial de profundidad).
-- Contactos NA / NC conmutables con un clic.
-- Bobina directa, SET, RESET y temporizador TON.
+- Contactos NA / NC / flanco positivo (P) / flanco negativo (N), conmutables con un clic.
+- Bobina directa, SET, RESET y temporizadores TON, TOF y TP — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
+- **Arrastrar y soltar** dentro del esquema: inserta contactos/bloques paralelos en cualquier posición, o mueve uno ya colocado a otra rama, con zonas de aterrizaje visuales mientras arrastras.
 - Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
 - Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
 
@@ -46,22 +47,20 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - Cada entrada puede marcarse como normalmente abierta o normalmente cerrada a nivel de dispositivo físico (por ejemplo, un termostato NC), independientemente del contacto que uses en el segmento — igual que en una instalación real.
 
 **Proceso simulado**
-- Asigna a cada dirección un dispositivo visual animado: motor, cinta transportadora, sensor, lámpara, alarma o puerta.
+- Asigna a cada dirección un dispositivo visual animado: pulsador, interruptor de palanca, seta de PARO, sensor, motor, cinta transportadora, lámpara, alarma, puerta o temporizador.
+- Vive en la barra lateral derecha, con iconos grandes (dos por fila) y su propio scroll — se queda visible mientras navegas por los segmentos, en vez de perderse de vista al hacer scroll por el editor.
 - Solo se muestran las direcciones que estás usando de verdad en tus segmentos.
 - Aviso sonoro (silenciable) cuando se activa una alarma.
 
-**Tabla de variables**
-- Asigna nombres simbólicos a tus direcciones (por ejemplo, `I0.2` → `Marcha_M1`) y verlos reflejados directamente en el editor.
+**Menú de pausa**
+- Se abre pulsando el logo "ElektriKOP" de la barra izquierda — como el menú de pausa de un videojuego, agrupa las acciones que no son la interacción constante del editor:
+  - **Proyecto**: renombrar, exportar/importar en JSON, o limpiar todo.
+  - **Tabla de variables**: asigna nombres simbólicos a tus direcciones (por ejemplo, `I0.2` → `Marcha_M1`). Puedes nombrar una dirección **antes incluso de usarla** en el editor con el botón "+ Añadir variable" — no hace falta esperar a colocar el contacto o la bobina.
+  - **Modo Desafío**: comprueba automáticamente si tu solución a uno de los [ejercicios propuestos](docs/ejercicios/) se comporta como debe, ciclo a ciclo — valida el resultado, no cómo has dibujado el circuito, así que cualquier forma correcta de resolverlo vale. Un distintivo flotante (✅/❌) queda visible junto al logo tras comprobar, aunque cierres el menú.
 
 **Deshacer/rehacer y autoguardado**
 - Ctrl+Z / Ctrl+Shift+Z (o los botones ⟲/⟳) para deshacer y rehacer, hasta 50 pasos.
 - El proyecto se autoguarda solo en el navegador — cerrar o recargar la pestaña por accidente ya no significa perder el trabajo.
-
-**Modo Desafío**
-- Comprueba automáticamente si tu solución a uno de los [ejercicios propuestos](docs/ejercicios/) se comporta como debe, ciclo a ciclo — valida el resultado, no cómo has dibujado el circuito, así que cualquier forma correcta de resolverlo vale.
-
-**Proyectos**
-- Exporta e importa proyectos completos en JSON — no pierdes tu trabajo al cerrar la pestaña, y puedes compartir ejercicios con compañeros o alumnos.
 
 ## Capturas
 
@@ -88,15 +87,14 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 
 ## Cómo usar
 
-1. **Renombra el proyecto** haciendo clic en el título de la barra lateral.
-2. **Añade un segmento** con el botón correspondiente en el editor.
-3. **Añade contactos** en serie (`+C`) o en paralelo (`+P`), y elige su dirección (I o Q) en el desplegable.
-4. Haz clic sobre un contacto para alternarlo entre normalmente abierto (NA) y normalmente cerrado (NC).
-5. Elige el tipo de salida del segmento: bobina directa, SET, RESET o temporizador TON.
-6. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
-7. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado**.
-8. Cuando quieras guardar tu trabajo, usa **Exportar** — te descarga un `.json` que puedes volver a cargar con **Importar** en cualquier momento. (No es imprescindible: tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.)
-9. Si estás resolviendo uno de los [ejercicios propuestos](docs/ejercicios/), abre el panel **Modo Desafío** (barra derecha) y pulsa **Comprobar** para validar tu solución automáticamente.
+1. **Añade un segmento** con el botón correspondiente en el editor.
+2. **Añade contactos** en serie (`+C`) o en paralelo (`+P`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I o Q) en el desplegable.
+3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
+4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, TON, TOF o TP) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento.
+5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
+6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha).
+7. Pulsa el logo **ElektriKOP** (arriba a la izquierda) para abrir el **menú de pausa**: ahí puedes renombrar el proyecto, exportar/importar en JSON, nombrar variables y comprobar tu solución en Modo Desafío. Nada de esto es imprescindible en el día a día — tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.
+8. Si estás resolviendo uno de los [ejercicios propuestos](docs/ejercicios/), abre el menú, entra en **Modo Desafío**, elige el ejercicio y pulsa **Comprobar** — el resultado queda visible en un distintivo junto al logo aunque cierres el menú.
 
 ## Ejercicios propuestos
 
@@ -113,8 +111,10 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 - [x] Ejercicios propuestos y resueltos en `docs/ejercicios/`.
 - [x] Deshacer/rehacer y autoguardado.
 - [x] Modo Desafío: valida automáticamente el resultado esperado de un ejercicio.
-- [ ] Más tipos de temporizador (TOF, TP).
-- [ ] Contadores (CTU/CTD).
+- [x] Más tipos de temporizador (TOF, TP) y contactos de flanco (P/N).
+- [x] Arrastrar y soltar en el editor KOP (insertar y mover contactos/bloques paralelos, elegir el tipo de salida).
+- [x] Menú de pausa: agrupa proyecto, tabla de variables y Modo Desafío fuera del flujo principal del editor.
+- [ ] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
 - [ ] Comparadores numéricos (`>=`, `==`) sobre valores simulados.
 - [ ] Compartir proyectos mediante un enlace, sin necesidad de archivo.
 
