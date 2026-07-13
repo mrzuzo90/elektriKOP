@@ -108,8 +108,11 @@ export function TiaTonBox({ active, flowIn, preset, elapsed }) {
       <div style={{
         border: `3px solid ${color}`,
         backgroundColor: "#FFF",
-        width: 60,
-        height: 50,
+        width: 64,
+        // La fuente pixel tiene más altura de línea que Courier New: a
+        // 50px las 3 filas (TON / IN-Q / PT-ET) se apretaban tanto que se
+        // solapaban entre sí y con el texto de preset/elapsed de debajo.
+        height: 66,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -117,18 +120,21 @@ export function TiaTonBox({ active, flowIn, preset, elapsed }) {
         position: "relative",
         boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
       }}>
-        <div style={{ fontSize: 12, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText }}>TON</div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.tiaText }}>
+        {/* lineHeight fijo: la fuente pixel tiene una altura de línea por
+            defecto bastante mayor que Courier New, así que sin fijarla
+            estas 3 filas se apretaban y acababan solapándose entre sí. */}
+        <div style={{ fontSize: 12, lineHeight: 1.2, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText }}>TON</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1, color: T.tiaText }}>
           <div>IN</div>
           <div>Q</div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.tiaText }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1, color: T.tiaText }}>
           <div>PT</div>
           <div>ET</div>
         </div>
         {/* Helper text outside box */}
-        <div style={{ position: "absolute", bottom: -16, left: 0, fontSize: 12, color: T.tiaBlue }}>{preset}s</div>
-        <div style={{ position: "absolute", bottom: -16, right: 0, fontSize: 12, color: T.tiaText }}>{(elapsed || 0).toFixed(1)}s</div>
+        <div style={{ position: "absolute", bottom: -19, left: 0, fontSize: 12, lineHeight: 1, color: T.tiaBlue }}>{preset}s</div>
+        <div style={{ position: "absolute", bottom: -19, right: 0, fontSize: 12, lineHeight: 1, color: T.tiaText }}>{(elapsed || 0).toFixed(1)}s</div>
       </div>
       <TiaLine active={color === T.tiaLineActive} size={8} />
     </div>

@@ -40,7 +40,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
             onChange={(e) => onChange({ ...rung, title: e.target.value })}
             className="dw-edit-field dw-edit-field-dark"
             style={{
-              width: 120,
+              width: 160,
               fontWeight: "bold",
               fontSize: 16,
               color: T.tiaText,
@@ -48,14 +48,15 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
               outline: "none",
               padding: "2px 0",
             }}
-            title="Clic para renombrar el segmento"
+            title={rung.title || "Clic para renombrar el segmento"}
           />
           <span style={{ color: T.tiaText }}>:</span>
           <input
             value={rung.comment}
             onChange={(e) => onChange({...rung, comment: e.target.value})}
             className="dw-edit-field dw-edit-field-dark"
-            style={{ width: 300, fontStyle: "italic", color: "#555", fontFamily: T.mono, fontSize: 16, outline: "none", padding: "2px 0" }}
+            style={{ width: 380, fontStyle: "italic", color: "#555", fontFamily: T.mono, fontSize: 16, outline: "none", padding: "2px 0" }}
+            title={rung.comment}
           />
         </div>
         <div>

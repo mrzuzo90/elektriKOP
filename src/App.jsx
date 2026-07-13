@@ -155,7 +155,7 @@ export default function PlcEmulator() {
              <div style={{ display: "flex", gap: 8 }}>
                <PixelBtn small color="dwGrey" onClick={project.undo} disabled={!project.canUndo} title="Deshacer (Ctrl+Z)">⟲ Deshacer</PixelBtn>
                <PixelBtn small color="dwGrey" onClick={project.redo} disabled={!project.canRedo} title="Rehacer (Ctrl+Shift+Z)">⟳ Rehacer</PixelBtn>
-               <PixelBtn small color="dwGrey" onClick={() => {
+               <PixelBtn small color="dwGrey" disabled={project.rungs.length >= MAX_RUNGS} onClick={() => {
                   if (project.rungs.length < MAX_RUNGS) {
                     project.setRungs([...project.rungs, newRung(project.rungs.length ? Math.max(...project.rungs.map(r => r.id)) + 1 : 0)]);
                   }

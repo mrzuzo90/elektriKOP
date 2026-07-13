@@ -6,6 +6,7 @@ export function TiaSelect({ value, onChange, options, isOut, symbols }) {
   return (
     <select
       value={value}
+      title={labelFor(value)}
       onChange={(e) => onChange(e.target.value)}
       style={pixelSelectStyle({
         fontFamily: T.mono,
@@ -17,7 +18,12 @@ export function TiaSelect({ value, onChange, options, isOut, symbols }) {
         transform: isOut ? "none" : "translateX(-50%)",
         color: T.tiaText,
         outline: "none",
-        maxWidth: 150,
+        // Los contactos en serie se cablean muy juntos (~60px entre
+        // centros) — un select más ancho que eso se solaparía con el del
+        // contacto vecino, ya que cada uno se centra sobre el suyo con
+        // position:absolute. Las salidas (isOut) no tienen ese problema:
+        // están solas al final de la fila, así que pueden ir más anchas.
+        maxWidth: isOut ? 150 : 64,
         padding: "1px 14px 1px 4px",
         boxShadow: `1px 1px 0px 0px ${T.dwGrey}`,
       })}
