@@ -30,10 +30,23 @@ export function computeScanTick(rungs, mem, prevTimers, prevScanMem = {}) {
       if (combined) nextMem[rung.outAddr] = false;
     } else if (rung.outType === "tof") {
       // Off-delay: la salida sigue a la entrada al activarse, pero al
-      // desactivarse se queda encendida "preset" segundos más.
-      const prevElapsed = prevTimers[rung.id] || 0;
-      let elapsed = combined ? 0 : prevElapsed + SCAN_MS / 1000;
-      if (elapsed > rung.preset) elapsed = rung.preset;
+      // desactivarse se queda encendida "preset" segundos más. elapsed
+      // representa "tiempo desde que se cortó la corriente", así que su
+      // valor de reposo (nunca se ha activado, o ya terminó de contar) es
+      // rung.preset — NO 0. Si el valor por defecto fuera 0, cualquier
+      // ciclo sin corriente (incluido el primero, en frío) se leería como
+      // "acaba de desactivarse" y arrancaría la cuenta atrás solo — la
+      // salida se activaría sin que la entrada hubiera estado nunca a 1.
+      const prevElapsed = prevTimers[rung.id] ?? rung.preset;
+      let elapsed;
+      if (combined) {
+        elapsed = 0; // energizado: listo para arrancar la cuenta en cuanto se corte
+      } else if (prevElapsed >= rung.preset) {
+        elapsed = rung.preset; // ya estaba en reposo (o nunca se activó): sigue así
+      } else {
+        elapsed = prevElapsed + SCAN_MS / 1000; // flanco de bajada o ya contando: sigue la cuenta
+        if (elapsed > rung.preset) elapsed = rung.preset;
+      }
       nextTimers[rung.id] = elapsed;
       nextMem[rung.outAddr] = combined || elapsed < rung.preset;
     } else if (rung.outType === "tp") {

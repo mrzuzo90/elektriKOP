@@ -128,6 +128,31 @@ describe("computeScanTick — temporizador TOF (desconexión)", () => {
     expect(outputs["Q0.0"]).toBe(true);
     expect(timers["r1"]).toBe(0);
   });
+
+  it("si la entrada nunca ha estado a 1, la salida se queda a 0 aunque pasen ciclos sin corriente (no arranca la cuenta sola)", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tof", { preset: 0.2 })];
+    let timers = {};
+    let outputs;
+    for (let i = 0; i < 5; i++) {
+      ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+      expect(outputs["Q0.0"]).toBe(false);
+    }
+  });
+
+  it("una vez que la cuenta atrás termina, no se reinicia sola en los ciclos siguientes sin corriente", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tof", { preset: 0.1 })];
+    let timers = {};
+    let outputs;
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers)); // activa
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers)); // empieza a contar
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers)); // preset cumplido, se apaga
+    expect(outputs["Q0.0"]).toBe(false);
+
+    for (let i = 0; i < 5; i++) {
+      ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+      expect(outputs["Q0.0"]).toBe(false);
+    }
+  });
 });
 
 describe("computeScanTick — temporizador TP (pulso)", () => {
