@@ -118,6 +118,12 @@ export default function PlcEmulator() {
             {project.importError && (
               <div style={{ color: T.red, fontSize: 12, marginTop: 6 }}>{project.importError}</div>
             )}
+            {project.restoredFromAutosave && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#E3F2FD", border: "1px solid #64B5F6", color: "#0D47A1", padding: "6px 10px", marginTop: 6, fontSize: 12 }}>
+                <span>↺ Proyecto restaurado automáticamente desde el autoguardado.</span>
+                <button onClick={project.dismissRestoredNotice} style={{ border: "none", background: "none", color: "#0D47A1", cursor: "pointer", fontWeight: "bold" }}>✕</button>
+              </div>
+            )}
           </div>
 
           <SiemensPLC inputs={effectiveInputs} outputs={sim.outputs} running={sim.running} error={false} scanCount={sim.scanCount} />
@@ -144,11 +150,15 @@ export default function PlcEmulator() {
                 <div style={{ fontSize: 20, fontWeight: "bold", color: T.tiaText }}>Main [OB1]</div>
                 <div style={{ fontSize: 14, color: "#666" }}>Program block (Ladder Logic)</div>
              </div>
-             <PixelBtn small color="dwGrey" onClick={() => {
-                if (project.rungs.length < MAX_RUNGS) {
-                  project.setRungs([...project.rungs, newRung(project.rungs.length ? Math.max(...project.rungs.map(r => r.id)) + 1 : 0)]);
-                }
-             }}>+ Añadir Segmento</PixelBtn>
+             <div style={{ display: "flex", gap: 8 }}>
+               <PixelBtn small color="dwGrey" onClick={project.undo} disabled={!project.canUndo} title="Deshacer (Ctrl+Z)">⟲ Deshacer</PixelBtn>
+               <PixelBtn small color="dwGrey" onClick={project.redo} disabled={!project.canRedo} title="Rehacer (Ctrl+Shift+Z)">⟳ Rehacer</PixelBtn>
+               <PixelBtn small color="dwGrey" onClick={() => {
+                  if (project.rungs.length < MAX_RUNGS) {
+                    project.setRungs([...project.rungs, newRung(project.rungs.length ? Math.max(...project.rungs.map(r => r.id)) + 1 : 0)]);
+                  }
+               }}>+ Añadir Segmento</PixelBtn>
+             </div>
           </div>
 
           <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
