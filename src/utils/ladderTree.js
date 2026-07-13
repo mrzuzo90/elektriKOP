@@ -2,7 +2,7 @@ let _uid = 0;
 export const genId = () => `n${_uid++}`;
 
 export function newContactNode() {
-  return { kind: "contact", id: genId(), addr: "I0.0", neg: false };
+  return { kind: "contact", id: genId(), addr: "I0.0", neg: false, edge: null };
 }
 export function newBranch() {
   return { id: genId(), nodes: [newContactNode()] };
@@ -17,7 +17,7 @@ export function newRung(id) {
     comment: "Comentario del segmento...",
     logic: [newContactNode()],
     outAddr: "Q0.0",
-    outType: "coil", // coil | ton
+    outType: "coil", // coil | set | reset | ton | tof | tp
     preset: 2,
   };
 }

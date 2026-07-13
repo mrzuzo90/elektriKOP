@@ -4,6 +4,9 @@ import { computeStates, evalNode, evalSeries } from "./evalNode";
 function contact(addr, neg = false) {
   return { kind: "contact", id: `c-${addr}-${neg}`, addr, neg };
 }
+function edgeContact(addr, edge) {
+  return { kind: "contact", id: `c-${addr}-${edge}`, addr, neg: false, edge };
+}
 function branch(id, nodes) {
   return { id, nodes };
 }
@@ -24,6 +27,20 @@ describe("evalNode", () => {
 
   it("un contacto sin memoria asociada se trata como false", () => {
     expect(evalNode(contact("I0.5"), {})).toBe(false);
+  });
+
+  it("un contacto de flanco P solo vale true en la transición 0→1 respecto a prevMem", () => {
+    const c = edgeContact("I0.0", "P");
+    expect(evalNode(c, { "I0.0": true }, { "I0.0": false })).toBe(true);
+    expect(evalNode(c, { "I0.0": true }, { "I0.0": true })).toBe(false);
+    expect(evalNode(c, { "I0.0": false }, { "I0.0": false })).toBe(false);
+  });
+
+  it("un contacto de flanco N solo vale true en la transición 1→0 respecto a prevMem", () => {
+    const c = edgeContact("I0.0", "N");
+    expect(evalNode(c, { "I0.0": false }, { "I0.0": true })).toBe(true);
+    expect(evalNode(c, { "I0.0": false }, { "I0.0": false })).toBe(false);
+    expect(evalNode(c, { "I0.0": true }, { "I0.0": true })).toBe(false);
   });
 
   it("un nodo paralelo es true si al menos una rama pasa (OR)", () => {

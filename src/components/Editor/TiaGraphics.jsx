@@ -34,7 +34,7 @@ export function TiaLine({ active, size = 20 }) {
   );
 }
 
-export function TiaContact({ neg, stateObj }) {
+export function TiaContact({ neg, edge, stateObj }) {
   const active = stateObj?.flowIn && stateObj?.state;
   const color = active ? T.tiaLineActive : T.tiaLine;
   const hasFlow = stateObj?.flowIn;
@@ -50,7 +50,12 @@ export function TiaContact({ neg, stateObj }) {
           <line x1="16" y1="15" x2="24" y2="15" stroke={active ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="8" y1="5" x2="8" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
           <line x1="16" y1="5" x2="16" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
-          {neg && <line x1="6" y1="26" x2="18" y2="4" stroke={color} strokeWidth="3" strokeLinecap="square" />}
+          {neg && !edge && <line x1="6" y1="26" x2="18" y2="4" stroke={color} strokeWidth="3" strokeLinecap="square" />}
+          {/* Flanco P/N: triángulo justo encima de las barras, apuntando
+              hacia dentro (P, flanco de subida) o hacia fuera (N, bajada) —
+              convención habitual de TIA Portal para estas instrucciones. */}
+          {edge === "P" && <polygon points="12,0 8,5 16,5" fill={color} />}
+          {edge === "N" && <polygon points="12,5 8,0 16,0" fill={color} />}
         </svg>
       </div>
       <TiaLine active={active} size={8} />
@@ -96,7 +101,7 @@ export function TiaSetReset({ active, flowIn, type }) {
   );
 }
 
-export function TiaTonBox({ active, flowIn, preset, elapsed }) {
+export function TiaTonBox({ active, flowIn, preset, elapsed, label = "TON" }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
   return (
     // flex-start (no "center"): el TON es una caja de 50px, más alta que
@@ -123,7 +128,7 @@ export function TiaTonBox({ active, flowIn, preset, elapsed }) {
         {/* lineHeight fijo: la fuente pixel tiene una altura de línea por
             defecto bastante mayor que Courier New, así que sin fijarla
             estas 3 filas se apretaban y acababan solapándose entre sí. */}
-        <div style={{ fontSize: 12, lineHeight: 1.2, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText }}>TON</div>
+        <div style={{ fontSize: 12, lineHeight: 1.2, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText }}>{label}</div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1, color: T.tiaText }}>
           <div>IN</div>
           <div>Q</div>

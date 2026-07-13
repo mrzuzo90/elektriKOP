@@ -8,5 +8,5 @@ export const DEVICE_TYPES = [
   { id: "lampara", label: "Lámpara" },
   { id: "alarma", label: "Alarma" },
   { id: "puerta", label: "Puerta" },
-  { id: "temporizador", label: "Temporizador (salida TON)" },
+  { id: "temporizador", label: "Temporizador (salida TON/TOF/TP)" },
 ];

@@ -95,3 +95,137 @@ describe("computeScanTick — temporizador TON", () => {
     expect(timers["r1"]).toBe(0.1);
   });
 });
+
+describe("computeScanTick — temporizador TOF (desconexión)", () => {
+  it("la salida se activa al instante con la entrada, sin esperar al preset", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tof", { preset: 0.2 })];
+    const { outputs, timers } = computeScanTick(rungs, { "I0.0": true }, {});
+    expect(outputs["Q0.0"]).toBe(true);
+    expect(timers["r1"]).toBe(0);
+  });
+
+  it("al soltar la entrada, la salida se mantiene hasta llegar al preset y luego se apaga", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tof", { preset: 0.2 })];
+    let timers = {};
+    let outputs;
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(true);
+
+    const ticksNeeded = Math.ceil(0.2 / (SCAN_MS / 1000));
+    for (let i = 0; i < ticksNeeded - 1; i++) {
+      ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+      expect(outputs["Q0.0"]).toBe(true);
+    }
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+    expect(outputs["Q0.0"]).toBe(false);
+  });
+
+  it("si la entrada vuelve a activarse antes del preset, la salida no llega a apagarse", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tof", { preset: 0.2 })];
+    let timers = { r1: 0.15 };
+    let outputs;
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(true);
+    expect(timers["r1"]).toBe(0);
+  });
+});
+
+describe("computeScanTick — temporizador TP (pulso)", () => {
+  // preset=0.2s con SCAN_MS=100ms: el pulso dura exactamente 2 ciclos.
+  it("un flanco de subida dispara un pulso de 'preset' segundos aunque la entrada baje antes", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tp", { preset: 0.2 })];
+    let timers = {};
+    let outputs;
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(true); // ciclo del flanco: pulso arranca
+
+    // la entrada baja enseguida, pero el pulso ya disparado sigue su curso
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+    expect(outputs["Q0.0"]).toBe(true);
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+    expect(outputs["Q0.0"]).toBe(false); // preset cumplido, pulso termina
+  });
+
+  // preset=0.1s: el pulso dura un único ciclo.
+  it("no vuelve a disparar mientras la entrada siga activa tras completar el pulso", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tp", { preset: 0.1 })];
+    let timers = {};
+    let outputs;
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(true); // ciclo del flanco
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(false); // pulso ya terminado
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers));
+    expect(outputs["Q0.0"]).toBe(false); // sigue sin disparar, no hay flanco nuevo
+  });
+
+  it("un segundo flanco (tras soltar y volver a pulsar) dispara un nuevo pulso", () => {
+    const rungs = [contactRung("r1", "I0.0", "Q0.0", "tp", { preset: 0.1 })];
+    let timers = {};
+    let outputs;
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers)); // pulso 1 arranca
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers)); // pulso 1 termina
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": false }, timers));
+    expect(outputs["Q0.0"]).toBe(false);
+
+    ({ outputs, timers } = computeScanTick(rungs, { "I0.0": true }, timers)); // nuevo flanco
+    expect(outputs["Q0.0"]).toBe(true);
+  });
+});
+
+describe("computeScanTick — contactos de flanco P/N", () => {
+  function edgeContactRung(id, addr, outAddr, edge) {
+    return {
+      id,
+      title: id,
+      comment: "",
+      logic: [{ kind: "contact", id: `${id}-c`, addr, neg: false, edge }],
+      outAddr,
+      outType: "coil",
+      preset: 2,
+    };
+  }
+
+  it("un contacto de flanco P solo deja pasar corriente en el ciclo del 0→1", () => {
+    const rungs = [edgeContactRung("r1", "I0.0", "Q0.0", "P")];
+    let timers = {};
+    let mem = {};
+    let outputs;
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": false }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(false);
+
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": true }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(true);
+
+    // el ciclo siguiente, aunque la entrada se mantenga a 1, ya no es flanco
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": true }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(false);
+  });
+
+  it("un contacto de flanco N solo deja pasar corriente en el ciclo del 1→0", () => {
+    const rungs = [edgeContactRung("r1", "I0.0", "Q0.0", "N")];
+    let timers = {};
+    let mem = {};
+    let outputs;
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": true }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(false);
+
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": false }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(true);
+
+    ({ outputs, timers, mem } = computeScanTick(rungs, { "I0.0": false }, timers, mem));
+    expect(outputs["Q0.0"]).toBe(false);
+  });
+
+  it("sin prevScanMem (primer ciclo, valor por defecto {}), toda dirección se asume que venía a 0", () => {
+    const rungs = [edgeContactRung("r1", "I0.0", "Q0.0", "P")];
+    const { outputs } = computeScanTick(rungs, { "I0.0": true }, {});
+    expect(outputs["Q0.0"]).toBe(true);
+  });
+});

@@ -192,7 +192,7 @@ export default function PlcEmulator() {
               </div>
             )}
             {project.rungs.map((rung, idx) => {
-              const states = computeStates(rung.logic, { ...effectiveInputs, ...sim.outputs }, {});
+              const states = computeStates(rung.logic, { ...effectiveInputs, ...sim.outputs }, sim.prevMem);
               return (
                 <TiaSegment
                   key={rung.id}
@@ -208,7 +208,12 @@ export default function PlcEmulator() {
                   evalResult={{
                     states,
                     outputState: sim.outputs[rung.outAddr],
-                    timerElapsed: rung.outType === "ton" ? sim.timerDisplay[rung.id] ?? 0 : undefined,
+                    timerElapsed:
+                      rung.outType === "ton" || rung.outType === "tof"
+                        ? sim.timerDisplay[rung.id] ?? 0
+                        : rung.outType === "tp"
+                          ? sim.timerDisplay[rung.id]?.elapsed ?? 0
+                          : undefined,
                   }}
                 />
               );

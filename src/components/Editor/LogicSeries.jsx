@@ -4,6 +4,21 @@ import { TiaLine, TiaContact } from "./TiaGraphics";
 import { TiaSelect, TiaMiniBtn } from "./TiaControls";
 import { BRANCH_H, BRANCH_GAP, STEP } from "./parallelGeometry";
 
+// Un clic en el contacto recorre sus 4 variantes: NA → NC → flanco P
+// (subida) → flanco N (bajada) → NA. neg y edge son mutuamente excluyentes.
+function cycleContactMode(n) {
+  if (!n.neg && !n.edge) return { neg: true, edge: null };
+  if (n.neg) return { neg: false, edge: "P" };
+  if (n.edge === "P") return { neg: false, edge: "N" };
+  return { neg: false, edge: null };
+}
+function contactModeTitle(n) {
+  if (n.edge === "P") return "Flanco positivo (P) — clic para pasar a flanco N";
+  if (n.edge === "N") return "Flanco negativo (N) — clic para volver a NA";
+  if (n.neg) return "Normalmente cerrado (NC) — clic para pasar a flanco P";
+  return "Normalmente abierto (NA) — clic para pasar a NC";
+}
+
 export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols }) {
   let currentFlow = flowIn;
 
@@ -25,10 +40,10 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
               <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", margin: "0 4px" }}>
                 <TiaSelect value={n.addr} onChange={(v) => actions.updateContact(n.id, { addr: v })} options={[...INPUT_ADDR, ...OUTPUT_ADDR]} symbols={symbols} />
                 <div
-                  onClick={() => actions.updateContact(n.id, { neg: !n.neg })}
-                  style={{ cursor: "pointer" }} title="Click para alternar NA/NC"
+                  onClick={() => actions.updateContact(n.id, cycleContactMode(n))}
+                  style={{ cursor: "pointer" }} title={contactModeTitle(n)}
                 >
-                  <TiaContact neg={n.neg} stateObj={{ ...nodeState, flowIn: prevFlow }} />
+                  <TiaContact neg={n.neg} edge={n.edge} stateObj={{ ...nodeState, flowIn: prevFlow }} />
                 </div>
                 {nodes.length > 1 && (
                   <button onClick={() => actions.removeNode(n.id)} style={{ position: "absolute", bottom: -15, fontSize: 10, color: "red", border: "none", background: "none", cursor: "pointer" }}>✕</button>

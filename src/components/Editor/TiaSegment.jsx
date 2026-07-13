@@ -82,8 +82,8 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
 
         {/* Output Device */}
         <div style={{ position: "relative", marginRight: 8, display: "flex", alignItems: "center" }}>
-          {rung.outType === "ton" ? (
-             <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} />
+          {rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
+             <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
           ) : rung.outType === "set" || rung.outType === "reset" ? (
              <TiaSetReset active={evalResult?.outputState} flowIn={flowToOut} type={rung.outType} />
           ) : (
@@ -114,7 +114,15 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
             <input type="radio" checked={rung.outType === "ton"} onChange={() => onChange({...rung, outType: "ton"})} />
             Temp TON
          </label>
-         {rung.outType === "ton" && (
+         <label style={{ display: "flex", alignItems: "center", gap: 4, color: T.tiaText, cursor: "pointer" }}>
+            <input type="radio" checked={rung.outType === "tof"} onChange={() => onChange({...rung, outType: "tof"})} />
+            Temp TOF
+         </label>
+         <label style={{ display: "flex", alignItems: "center", gap: 4, color: T.tiaText, cursor: "pointer" }}>
+            <input type="radio" checked={rung.outType === "tp"} onChange={() => onChange({...rung, outType: "tp"})} />
+            Temp TP
+         </label>
+         {(rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp") && (
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                <span style={{color: T.tiaText}}>PT (segs):</span>
                <input

@@ -10,14 +10,16 @@ export function runChallenge(rungs, wiringMap, steps) {
   let physicalInputs = {};
   let mem = {};
   let timers = {};
+  let scanMem = {};
   const results = [];
 
   const tick = () => {
     const effectiveInputs = applyWiring(physicalInputs, wiringMap);
     const combinedMem = { ...effectiveInputs, ...mem };
-    const { outputs, timers: nextTimers } = computeScanTick(rungs, combinedMem, timers);
+    const { outputs, timers: nextTimers, mem: nextScanMem } = computeScanTick(rungs, combinedMem, timers, scanMem);
     mem = outputs;
     timers = nextTimers;
+    scanMem = nextScanMem;
   };
 
   steps.forEach((step) => {

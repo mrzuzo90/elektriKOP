@@ -16,6 +16,10 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
   const [outputs, setOutputs] = useState(zeroOutputs);
   const [timerDisplay, setTimerDisplay] = useState({});
   const [scanCount, setScanCount] = useState(0);
+  // Memoria tal cual estaba al empezar el último scan ejecutado — la usa
+  // App.jsx para pintar los contactos de flanco (P/N), que necesitan
+  // comparar el ciclo actual contra el anterior.
+  const [prevMem, setPrevMem] = useState({});
 
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
@@ -30,6 +34,10 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
 
   const outputsRef = useRef(outputs);
   const timersRef = useRef({});
+  // Memoria completa (I+Q) tal cual quedó al terminar el último scan — la
+  // usan los contactos de flanco P/N de computeScanTick para comparar
+  // ciclo contra ciclo (ver comentario en scanCycle.js).
+  const scanMemRef = useRef({});
   const audioCtxRef = useRef(null);
   const prevAlarmRef = useRef({});
 
@@ -90,12 +98,14 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
 
   const runScanTick = () => {
     const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current };
-    const { outputs: nextOutputs, timers: nextTimerDisplay } = computeScanTick(rungsRef.current, mem, timersRef.current);
+    const { outputs: nextOutputs, timers: nextTimerDisplay, mem: nextMem } = computeScanTick(rungsRef.current, mem, timersRef.current, scanMemRef.current);
 
     timersRef.current = nextTimerDisplay;
     outputsRef.current = nextOutputs;
+    scanMemRef.current = nextMem;
     setOutputs(nextOutputs);
     setTimerDisplay(nextTimerDisplay);
+    setPrevMem(nextMem);
     setScanCount((n) => n + 1);
     checkAlarms(nextOutputs);
   };
@@ -119,7 +129,9 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
     setOutputs(zeroOut);
     outputsRef.current = zeroOut;
     timersRef.current = {};
+    scanMemRef.current = {};
     setTimerDisplay({});
+    setPrevMem({});
     setScanCount(0);
     prevAlarmRef.current = {};
   };
@@ -131,5 +143,5 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
     delete timersRef.current[rungId];
   };
 
-  return { running, setRunning, outputs, timerDisplay, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
+  return { running, setRunning, outputs, timerDisplay, prevMem, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
 }

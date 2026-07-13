@@ -45,9 +45,10 @@ export function collectOutputConflicts(rungs) {
   });
   return Object.entries(byAddr).filter(([, idxs]) => {
     if (idxs.length < 2) return false;
-    // Solo avisamos si hay una bobina directa o un TON compartiendo la
-    // dirección con algo más — esos dos tipos sobrescriben sin condiciones,
-    // así que compartir dirección con ellos casi siempre es un despiste.
-    return idxs.some((i) => rungs[i].outType === "coil" || rungs[i].outType === "ton");
+    // Solo avisamos si hay una bobina directa o un temporizador (TON/TOF/TP)
+    // compartiendo la dirección con algo más — estos tipos sobrescriben sin
+    // condiciones, así que compartir dirección con ellos casi siempre es un
+    // despiste.
+    return idxs.some((i) => ["coil", "ton", "tof", "tp"].includes(rungs[i].outType));
   });
 }
