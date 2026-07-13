@@ -3,6 +3,7 @@ import { T } from "../../utils/constants";
 import { pixelBorderStyle } from "../../styles/pixelStyles";
 import PixelBtn from "../shared/PixelBtn";
 import ChallengePanel from "../Challenge/ChallengePanel";
+import SymbolsPanel from "../SymbolsPanel";
 
 // Una sección con el mismo lenguaje visual de card que ya usan
 // SymbolsPanel/ChallengePanel (header gris + cuerpo blanco tipo TIA
@@ -40,6 +41,9 @@ export default function PauseMenu({
   rungs,
   wiringMap,
   onChallengeResultChange,
+  usedAddresses,
+  symbols,
+  onChangeSymbol,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -118,6 +122,10 @@ export default function PauseMenu({
                 <button onClick={onDismissRestoredNotice} style={{ border: "none", background: "none", color: "#0D47A1", cursor: "pointer", fontWeight: "bold" }}>✕</button>
               </div>
             )}
+          </Section>
+
+          <Section icon="🏷️" title="Tabla de variables">
+            <SymbolsPanel usedAddresses={usedAddresses} symbols={symbols} onChangeSymbol={onChangeSymbol} />
           </Section>
 
           <Section icon="🎯" title="Modo Desafío">

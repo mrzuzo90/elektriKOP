@@ -251,7 +251,7 @@ function TimerIcon({ active }) {
   );
 }
 
-export function DeviceIcon({ type, active }) {
+function deviceIconFor(type, active) {
   switch (type) {
     case "pulsador":
       return <PushButtonIcon active={active} />;
@@ -280,4 +280,20 @@ export function DeviceIcon({ type, active }) {
         </div>
       );
   }
+}
+
+// size opcional (por defecto 40, el tamaño "nativo" de deviceBoxStyle):
+// en vez de reescribir cada icono con medidas proporcionales, se escala el
+// icono completo con transform y se reserva el hueco de layout ya
+// escalado — como son formas CSS (gradientes/clip-path, no imágenes
+// rasterizadas), amplían sin perder nitidez.
+export function DeviceIcon({ type, active, size = 40 }) {
+  const icon = deviceIconFor(type, active);
+  if (size === 40) return icon;
+  const scale = size / 40;
+  return (
+    <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ transform: `scale(${scale})` }}>{icon}</div>
+    </div>
+  );
 }
