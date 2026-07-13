@@ -71,7 +71,7 @@ npm run dev
 
 Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 
-> Si vienes de un proyecto React ya existente, también puedes copiar `src/App.jsx` directamente a tu propio proyecto — no tiene dependencias externas más allá de React.
+> Si vienes de un proyecto React ya existente, también puedes copiar la carpeta `src/` completa a tu propio proyecto — no tiene dependencias externas más allá de React.
 
 ## Cómo usar
 
@@ -86,16 +86,13 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 
 ## Ejercicios propuestos
 
-En [`docs/ejercicios/`](docs/ejercicios) encontrarás archivos `.json` listos para importar, con ejercicios de dificultad creciente:
+🚧 **Aún no publicados** — de momento no hay ningún ejercicio en el repositorio. La idea es que `docs/ejercicios/` acabe teniendo archivos `.json` listos para importar (dificultad creciente: marcha/paro con enclavamiento, semáforo con temporizadores, puerta automática con finales de carrera...), cada uno con su enunciado y, cuando aplique, su solución de referencia. Es una pieza central de la propuesta didáctica del proyecto — ver el Roadmap.
 
-- **01 — Marcha/paro con enclavamiento**: el clásico circuito de arranque y parada de un motor.
-- **02 — Semáforo con temporizadores**: tres salidas secuenciadas con TON.
-- **03 — Puerta automática con dos finales de carrera**: pulsador de apertura, sensores de fin de carrera y lógica cruzada de apertura/cierre.
-
-> Si te animas a crear más ejercicios, ¡son bienvenidos como *pull request*!
+> Si te animas a crear ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
 
 ## Roadmap / ideas futuras
 
+- [ ] **Ejercicios propuestos y resueltos en `docs/ejercicios/`** — prioritario: es lo que convierte esto de un editor en una herramienta didáctica de verdad.
 - [ ] Más tipos de temporizador (TOF, TP).
 - [ ] Contadores (CTU/CTD).
 - [ ] Modo "examen": oculta la solución y valida el resultado esperado.
@@ -107,7 +104,7 @@ Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real d
 
 Las contribuciones son bienvenidas, especialmente:
 
-- Ejercicios nuevos para `docs/ejercicios/`.
+- Ejercicios (propuestos y, si puede ser, también resueltos) para `docs/ejercicios/` — ver Roadmap.
 - Corrección de errores de lógica en la simulación.
 - Traducciones (el proyecto nació en español, pero un `README.en.md` sería estupendo).
 
