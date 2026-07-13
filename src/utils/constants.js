@@ -24,7 +24,7 @@ export const T = {
   // Utilidades
   red: "#FF3333",
   text: "#FFFFFF",
-  mono: "'Courier New', 'Consolas', monospace",
+  mono: "'Silkscreen', 'Courier New', 'Consolas', monospace",
 };
 
 // Direccionamiento real Siemens (Octal por byte: 0.0 a 0.7, 1.0 a 1.1 para 10 entradas/salidas)

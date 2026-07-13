@@ -51,6 +51,13 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 **Tabla de variables**
 - Asigna nombres simbólicos a tus direcciones (por ejemplo, `I0.2` → `Marcha_M1`) y verlos reflejados directamente en el editor.
 
+**Deshacer/rehacer y autoguardado**
+- Ctrl+Z / Ctrl+Shift+Z (o los botones ⟲/⟳) para deshacer y rehacer, hasta 50 pasos.
+- El proyecto se autoguarda solo en el navegador — cerrar o recargar la pestaña por accidente ya no significa perder el trabajo.
+
+**Modo Desafío**
+- Comprueba automáticamente si tu solución a uno de los [ejercicios propuestos](docs/ejercicios/) se comporta como debe, ciclo a ciclo — valida el resultado, no cómo has dibujado el circuito, así que cualquier forma correcta de resolverlo vale.
+
 **Proyectos**
 - Exporta e importa proyectos completos en JSON — no pierdes tu trabajo al cerrar la pestaña, y puedes compartir ejercicios con compañeros o alumnos.
 
@@ -71,7 +78,7 @@ npm run dev
 
 Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 
-> Si vienes de un proyecto React ya existente, también puedes copiar la carpeta `src/` completa a tu propio proyecto — no tiene dependencias externas más allá de React.
+> Si vienes de un proyecto React ya existente, también puedes copiar la carpeta `src/` completa a tu propio proyecto — solo necesita React y `@fontsource/silkscreen` (la tipografía retro, autoalojada: se empaqueta con el build, sin llamadas a servicios externos en tiempo de ejecución).
 
 ## Cómo usar
 
@@ -82,7 +89,8 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 5. Elige el tipo de salida del segmento: bobina directa, SET, RESET o temporizador TON.
 6. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
 7. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado**.
-8. Cuando quieras guardar tu trabajo, usa **Exportar** — te descarga un `.json` que puedes volver a cargar con **Importar** en cualquier momento.
+8. Cuando quieras guardar tu trabajo, usa **Exportar** — te descarga un `.json` que puedes volver a cargar con **Importar** en cualquier momento. (No es imprescindible: tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.)
+9. Si estás resolviendo uno de los [ejercicios propuestos](docs/ejercicios/), abre el panel **Modo Desafío** (barra derecha) y pulsa **Comprobar** para validar tu solución automáticamente.
 
 ## Ejercicios propuestos
 
@@ -97,9 +105,11 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 ## Roadmap / ideas futuras
 
 - [x] Ejercicios propuestos y resueltos en `docs/ejercicios/`.
+- [x] Deshacer/rehacer y autoguardado.
+- [x] Modo Desafío: valida automáticamente el resultado esperado de un ejercicio.
 - [ ] Más tipos de temporizador (TOF, TP).
 - [ ] Contadores (CTU/CTD).
-- [ ] Modo "examen": oculta la solución y valida el resultado esperado.
+- [ ] Comparadores numéricos (`>=`, `==`) sobre valores simulados.
 - [ ] Compartir proyectos mediante un enlace, sin necesidad de archivo.
 
 Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real de aula es bienvenida.

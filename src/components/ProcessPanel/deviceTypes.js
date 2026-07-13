@@ -1,5 +1,5 @@
 export const DEVICE_TYPES = [
-  { id: "none", label: "— Sin asignar —" },
+  { id: "none", label: "Sin asignar" },
   { id: "pulsador", label: "Pulsador (momentáneo)" },
   { id: "paro", label: "Seta de PARO (enclavamiento)" },
   { id: "sensor", label: "Sensor / fin de carrera" },

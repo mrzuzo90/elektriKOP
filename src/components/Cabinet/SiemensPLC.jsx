@@ -69,7 +69,7 @@ export default function SiemensPLC({ inputs, outputs, running, error, scanCount 
 
         <div style={{ marginTop: 15, textAlign: "right" }}>
           <div style={{ fontSize: 18, fontWeight: "bold", color: "#FFF", letterSpacing: 1, textShadow: "2px 2px #000" }}>SIEMENS</div>
-          <div style={{ fontSize: 14, color: "#CCC" }}>SIMATIC S7-1200</div>
+          <div style={{ fontSize: 11, color: "#CCC" }}>SIMATIC S7-1200</div>
         </div>
       </div>
 

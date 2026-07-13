@@ -7,6 +7,7 @@ import { fontStyles } from "./styles/pixelStyles";
 import PixelBtn from "./components/shared/PixelBtn";
 import ProcessPanel from "./components/ProcessPanel/ProcessPanel";
 import SymbolsPanel from "./components/SymbolsPanel";
+import ChallengePanel from "./components/Challenge/ChallengePanel";
 import SiemensPLC from "./components/Cabinet/SiemensPLC";
 import HmiPanel from "./components/HMI/HmiPanel";
 import TiaSegment from "./components/Editor/TiaSegment";
@@ -24,6 +25,7 @@ export default function PlcEmulator() {
   const [inputs, setInputs] = useState(zeroInputs);
   const [showProcess, setShowProcess] = useState(true);
   const [showSymbols, setShowSymbols] = useState(false);
+  const [showChallenge, setShowChallenge] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [booting, setBooting] = useState(true);
 
@@ -142,8 +144,8 @@ export default function PlcEmulator() {
           </div>
         </div>
 
-        {/* Right Area: TIA Portal Editor */}
-        <div style={{ flex: 1, backgroundColor: "#EBEBEB", display: "flex", flexDirection: "column" }}>
+        {/* Centro: TIA Portal Editor — solo los segmentos */}
+        <div style={{ flex: 1, minWidth: 0, backgroundColor: "#EBEBEB", display: "flex", flexDirection: "column" }}>
 
           <div style={{ backgroundColor: "#F0F0F0", borderBottom: "1px solid #CCC", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
              <div>
@@ -157,19 +159,11 @@ export default function PlcEmulator() {
                   if (project.rungs.length < MAX_RUNGS) {
                     project.setRungs([...project.rungs, newRung(project.rungs.length ? Math.max(...project.rungs.map(r => r.id)) + 1 : 0)]);
                   }
-               }}>+ Añadir Segmento</PixelBtn>
+               }}>+ Segmento</PixelBtn>
              </div>
           </div>
 
           <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
-            {collectOutputConflicts(project.rungs).length > 0 && (
-              <div style={{ background: "#FFF3CD", border: "1px solid #FFB300", color: "#7A5200", padding: "8px 12px", marginBottom: 16, fontSize: 13 }}>
-                ⚠️ Direcciones de salida repetidas sin ser SET/RESET:{" "}
-                {collectOutputConflicts(project.rungs)
-                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => project.rungs[i].title).join(", ")})`)
-                  .join(" · ")}
-              </div>
-            )}
             <ProcessPanel
               addresses={collectUsedAddresses(project.rungs)}
               deviceMap={project.deviceMap}
@@ -181,13 +175,14 @@ export default function PlcEmulator() {
               visible={showProcess}
               onToggle={() => setShowProcess((v) => !v)}
             />
-            <SymbolsPanel
-              addresses={collectUsedAddresses(project.rungs)}
-              symbols={project.symbols}
-              onChangeSymbol={project.setSymbolFor}
-              visible={showSymbols}
-              onToggle={() => setShowSymbols((v) => !v)}
-            />
+            {collectOutputConflicts(project.rungs).length > 0 && (
+              <div style={{ background: "#FFF3CD", border: "1px solid #FFB300", color: "#7A5200", padding: "8px 12px", marginBottom: 16, fontSize: 13 }}>
+                ⚠️ Direcciones de salida repetidas sin ser SET/RESET:{" "}
+                {collectOutputConflicts(project.rungs)
+                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => project.rungs[i].title).join(", ")})`)
+                  .join(" · ")}
+              </div>
+            )}
             {project.rungs.map((rung, idx) => {
               const states = computeStates(rung.logic, { ...effectiveInputs, ...sim.outputs }, {});
               return (
@@ -213,6 +208,25 @@ export default function PlcEmulator() {
             {project.rungs.length >= MAX_RUNGS && <div style={{ color: "red", textAlign: "center", marginTop: 10 }}>Límite de segmentos alcanzado ({MAX_RUNGS})</div>}
           </div>
 
+        </div>
+
+        {/* Derecha: Proceso simulado / Tabla de variables / Modo Desafío —
+            mismo fondo que la barra izquierda para enmarcar el centro claro
+            tipo TIA Portal entre los dos laterales oscuros DeWalt. */}
+        <div style={{ width: 320, flexShrink: 0, backgroundColor: T.dwGrey, borderLeft: `4px solid ${T.dwBlack}`, padding: 20, overflowY: "auto" }}>
+          <SymbolsPanel
+            addresses={collectUsedAddresses(project.rungs)}
+            symbols={project.symbols}
+            onChangeSymbol={project.setSymbolFor}
+            visible={showSymbols}
+            onToggle={() => setShowSymbols((v) => !v)}
+          />
+          <ChallengePanel
+            rungs={project.rungs}
+            wiringMap={project.wiringMap}
+            visible={showChallenge}
+            onToggle={() => setShowChallenge((v) => !v)}
+          />
         </div>
       </div>
     </>

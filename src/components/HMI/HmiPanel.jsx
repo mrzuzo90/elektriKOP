@@ -35,11 +35,11 @@ export default function HmiPanel({ inputs, onToggle, onPulse, running, timers, d
         justifyContent: "center",
         textTransform: "uppercase"
       }}>
-         <div style={{ display: "flex", justifyContent: "space-between" }}>
+         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
             <span>SYS: {running ? "RUNNING" : "STOPPED"}</span>
             <span style={{ animation: running ? "blink 1s infinite" : "none" }}>{running ? "▶" : "⏸"}</span>
          </div>
-         <div style={{ marginTop: 2, fontSize: 13 }}>
+         <div style={{ marginTop: 2, fontSize: 13, fontWeight: "bold" }}>
            CICLO: <span key={scanCount ?? 0} className="dw-tick">{String(scanCount ?? 0).padStart(5, "0")}</span>
          </div>
          {activeTimers.length > 0 ? (

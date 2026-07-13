@@ -34,13 +34,14 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
               const type = deviceMap[addr] || "none";
               const wiring = wiringMap?.[addr] || "NA";
               return (
-                <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 68 }}>
+                <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 84 }}>
                   <span style={{ fontSize: 11, color: T.tiaText, fontWeight: "bold" }}>{addr}</span>
                   <DeviceIcon type={type} active={active} />
                   <select
                     value={type}
+                    title={DEVICE_TYPES.find((d) => d.id === type)?.label}
                     onChange={(e) => onChangeType(addr, e.target.value)}
-                    style={pixelSelectStyle({ fontSize: 9, width: "100%", fontFamily: T.mono, color: T.tiaText, padding: "2px 14px 2px 4px" })}
+                    style={pixelSelectStyle({ fontSize: 10, width: "100%", fontFamily: T.mono, color: T.tiaText, padding: "2px 14px 2px 4px" })}
                   >
                     {DEVICE_TYPES.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -59,7 +60,7 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
                           style={{
                             flex: 1,
                             fontFamily: T.mono,
-                            fontSize: 9,
+                            fontSize: 10,
                             padding: "2px 0",
                             cursor: "pointer",
                             backgroundColor: wiring === "NA" ? T.dwYellow : "#EEE",
@@ -75,7 +76,7 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
                           style={{
                             flex: 1,
                             fontFamily: T.mono,
-                            fontSize: 9,
+                            fontSize: 10,
                             padding: "2px 0",
                             cursor: "pointer",
                             backgroundColor: wiring === "NC" ? T.dwYellow : "#EEE",
@@ -88,7 +89,7 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
                           NC
                         </button>
                       </div>
-                      <span style={{ fontSize: 9, color: (wiring === "NC" ? !active : active) ? T.dwYellow : "#999" }}>
+                      <span style={{ fontSize: 10, color: (wiring === "NC" ? !active : active) ? T.dwYellow : "#999" }}>
                         PLC ve: {(wiring === "NC" ? !active : active) ? "1" : "0"}
                       </span>
                     </>
