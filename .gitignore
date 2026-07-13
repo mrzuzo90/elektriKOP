@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Notas de desarrollo internas (roadmap, decisiones de scope) — no públicas
+CLAUDE.md
