@@ -73,6 +73,58 @@ function PushButtonIcon({ active }) {
   );
 }
 
+function SwitchIcon({ active }) {
+  return (
+    <div style={deviceBoxStyle}>
+      <div style={{ position: "relative", width: 26, height: 26 }}>
+        {/* Placa metálica base */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, #7A7A7A, #3A3A3A)",
+            border: `2px solid ${T.dwBlack}`,
+            borderRadius: 3,
+          }}
+        />
+        {/* Pivote de la palanca */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 4,
+            left: "50%",
+            width: 8,
+            height: 8,
+            background: "#1A1A1A",
+            border: `1px solid ${T.dwBlack}`,
+            borderRadius: "50%",
+            transform: "translateX(-50%)",
+          }}
+        />
+        {/* Palanca: inclinada a la izquierda en reposo (OFF) y a la
+            derecha, iluminada, cuando está activada (ON) — convención de
+            interruptor de palanca tipo panel industrial retro. */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 6,
+            left: "50%",
+            width: 5,
+            height: 16,
+            background: active ? T.dwYellow : "#CCC",
+            border: `1px solid ${T.dwBlack}`,
+            borderRadius: 2,
+            transformOrigin: "bottom center",
+            transform: `translateX(-50%) rotate(${active ? 20 : -20}deg)`,
+            boxShadow: active ? `0 0 6px ${T.dwYellow}` : "none",
+            transition: "transform 0.15s ease",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function EStopIcon({ active }) {
   return (
     <div style={{ ...deviceBoxStyle, backgroundColor: T.dwYellow }}>
@@ -203,6 +255,8 @@ export function DeviceIcon({ type, active }) {
   switch (type) {
     case "pulsador":
       return <PushButtonIcon active={active} />;
+    case "interruptor":
+      return <SwitchIcon active={active} />;
     case "paro":
       return <EStopIcon active={active} />;
     case "motor":
