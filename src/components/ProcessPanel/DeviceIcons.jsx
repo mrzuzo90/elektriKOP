@@ -175,6 +175,30 @@ function DoorIcon({ active }) {
   );
 }
 
+function TimerIcon({ active }) {
+  return (
+    <div style={deviceBoxStyle}>
+      <div style={{ position: "relative", width: 24, height: 24 }}>
+        <div style={{ position: "absolute", top: -5, left: "50%", width: 8, height: 3, background: T.dwBlack, transform: "translateX(-50%)" }} />
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            background: active ? T.dwYellow : "#444",
+            border: `2px solid ${T.dwBlack}`,
+            boxShadow: active ? `0 0 8px ${T.dwYellow}` : "none",
+            animation: active ? "pulseGlow 0.9s ease-in-out infinite" : "none",
+          }}
+        >
+          <div style={{ position: "absolute", top: "50%", left: "50%", width: 2, height: 8, background: T.dwBlack, transformOrigin: "50% 100%", transform: "translate(-50%,-100%)" }} />
+          <div style={{ position: "absolute", top: "50%", left: "50%", width: 2, height: 6, background: T.dwBlack, transformOrigin: "50% 100%", transform: "translate(-50%,-100%) rotate(90deg)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DeviceIcon({ type, active }) {
   switch (type) {
     case "pulsador":
@@ -193,6 +217,8 @@ export function DeviceIcon({ type, active }) {
       return <AlarmIcon active={active} />;
     case "puerta":
       return <DoorIcon active={active} />;
+    case "temporizador":
+      return <TimerIcon active={active} />;
     default:
       return (
         <div style={{ ...deviceBoxStyle, backgroundColor: "#2A2A2A", border: "2px dashed #555" }}>
