@@ -159,6 +159,26 @@ export function useProject() {
     URL.revokeObjectURL(url);
   };
 
+  // Vacía el proyecto (segmentos, dispositivos, cableado y símbolos) sin
+  // tocar el nombre. Mismo tratamiento de historial que importProject: al
+  // ser equivalente a abrir un documento nuevo, no debe poder deshacerse
+  // hacia lo que había antes.
+  const clearProject = () => {
+    clearTimeout(debounceRef.current);
+    pendingBeforeRef.current = null;
+    setPast([]);
+    setFuture([]);
+    setProjectState((prev) => ({
+      projectName: prev.projectName,
+      rungs: [newRung(0)],
+      deviceMap: {},
+      wiringMap: {},
+      symbols: {},
+    }));
+    setImportError("");
+    setRestoredFromAutosave(false);
+  };
+
   const importProject = (file, { onSuccess } = {}) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -199,7 +219,7 @@ export function useProject() {
     wiringMap: project.wiringMap, setWiringFor,
     symbols: project.symbols, setSymbolFor,
     importError,
-    exportProject, importProject,
+    exportProject, importProject, clearProject,
     fileInputRef,
     undo, redo,
     canUndo: past.length > 0,

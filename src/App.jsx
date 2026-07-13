@@ -57,6 +57,13 @@ export default function PlcEmulator() {
     sim.resetSimulation();
   };
 
+  const clearAll = () => {
+    if (!window.confirm("¿Limpiar todo? Se borrarán los segmentos, las variables y el estado de la simulación.")) return;
+    project.clearProject();
+    setInputs(zeroInputs());
+    sim.resetSimulation();
+  };
+
   const handleFileSelected = (file) => {
     project.importProject(file, {
       onSuccess: () => {
@@ -105,6 +112,7 @@ export default function PlcEmulator() {
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
               <PixelBtn small color="dwGrey" onClick={project.exportProject}>💾 Exportar</PixelBtn>
               <PixelBtn small color="dwGrey" onClick={() => project.fileInputRef.current?.click()}>📂 Importar</PixelBtn>
+              <PixelBtn small color="red" onClick={clearAll} title="Borra segmentos, variables y estado de la simulación">🗑 Limpiar Todo</PixelBtn>
             </div>
             <input
               ref={project.fileInputRef}
