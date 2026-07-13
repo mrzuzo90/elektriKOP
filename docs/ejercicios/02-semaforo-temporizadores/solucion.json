@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "projectName": "Ejercicio 2 - Semaforo con temporizadores",
+  "rungs": [
+    {
+      "id": 0,
+      "title": "ROJO",
+      "comment": "Rojo encendido mientras el sistema esta en marcha y no estemos en fase verde ni amarilla.",
+      "logic": [
+        { "kind": "contact", "id": "n0", "addr": "I0.0", "neg": false },
+        { "kind": "contact", "id": "n1", "addr": "Q0.1", "neg": true },
+        { "kind": "contact", "id": "n2", "addr": "Q0.2", "neg": true }
+      ],
+      "outAddr": "Q0.0",
+      "outType": "coil",
+      "preset": 2
+    },
+    {
+      "id": 1,
+      "title": "T_ROJO",
+      "comment": "Temporiza la duracion de la fase roja (4 s).",
+      "logic": [
+        { "kind": "contact", "id": "n3", "addr": "Q0.0", "neg": false }
+      ],
+      "outAddr": "Q0.3",
+      "outType": "ton",
+      "preset": 4
+    },
+    {
+      "id": 2,
+      "title": "VERDE",
+      "comment": "Se enciende cuando termina T_ROJO y se enclava hasta que termina T_VERDE.",
+      "logic": [
+        { "kind": "contact", "id": "n4", "addr": "I0.0", "neg": false },
+        {
+          "kind": "parallel",
+          "id": "n5",
+          "branches": [
+            {
+              "id": "n6",
+              "nodes": [
+                { "kind": "contact", "id": "n7", "addr": "Q0.0", "neg": false },
+                { "kind": "contact", "id": "n8", "addr": "Q0.3", "neg": false }
+              ]
+            },
+            {
+              "id": "n9",
+              "nodes": [
+                { "kind": "contact", "id": "n10", "addr": "Q0.1", "neg": false },
+                { "kind": "contact", "id": "n11", "addr": "Q0.4", "neg": true }
+              ]
+            }
+          ]
+        }
+      ],
+      "outAddr": "Q0.1",
+      "outType": "coil",
+      "preset": 2
+    },
+    {
+      "id": 3,
+      "title": "T_VERDE",
+      "comment": "Temporiza la duracion de la fase verde (4 s).",
+      "logic": [
+        { "kind": "contact", "id": "n12", "addr": "Q0.1", "neg": false }
+      ],
+      "outAddr": "Q0.4",
+      "outType": "ton",
+      "preset": 4
+    },
+    {
+      "id": 4,
+      "title": "AMARILLO",
+      "comment": "Se enciende cuando termina T_VERDE y se enclava hasta que termina T_AMARILLO.",
+      "logic": [
+        { "kind": "contact", "id": "n13", "addr": "I0.0", "neg": false },
+        {
+          "kind": "parallel",
+          "id": "n14",
+          "branches": [
+            {
+              "id": "n15",
+              "nodes": [
+                { "kind": "contact", "id": "n16", "addr": "Q0.1", "neg": false },
+                { "kind": "contact", "id": "n17", "addr": "Q0.4", "neg": false }
+              ]
+            },
+            {
+              "id": "n18",
+              "nodes": [
+                { "kind": "contact", "id": "n19", "addr": "Q0.2", "neg": false },
+                { "kind": "contact", "id": "n20", "addr": "Q0.5", "neg": true }
+              ]
+            }
+          ]
+        }
+      ],
+      "outAddr": "Q0.2",
+      "outType": "coil",
+      "preset": 2
+    },
+    {
+      "id": 5,
+      "title": "T_AMARILLO",
+      "comment": "Temporiza la duracion de la fase amarilla (2 s), y al terminar reinicia el ciclo en ROJO.",
+      "logic": [
+        { "kind": "contact", "id": "n21", "addr": "Q0.2", "neg": false }
+      ],
+      "outAddr": "Q0.5",
+      "outType": "ton",
+      "preset": 2
+    }
+  ],
+  "deviceMap": {
+    "Q0.0": "lampara",
+    "Q0.1": "lampara",
+    "Q0.2": "lampara"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Marcha_Semaforo",
+    "Q0.0": "Rojo",
+    "Q0.1": "Verde",
+    "Q0.2": "Amarillo",
+    "Q0.3": "T_Rojo_fin",
+    "Q0.4": "T_Verde_fin",
+    "Q0.5": "T_Amarillo_fin"
+  }
+}

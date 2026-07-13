@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "projectName": "Ejercicio 1 - Marcha Paro con enclavamiento",
+  "rungs": [
+    {
+      "id": 0,
+      "title": "MARCHA_PARO",
+      "comment": "Motor arranca con Marcha (I0.0) y queda enclavado hasta pulsar Paro (I0.1).",
+      "logic": [
+        {
+          "kind": "parallel",
+          "id": "n1",
+          "branches": [
+            { "id": "n2", "nodes": [{ "kind": "contact", "id": "n3", "addr": "I0.0", "neg": false }] },
+            { "id": "n4", "nodes": [{ "kind": "contact", "id": "n5", "addr": "Q0.0", "neg": false }] }
+          ]
+        },
+        { "kind": "contact", "id": "n6", "addr": "I0.1", "neg": true }
+      ],
+      "outAddr": "Q0.0",
+      "outType": "coil",
+      "preset": 2
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "pulsador",
+    "I0.1": "paro",
+    "Q0.0": "motor"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Marcha_M1",
+    "I0.1": "Paro_M1",
+    "Q0.0": "Motor_M1"
+  }
+}

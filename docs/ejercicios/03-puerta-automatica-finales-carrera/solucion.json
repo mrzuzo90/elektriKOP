@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "projectName": "Ejercicio 3 - Puerta automatica con finales de carrera",
+  "rungs": [
+    {
+      "id": 0,
+      "title": "MOTOR_ABRIR",
+      "comment": "Abre y se enclava hasta el final de carrera abierta (I0.2); se corta si se pulsa Cerrar o si Cerrar ya esta activo.",
+      "logic": [
+        {
+          "kind": "parallel",
+          "id": "n1",
+          "branches": [
+            { "id": "n2", "nodes": [{ "kind": "contact", "id": "n3", "addr": "I0.0", "neg": false }] },
+            { "id": "n4", "nodes": [{ "kind": "contact", "id": "n5", "addr": "Q0.0", "neg": false }] }
+          ]
+        },
+        { "kind": "contact", "id": "n6", "addr": "I0.2", "neg": false },
+        { "kind": "contact", "id": "n7", "addr": "Q0.1", "neg": true },
+        { "kind": "contact", "id": "n8", "addr": "I0.1", "neg": true }
+      ],
+      "outAddr": "Q0.0",
+      "outType": "coil",
+      "preset": 2
+    },
+    {
+      "id": 1,
+      "title": "MOTOR_CERRAR",
+      "comment": "Cierra y se enclava hasta el final de carrera cerrada (I0.3); se corta si se pulsa Abrir o si Abrir ya esta activo.",
+      "logic": [
+        {
+          "kind": "parallel",
+          "id": "n9",
+          "branches": [
+            { "id": "n10", "nodes": [{ "kind": "contact", "id": "n11", "addr": "I0.1", "neg": false }] },
+            { "id": "n12", "nodes": [{ "kind": "contact", "id": "n13", "addr": "Q0.1", "neg": false }] }
+          ]
+        },
+        { "kind": "contact", "id": "n14", "addr": "I0.3", "neg": false },
+        { "kind": "contact", "id": "n15", "addr": "Q0.0", "neg": true },
+        { "kind": "contact", "id": "n16", "addr": "I0.0", "neg": true }
+      ],
+      "outAddr": "Q0.1",
+      "outType": "coil",
+      "preset": 2
+    },
+    {
+      "id": 2,
+      "title": "AVISO_MOVIMIENTO",
+      "comment": "Baliza/zumbador activo mientras la puerta se mueve en cualquier sentido.",
+      "logic": [
+        {
+          "kind": "parallel",
+          "id": "n17",
+          "branches": [
+            { "id": "n18", "nodes": [{ "kind": "contact", "id": "n19", "addr": "Q0.0", "neg": false }] },
+            { "id": "n20", "nodes": [{ "kind": "contact", "id": "n21", "addr": "Q0.1", "neg": false }] }
+          ]
+        }
+      ],
+      "outAddr": "Q0.2",
+      "outType": "coil",
+      "preset": 2
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "pulsador",
+    "I0.1": "pulsador",
+    "I0.2": "sensor",
+    "I0.3": "sensor",
+    "Q0.0": "motor",
+    "Q0.1": "motor",
+    "Q0.2": "alarma"
+  },
+  "wiringMap": {
+    "I0.2": "NC",
+    "I0.3": "NC"
+  },
+  "symbols": {
+    "I0.0": "Abrir",
+    "I0.1": "Cerrar",
+    "I0.2": "FC_Abierta",
+    "I0.3": "FC_Cerrada",
+    "Q0.0": "Motor_Abrir",
+    "Q0.1": "Motor_Cerrar",
+    "Q0.2": "Aviso_Movimiento"
+  }
+}

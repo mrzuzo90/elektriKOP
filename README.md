@@ -86,13 +86,17 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 
 ## Ejercicios propuestos
 
-🚧 **Aún no publicados** — de momento no hay ningún ejercicio en el repositorio. La idea es que `docs/ejercicios/` acabe teniendo archivos `.json` listos para importar (dificultad creciente: marcha/paro con enclavamiento, semáforo con temporizadores, puerta automática con finales de carrera...), cada uno con su enunciado y, cuando aplique, su solución de referencia. Es una pieza central de la propuesta didáctica del proyecto — ver el Roadmap.
+En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad creciente, cada uno con su enunciado y un `.json` con la solución listo para importar:
 
-> Si te animas a crear ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
+1. [Marcha/Paro con enclavamiento](docs/ejercicios/01-marcha-paro-enclavamiento/enunciado.md) ⭐
+2. [Semáforo con temporizadores](docs/ejercicios/02-semaforo-temporizadores/enunciado.md) ⭐⭐
+3. [Puerta automática con finales de carrera](docs/ejercicios/03-puerta-automatica-finales-carrera/enunciado.md) ⭐⭐⭐
+
+> Si te animas a crear más ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
 
 ## Roadmap / ideas futuras
 
-- [ ] **Ejercicios propuestos y resueltos en `docs/ejercicios/`** — prioritario: es lo que convierte esto de un editor en una herramienta didáctica de verdad.
+- [x] Ejercicios propuestos y resueltos en `docs/ejercicios/`.
 - [ ] Más tipos de temporizador (TOF, TP).
 - [ ] Contadores (CTU/CTD).
 - [ ] Modo "examen": oculta la solución y valida el resultado esperado.
@@ -104,7 +108,7 @@ Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real d
 
 Las contribuciones son bienvenidas, especialmente:
 
-- Ejercicios (propuestos y, si puede ser, también resueltos) para `docs/ejercicios/` — ver Roadmap.
+- Más ejercicios (propuestos y, si puede ser, también resueltos) para `docs/ejercicios/`.
 - Corrección de errores de lógica en la simulación.
 - Traducciones (el proyecto nació en español, pero un `README.en.md` sería estupendo).
 
