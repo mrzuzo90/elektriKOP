@@ -7,7 +7,7 @@ import { fontStyles } from "./styles/pixelStyles";
 import PixelBtn from "./components/shared/PixelBtn";
 import ProcessPanel from "./components/ProcessPanel/ProcessPanel";
 import SymbolsPanel from "./components/SymbolsPanel";
-import ChallengePanel from "./components/Challenge/ChallengePanel";
+import PauseMenu from "./components/PauseMenu/PauseMenu";
 import SiemensPLC from "./components/Cabinet/SiemensPLC";
 import HmiPanel from "./components/HMI/HmiPanel";
 import TiaSegment from "./components/Editor/TiaSegment";
@@ -25,9 +25,15 @@ export default function PlcEmulator() {
   const [inputs, setInputs] = useState(zeroInputs);
   const [showProcess, setShowProcess] = useState(true);
   const [showSymbols, setShowSymbols] = useState(false);
-  const [showChallenge, setShowChallenge] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [booting, setBooting] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Copia ligera del último resultado de Modo Desafío, solo para el
+  // distintivo flotante — el estado "de verdad" (ejercicio elegido,
+  // resultado completo) sigue viviendo dentro de ChallengePanel, que se
+  // queda montado (solo oculto vía CSS en PauseMenu) para no perderlo al
+  // cerrar el menú.
+  const [challengeBadge, setChallengeBadge] = useState(null);
 
   useEffect(() => {
     const id = setTimeout(() => setBooting(false), 1100);
@@ -62,6 +68,7 @@ export default function PlcEmulator() {
     project.clearProject();
     setInputs(zeroInputs());
     sim.resetSimulation();
+    setChallengeBadge(null);
   };
 
   const handleFileSelected = (file) => {
@@ -89,14 +96,15 @@ export default function PlcEmulator() {
         <div style={{ width: 380, padding: 20, borderRight: `4px solid ${T.dwBlack}`, backgroundColor: T.dwGrey, overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
 
           <div style={{ width: "100%", marginBottom: 20, textAlign: "center" }}>
-            <input
-              value={project.projectName}
-              onChange={(e) => project.setProjectName(e.target.value)}
-              className="dw-edit-field dw-neon-text"
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="dw-neon-text"
+              title="Abrir el menú (proyecto, exportar/importar, Modo Desafío)"
               style={{
                 width: "100%",
-                textAlign: "center",
-                outline: "none",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
                 color: T.dwYellow,
                 fontFamily: T.mono,
                 fontWeight: "bold",
@@ -106,33 +114,26 @@ export default function PlcEmulator() {
                 textShadow: `2px 2px 0 ${T.dwBlack}`,
                 textTransform: "uppercase",
               }}
-              title="Clic para renombrar el proyecto"
-            />
+            >
+              ⏸ ElektriKOP
+            </button>
             <p style={{ color: "#AAA", fontSize: 14, marginTop: 6, letterSpacing: 1 }}>v2.0 TIA & ElektriZIA Edition</p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
-              <PixelBtn small color="dwGrey" onClick={project.exportProject}>💾 Exportar</PixelBtn>
-              <PixelBtn small color="dwGrey" onClick={() => project.fileInputRef.current?.click()}>📂 Importar</PixelBtn>
-              <PixelBtn small color="red" onClick={clearAll} title="Borra segmentos, variables y estado de la simulación">🗑 Limpiar Todo</PixelBtn>
-            </div>
-            <input
-              ref={project.fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelected(file);
-                e.target.value = "";
-              }}
-            />
-            {project.importError && (
-              <div style={{ color: T.red, fontSize: 12, marginTop: 6 }}>{project.importError}</div>
-            )}
-            {project.restoredFromAutosave && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#E3F2FD", border: "1px solid #64B5F6", color: "#0D47A1", padding: "6px 10px", marginTop: 6, fontSize: 12 }}>
-                <span>↺ Proyecto restaurado automáticamente desde el autoguardado.</span>
-                <button onClick={project.dismissRestoredNotice} style={{ border: "none", background: "none", color: "#0D47A1", cursor: "pointer", fontWeight: "bold" }}>✕</button>
-              </div>
+            <p style={{ color: "#777", fontSize: 11, marginTop: 2 }}>toca el logo para abrir el menú</p>
+
+            {challengeBadge && (
+              <button
+                onClick={() => setMenuOpen(true)}
+                title="Reabrir Modo Desafío"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10,
+                  border: `1px solid ${challengeBadge.pass ? T.tiaLineActive : T.red}`,
+                  backgroundColor: challengeBadge.pass ? "rgba(0,176,0,0.15)" : "rgba(255,51,51,0.15)",
+                  color: "#FFF", fontFamily: T.mono, fontSize: 12, padding: "4px 10px", cursor: "pointer",
+                }}
+              >
+                <span>{challengeBadge.pass ? "✅" : "❌"}</span>
+                <span>🎯 {challengeBadge.title}</span>
+              </button>
             )}
           </div>
 
@@ -223,9 +224,10 @@ export default function PlcEmulator() {
 
         </div>
 
-        {/* Derecha: Proceso simulado / Tabla de variables / Modo Desafío —
-            mismo fondo que la barra izquierda para enmarcar el centro claro
-            tipo TIA Portal entre los dos laterales oscuros DeWalt. */}
+        {/* Derecha: Tabla de variables — mismo fondo que la barra izquierda
+            para enmarcar el centro claro tipo TIA Portal entre los dos
+            laterales oscuros DeWalt. Modo Desafío vive ahora en el menú
+            de pausa (ver PauseMenu más abajo). */}
         <div style={{ width: 320, flexShrink: 0, backgroundColor: T.dwGrey, borderLeft: `4px solid ${T.dwBlack}`, padding: 20, overflowY: "auto" }}>
           <SymbolsPanel
             addresses={collectUsedAddresses(project.rungs)}
@@ -234,14 +236,26 @@ export default function PlcEmulator() {
             visible={showSymbols}
             onToggle={() => setShowSymbols((v) => !v)}
           />
-          <ChallengePanel
-            rungs={project.rungs}
-            wiringMap={project.wiringMap}
-            visible={showChallenge}
-            onToggle={() => setShowChallenge((v) => !v)}
-          />
         </div>
       </div>
+
+      <PauseMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        projectName={project.projectName}
+        onRenameProject={project.setProjectName}
+        onExport={project.exportProject}
+        onImportClick={() => project.fileInputRef.current?.click()}
+        fileInputRef={project.fileInputRef}
+        onFileSelected={handleFileSelected}
+        importError={project.importError}
+        restoredFromAutosave={project.restoredFromAutosave}
+        onDismissRestoredNotice={project.dismissRestoredNotice}
+        onClear={clearAll}
+        rungs={project.rungs}
+        wiringMap={project.wiringMap}
+        onChallengeResultChange={setChallengeBadge}
+      />
     </>
   );
 }
