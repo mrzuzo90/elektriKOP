@@ -8,6 +8,7 @@ export default function PixelBtn({ children, onClick, active, color = "yellow", 
       onClick={onClick}
       disabled={disabled}
       title={title}
+      className="dw-pixel-btn"
       style={{
         fontFamily: T.mono,
         fontSize: small ? 14 : 18,

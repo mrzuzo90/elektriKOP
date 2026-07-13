@@ -35,6 +35,41 @@ export const fontStyles = `
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes beltMove { from { background-position: 0 0; } to { background-position: 24px 0; } }
   @keyframes pulseGlow { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+  @keyframes neonFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 1; }
+    52% { opacity: 0.4; }
+    54% { opacity: 1; }
+    76% { opacity: 1; }
+    78% { opacity: 0.5; }
+    80% { opacity: 1; }
+  }
+  @keyframes sparkFlash {
+    0% { opacity: 0.9; transform: scale(0.4); }
+    100% { opacity: 0; transform: scale(2.2); }
+  }
+  @keyframes arcadeTick {
+    0% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+  @keyframes dwCrtBoot {
+    0% { transform: scaleY(1); opacity: 1; background-color: #FFFFFF; }
+    15% { transform: scaleY(1); opacity: 1; background-color: #FFFFFF; }
+    35% { transform: scaleY(0.006); opacity: 1; background-color: #000000; }
+    60% { transform: scaleY(0.006); opacity: 1; background-color: #000000; }
+    100% { transform: scaleY(1); opacity: 0; background-color: #000000; }
+  }
+
+  /* Botones pixel-art: hundimiento físico al pulsar (mousedown real, no
+     solo el estado "active" controlado por prop) + leve realce en hover
+     para reforzar la sensación de botón 3D. */
+  .dw-pixel-btn:not(:disabled):hover {
+    filter: brightness(1.06);
+  }
+  .dw-pixel-btn:not(:disabled):active {
+    transform: translate(3px, 3px) !important;
+    box-shadow: inset 4px 4px 0px 0px rgba(0,0,0,0.4) !important;
+  }
 
   /* Campos de texto "editables" (título de proyecto, nombre/comentario de
      segmento): sin caja hasta que el usuario interactúa, para no competir
@@ -65,5 +100,48 @@ export const fontStyles = `
       radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,0.12) 100%);
     mix-blend-mode: multiply;
     opacity: 0.35;
+  }
+
+  /* Parpadeo lento tipo neón en acentos amarillos DeWalt, independiente
+     de la simulación (puro ambiente retro). */
+  .dw-neon-text {
+    animation: neonFlicker 5s linear infinite;
+  }
+
+  /* Chispazo breve en la transición apagado→encendido de contactos y
+     bobinas del editor KOP. */
+  .dw-spark {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, ${T.dwYellow} 35%, transparent 70%);
+    animation: sparkFlash 0.25s ease-out forwards;
+  }
+
+  /* Rejilla fina de píxeles sobre la pantalla LCD del HMI, tipo consola
+     portátil retro (Game Boy) — se combina con el backgroundColor verde
+     inline del componente. */
+  .dw-lcd-screen {
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px);
+  }
+
+  /* Efecto "tick" arcade al incrementar el contador de ciclos en la LCD. */
+  .dw-tick {
+    display: inline-block;
+    animation: arcadeTick 0.12s ease-out;
+  }
+
+  /* Arranque tipo monitor CRT: flash blanco → colapsa a línea → se abre
+     a pantalla completa revelando la app (una sola vez, al cargar). */
+  .dw-crt-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+    transform-origin: center;
+    animation: dwCrtBoot 1.1s ease-in-out forwards;
   }
 `;

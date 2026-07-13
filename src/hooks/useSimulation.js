@@ -44,7 +44,9 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
     return audioCtxRef.current;
   };
 
-  const beep = () => {
+  // SFX de 8 bits: un único oscilador cuadrado por tono, reutilizado para
+  // la alarma y para los pitidos de botones (RUN/STOP, clic de contacto).
+  const playTone = (freq, duration = 0.15, gainValue = 0.05, delay = 0) => {
     if (!soundOnRef.current) return;
     const ctx = ensureAudio();
     if (!ctx) return;
@@ -52,15 +54,27 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "square";
-      osc.frequency.value = 880;
-      gain.gain.value = 0.05;
+      osc.frequency.value = freq;
+      gain.gain.value = gainValue;
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
+      const startAt = ctx.currentTime + delay;
+      osc.start(startAt);
+      osc.stop(startAt + duration);
     } catch {
       /* audio no disponible en este entorno, se ignora en silencio */
     }
+  };
+
+  const beep = () => playTone(880, 0.15);
+  const playClickSound = () => playTone(1200, 0.03, 0.04);
+  const playRunSound = () => {
+    playTone(660, 0.07, 0.05);
+    playTone(990, 0.09, 0.05, 0.07);
+  };
+  const playStopSound = () => {
+    playTone(440, 0.09, 0.05);
+    playTone(220, 0.12, 0.05, 0.08);
   };
 
   const checkAlarms = (nextOutputs) => {
@@ -117,5 +131,5 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
     delete timersRef.current[rungId];
   };
 
-  return { running, setRunning, outputs, timerDisplay, scanCount, stepOnce, resetSimulation, clearTimer };
+  return { running, setRunning, outputs, timerDisplay, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
 }

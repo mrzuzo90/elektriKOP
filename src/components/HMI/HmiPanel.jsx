@@ -20,7 +20,7 @@ export default function HmiPanel({ inputs, onToggle, onPulse, running, timers, d
       </div>
 
       {/* Pantalla LCD Retro */}
-      <div style={{
+      <div className="dw-lcd-screen" style={{
         backgroundColor: "#8BA791", // Verde LCD clásico
         border: `4px solid ${T.dwGrey}`,
         padding: "8px 12px",
@@ -39,7 +39,9 @@ export default function HmiPanel({ inputs, onToggle, onPulse, running, timers, d
             <span>SYS: {running ? "RUNNING" : "STOPPED"}</span>
             <span style={{ animation: running ? "blink 1s infinite" : "none" }}>{running ? "▶" : "⏸"}</span>
          </div>
-         <div style={{ marginTop: 2, fontSize: 13 }}>CICLO: {String(scanCount ?? 0).padStart(5, "0")}</div>
+         <div style={{ marginTop: 2, fontSize: 13 }}>
+           CICLO: <span key={scanCount ?? 0} className="dw-tick">{String(scanCount ?? 0).padStart(5, "0")}</span>
+         </div>
          {activeTimers.length > 0 ? (
            <div style={{ marginTop: 4, fontSize: 14, color: "#111" }}>
              T. ACTIVOS: {activeTimers.length}

@@ -63,16 +63,21 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
         </div>
       </div>
 
-      {/* Rung Logic Area */}
-      <div style={{ padding: "30px 10px", display: "flex", alignItems: "center", overflowX: "auto" }}>
+      {/* Rung Logic Area: flex-start, igual que LogicSeries — así la fila
+          crece de forma natural para acomodar un bloque paralelo alto, sin
+          necesidad de reservar espacio a mano. */}
+      <div style={{ padding: "30px 10px", display: "flex", alignItems: "flex-start", overflowX: "auto" }}>
 
         {/* Left Power Rail */}
-        <div style={{ width: 4, backgroundColor: T.tiaLine, height: 60, marginRight: 4 }} />
+        <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginRight: 4 }} />
 
         <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actions} depth={0} flowIn={true} symbols={symbols} />
 
-        {/* Main Line connecting to Output */}
-        <div style={{ flex: 1, height: 3, backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine, minWidth: 40 }} />
+        {/* Main Line connecting to Output — envuelta en una caja de 30px
+            para que la barra quede centrada a 15px, igual que el resto. */}
+        <div style={{ flex: 1, minWidth: 40, height: 30, display: "flex", alignItems: "center" }}>
+          <div style={{ width: "100%", height: 3, backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine }} />
+        </div>
 
         {/* Output Device */}
         <div style={{ position: "relative", marginRight: 8, display: "flex", alignItems: "center" }}>
@@ -87,7 +92,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
         </div>
 
         {/* Right Power Rail */}
-        <div style={{ width: 4, backgroundColor: T.tiaLine, height: 60, marginLeft: 4 }} />
+        <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginLeft: 4 }} />
       </div>
 
       {/* Output Type Selector / Footer */}

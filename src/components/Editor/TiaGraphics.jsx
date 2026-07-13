@@ -1,15 +1,36 @@
+import { useEffect, useRef, useState } from "react";
 import { T } from "../../utils/constants";
 
-export function TiaLine({ active, vertical, size = 20 }) {
+// Dispara un breve destello (200ms) cada vez que `active` pasa de false a
+// true — no en cada render, solo en la transición apagado→encendido.
+function useSpark(active) {
+  const prevRef = useRef(active);
+  const [sparking, setSparking] = useState(false);
+
+  useEffect(() => {
+    if (active && !prevRef.current) {
+      setSparking(true);
+      const id = setTimeout(() => setSparking(false), 250);
+      prevRef.current = active;
+      return () => clearTimeout(id);
+    }
+    prevRef.current = active;
+  }, [active]);
+
+  return sparking;
+}
+
+// Envuelto en una caja de 30px (misma altura que un contacto/bobina) con
+// la barra centrada dentro, para que el cable quede siempre a 15px de su
+// propio borde superior — la convención que usan TODOS los elementos de
+// la escalera, así que basta con alinear cada fila arriba (flex-start)
+// para que todo quede a la misma altura sin necesidad de cálculos.
+export function TiaLine({ active, size = 20 }) {
   const color = active ? T.tiaLineActive : T.tiaLine;
   return (
-    <div style={{
-      width: vertical ? 3 : size,
-      height: vertical ? size : 3,
-      backgroundColor: color,
-      margin: vertical ? "0 4px" : "0",
-      transition: "background-color 0.1s"
-    }} />
+    <div style={{ height: 30, display: "flex", alignItems: "center" }}>
+      <div style={{ width: size, height: 3, backgroundColor: color, transition: "background-color 0.1s" }} />
+    </div>
   );
 }
 
@@ -17,17 +38,21 @@ export function TiaContact({ neg, stateObj }) {
   const active = stateObj?.flowIn && stateObj?.state;
   const color = active ? T.tiaLineActive : T.tiaLine;
   const hasFlow = stateObj?.flowIn;
+  const sparking = useSpark(active);
 
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <TiaLine active={hasFlow} size={8} />
-      <svg width="24" height="30" viewBox="0 0 24 30" style={{ overflow: 'visible' }}>
-        <line x1="0" y1="15" x2="8" y2="15" stroke={hasFlow ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
-        <line x1="16" y1="15" x2="24" y2="15" stroke={active ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
-        <line x1="8" y1="5" x2="8" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
-        <line x1="16" y1="5" x2="16" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
-        {neg && <line x1="6" y1="26" x2="18" y2="4" stroke={color} strokeWidth="3" strokeLinecap="square" />}
-      </svg>
+      <div style={{ position: "relative" }}>
+        {sparking && <span className="dw-spark" />}
+        <svg width="24" height="30" viewBox="0 0 24 30" style={{ overflow: 'visible' }}>
+          <line x1="0" y1="15" x2="8" y2="15" stroke={hasFlow ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
+          <line x1="16" y1="15" x2="24" y2="15" stroke={active ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
+          <line x1="8" y1="5" x2="8" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
+          <line x1="16" y1="5" x2="16" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
+          {neg && <line x1="6" y1="26" x2="18" y2="4" stroke={color} strokeWidth="3" strokeLinecap="square" />}
+        </svg>
+      </div>
       <TiaLine active={active} size={8} />
     </div>
   );
@@ -35,15 +60,19 @@ export function TiaContact({ neg, stateObj }) {
 
 export function TiaCoil({ active, flowIn }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(active && flowIn);
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <TiaLine active={flowIn} size={12} />
-      <svg width="28" height="30" viewBox="0 0 28 30">
-        <line x1="0" y1="15" x2="6" y2="15" stroke={flowIn ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
-        <line x1="22" y1="15" x2="28" y2="15" stroke={color} strokeWidth="3" strokeLinecap="square" />
-        <path d="M 10 5 A 10 10 0 0 0 10 25" fill="none" stroke={color} strokeWidth="3" />
-        <path d="M 18 5 A 10 10 0 0 1 18 25" fill="none" stroke={color} strokeWidth="3" />
-      </svg>
+      <div style={{ position: "relative" }}>
+        {sparking && <span className="dw-spark" />}
+        <svg width="28" height="30" viewBox="0 0 28 30">
+          <line x1="0" y1="15" x2="6" y2="15" stroke={flowIn ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
+          <line x1="22" y1="15" x2="28" y2="15" stroke={color} strokeWidth="3" strokeLinecap="square" />
+          <path d="M 10 5 A 10 10 0 0 0 10 25" fill="none" stroke={color} strokeWidth="3" />
+          <path d="M 18 5 A 10 10 0 0 1 18 25" fill="none" stroke={color} strokeWidth="3" />
+        </svg>
+      </div>
     </div>
   );
 }
@@ -70,7 +99,11 @@ export function TiaSetReset({ active, flowIn, type }) {
 export function TiaTonBox({ active, flowIn, preset, elapsed }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
   return (
-    <div style={{ display: "flex", alignItems: "center" }}>
+    // flex-start (no "center"): el TON es una caja de 50px, más alta que
+    // el TiaLine de entrada (30px) — sin esto, bajo el nuevo convenio de
+    // alineado arriba de toda la escalera, el conector de entrada
+    // quedaría descolgado 10px por debajo de donde entra la línea real.
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
       <TiaLine active={flowIn} size={8} />
       <div style={{
         border: `3px solid ${color}`,

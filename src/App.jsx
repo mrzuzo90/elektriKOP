@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { T, INPUT_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddresses, collectOutputConflicts } from "./utils/plcIO";
@@ -25,9 +25,12 @@ export default function PlcEmulator() {
   const [showProcess, setShowProcess] = useState(true);
   const [showSymbols, setShowSymbols] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+  const [booting, setBooting] = useState(true);
 
-  const toggleInput = (addr) => setInputs((prev) => ({ ...prev, [addr]: !prev[addr] }));
-  const setInputMomentary = (addr, val) => setInputs((prev) => ({ ...prev, [addr]: val }));
+  useEffect(() => {
+    const id = setTimeout(() => setBooting(false), 1100);
+    return () => clearTimeout(id);
+  }, []);
 
   const project = useProject();
   const sim = useSimulation({
@@ -37,6 +40,15 @@ export default function PlcEmulator() {
     wiringMap: project.wiringMap,
     soundOn,
   });
+
+  const toggleInput = (addr) => {
+    sim.playClickSound();
+    setInputs((prev) => ({ ...prev, [addr]: !prev[addr] }));
+  };
+  const setInputMomentary = (addr, val) => {
+    if (val) sim.playClickSound();
+    setInputs((prev) => ({ ...prev, [addr]: val }));
+  };
 
   const resetAll = () => {
     setInputs(zeroInputs());
@@ -61,6 +73,7 @@ export default function PlcEmulator() {
     <>
       <style>{fontStyles}</style>
       <div className="dw-crt-overlay" />
+      {booting && <div className="dw-crt-boot" />}
       <div style={{ display: "flex", height: "100vh", backgroundColor: T.dwDark, fontFamily: T.mono, overflow: "hidden" }}>
 
         {/* Left Sidebar: PLC & HMI */}
@@ -70,7 +83,7 @@ export default function PlcEmulator() {
             <input
               value={project.projectName}
               onChange={(e) => project.setProjectName(e.target.value)}
-              className="dw-edit-field"
+              className="dw-edit-field dw-neon-text"
               style={{
                 width: "100%",
                 textAlign: "center",
@@ -107,11 +120,14 @@ export default function PlcEmulator() {
             )}
           </div>
 
-          <SiemensPLC inputs={effectiveInputs} outputs={sim.outputs} running={sim.running} error={false} />
+          <SiemensPLC inputs={effectiveInputs} outputs={sim.outputs} running={sim.running} error={false} scanCount={sim.scanCount} />
           <HmiPanel inputs={inputs} onToggle={toggleInput} onPulse={setInputMomentary} deviceMap={project.deviceMap} running={sim.running} timers={sim.timerDisplay} scanCount={sim.scanCount} />
 
           <div style={{ display: "flex", gap: 12, marginTop: 30, width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
-             <PixelBtn active={sim.running} onClick={() => sim.setRunning(!sim.running)}>{sim.running ? '⏸ STOP' : '▶ RUN'}</PixelBtn>
+             <PixelBtn active={sim.running} onClick={() => {
+               if (sim.running) sim.playStopSound(); else sim.playRunSound();
+               sim.setRunning(!sim.running);
+             }}>{sim.running ? '⏸ STOP' : '▶ RUN'}</PixelBtn>
              <PixelBtn color="red" onClick={resetAll}>⟲ RESET</PixelBtn>
              <PixelBtn small color="dwGrey" onClick={sim.stepOnce} title="Ejecuta un único ciclo de scan y para">⏭ 1 CICLO</PixelBtn>
              <PixelBtn small color="dwGrey" active={!soundOn} onClick={() => setSoundOn((v) => !v)} title="Silenciar/activar el pitido de alarma">

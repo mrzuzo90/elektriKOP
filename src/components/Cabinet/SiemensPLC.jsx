@@ -1,6 +1,6 @@
 import { T, INPUT_ADDR, OUTPUT_ADDR } from "../../utils/constants";
 
-export default function SiemensPLC({ inputs, outputs, running, error }) {
+export default function SiemensPLC({ inputs, outputs, running, error, scanCount }) {
   const ledSize = 10;
 
   const renderLedRow = (addrs, states, label) => (
@@ -55,6 +55,15 @@ export default function SiemensPLC({ inputs, outputs, running, error }) {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: error ? T.red : T.sLedOff, border: '1px solid #000' }} />
             <span style={{ fontSize: 10, color: "#FFF" }}>ERROR</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: 4,
+              backgroundColor: running && (scanCount ?? 0) % 2 === 0 ? T.sLedGreen : T.sLedOff,
+              boxShadow: running && (scanCount ?? 0) % 2 === 0 ? `0 0 4px ${T.sLedGreen}` : 'none',
+              border: '1px solid #000',
+            }} />
+            <span style={{ fontSize: 10, color: "#FFF" }}>WD</span>
           </div>
         </div>
 
