@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { OUTPUT_ADDR, SCAN_MS } from "../utils/constants";
-import { evalSeries } from "../utils/evalNode";
 import { applyWiring } from "../utils/plcIO";
+import { computeScanTick } from "../utils/scanCycle";
 
 function zeroOutputs() {
   return Object.fromEntries(OUTPUT_ADDR.map((a) => [a, false]));
@@ -76,30 +76,9 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
 
   const runScanTick = () => {
     const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current };
-    const nextTimerDisplay = {};
+    const { outputs: nextOutputs, timers: nextTimerDisplay } = computeScanTick(rungsRef.current, mem, timersRef.current);
 
-    rungsRef.current.forEach((rung) => {
-      const combined = evalSeries(rung.logic, mem);
-      let outVal;
-      if (rung.outType === "coil") {
-        outVal = combined;
-        mem[rung.outAddr] = outVal;
-      } else if (rung.outType === "set") {
-        if (combined) mem[rung.outAddr] = true;
-      } else if (rung.outType === "reset") {
-        if (combined) mem[rung.outAddr] = false;
-      } else {
-        const prevElapsed = timersRef.current[rung.id] || 0;
-        let elapsed = combined ? prevElapsed + SCAN_MS / 1000 : 0;
-        if (elapsed > rung.preset) elapsed = rung.preset;
-        timersRef.current[rung.id] = elapsed;
-        nextTimerDisplay[rung.id] = elapsed;
-        outVal = elapsed >= rung.preset;
-        mem[rung.outAddr] = outVal;
-      }
-    });
-
-    const nextOutputs = Object.fromEntries(OUTPUT_ADDR.map((a) => [a, !!mem[a]]));
+    timersRef.current = nextTimerDisplay;
     outputsRef.current = nextOutputs;
     setOutputs(nextOutputs);
     setTimerDisplay(nextTimerDisplay);
