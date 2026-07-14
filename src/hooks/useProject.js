@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { newRung, bumpUidPastImportedRungs } from "../utils/ladderTree";
+import { bumpUidPastImportedBlocks } from "../utils/ladderTree";
+import {
+  newBlock,
+  addBlock as addBlockPure,
+  renameBlock as renameBlockPure,
+  removeBlock as removeBlockPure,
+  setBlockRungs as setBlockRungsPure,
+  addParam as addParamPure,
+  renameParam as renameParamPure,
+  removeParam as removeParamPure,
+} from "../utils/blocks";
+import { CURRENT_VERSION, migrateProjectData } from "../utils/projectFormat";
 
 const STORAGE_KEY = "elektrikop.autosave.v1";
 const HISTORY_LIMIT = 50;
@@ -9,7 +20,7 @@ const AUTOSAVE_DEBOUNCE_MS = 800;
 function initialProject() {
   return {
     projectName: "Proyecto ELEE0109",
-    rungs: [newRung(0)],
+    blocks: [newBlock("main")],
     deviceMap: {},
     wiringMap: {},
     symbols: {},
@@ -20,14 +31,14 @@ function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.rungs) || data.rungs.length === 0) return null;
+    const migrated = migrateProjectData(JSON.parse(raw));
+    if (!migrated) return null;
     return {
-      projectName: data.projectName || "Proyecto ELEE0109",
-      rungs: data.rungs,
-      deviceMap: data.deviceMap || {},
-      wiringMap: data.wiringMap || {},
-      symbols: data.symbols || {},
+      projectName: migrated.projectName || "Proyecto ELEE0109",
+      blocks: migrated.blocks,
+      deviceMap: migrated.deviceMap || {},
+      wiringMap: migrated.wiringMap || {},
+      symbols: migrated.symbols || {},
     };
   } catch {
     return null;
@@ -44,7 +55,7 @@ export function useProject() {
   const loadedOnceRef = useRef(undefined);
   if (loadedOnceRef.current === undefined) {
     loadedOnceRef.current = loadFromStorage();
-    if (loadedOnceRef.current) bumpUidPastImportedRungs(loadedOnceRef.current.rungs);
+    if (loadedOnceRef.current) bumpUidPastImportedBlocks(loadedOnceRef.current.blocks);
   }
 
   const [project, setProjectState] = useState(() => loadedOnceRef.current || initialProject());
@@ -141,13 +152,23 @@ export function useProject() {
   }, [project]);
 
   const setProjectName = (name) => applyChange({ projectName: name });
-  const setRungs = (rungs) => applyChange({ rungs });
+  // Passthrough temporal sobre el bloque "main" — se retira en sub-fase B,
+  // cuando App.jsx pasa a usar blocks/setBlockRungs directamente.
+  const setRungs = (rungs) => applyChange({ blocks: setBlockRungsPure(projectRef.current.blocks, "main", rungs) });
   const setDeviceType = (addr, type) => applyChange({ deviceMap: { ...projectRef.current.deviceMap, [addr]: type } });
   const setWiringFor = (addr, wiring) => applyChange({ wiringMap: { ...projectRef.current.wiringMap, [addr]: wiring } });
   const setSymbolFor = (addr, name) => applyChange({ symbols: { ...projectRef.current.symbols, [addr]: name } });
 
+  const addBlock = () => applyChange({ blocks: addBlockPure(projectRef.current.blocks) });
+  const renameBlock = (blockId, name) => applyChange({ blocks: renameBlockPure(projectRef.current.blocks, blockId, name) });
+  const removeBlock = (blockId) => applyChange({ blocks: removeBlockPure(projectRef.current.blocks, blockId) });
+  const setBlockRungs = (blockId, rungs) => applyChange({ blocks: setBlockRungsPure(projectRef.current.blocks, blockId, rungs) });
+  const addParam = (blockId, direction, name) => applyChange({ blocks: addParamPure(projectRef.current.blocks, blockId, direction, name) });
+  const renameParam = (blockId, direction, paramId, name) => applyChange({ blocks: renameParamPure(projectRef.current.blocks, blockId, direction, paramId, name) });
+  const removeParam = (blockId, direction, paramId) => applyChange({ blocks: removeParamPure(projectRef.current.blocks, blockId, direction, paramId) });
+
   const exportProject = () => {
-    const data = { version: 1, ...project };
+    const data = { version: CURRENT_VERSION, ...project };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -170,7 +191,7 @@ export function useProject() {
     setFuture([]);
     setProjectState((prev) => ({
       projectName: prev.projectName,
-      rungs: [newRung(0)],
+      blocks: [newBlock("main")],
       deviceMap: {},
       wiringMap: {},
       symbols: {},
@@ -183,11 +204,11 @@ export function useProject() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const data = JSON.parse(reader.result);
-        if (!data || !Array.isArray(data.rungs) || data.rungs.length === 0) {
-          throw new Error("El archivo no tiene el formato esperado (falta 'rungs').");
+        const migrated = migrateProjectData(JSON.parse(reader.result));
+        if (!migrated) {
+          throw new Error("El archivo no tiene el formato esperado (falta 'rungs' o 'blocks').");
         }
-        bumpUidPastImportedRungs(data.rungs);
+        bumpUidPastImportedBlocks(migrated.blocks);
         // Importar es como abrir un documento nuevo: no debe poder
         // deshacerse hacia el proyecto que había antes.
         clearTimeout(debounceRef.current);
@@ -195,11 +216,11 @@ export function useProject() {
         setPast([]);
         setFuture([]);
         setProjectState({
-          projectName: data.projectName || "Proyecto importado",
-          rungs: data.rungs,
-          deviceMap: data.deviceMap || {},
-          wiringMap: data.wiringMap || {},
-          symbols: data.symbols || {},
+          projectName: migrated.projectName || "Proyecto importado",
+          blocks: migrated.blocks,
+          deviceMap: migrated.deviceMap || {},
+          wiringMap: migrated.wiringMap || {},
+          symbols: migrated.symbols || {},
         });
         setImportError("");
         setRestoredFromAutosave(false);
@@ -214,7 +235,10 @@ export function useProject() {
 
   return {
     projectName: project.projectName, setProjectName,
-    rungs: project.rungs, setRungs,
+    rungs: project.blocks.find((b) => b.id === "main")?.rungs, setRungs,
+    blocks: project.blocks,
+    addBlock, renameBlock, removeBlock, setBlockRungs,
+    addParam, renameParam, removeParam,
     deviceMap: project.deviceMap, setDeviceType,
     wiringMap: project.wiringMap, setWiringFor,
     symbols: project.symbols, setSymbolFor,

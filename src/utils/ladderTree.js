@@ -1,5 +1,7 @@
 let _uid = 0;
 export const genId = () => `n${_uid++}`;
+export const genBlockId = () => `b${_uid++}`;
+export const genParamId = () => `p${_uid++}`;
 
 export function newContactNode() {
   return { kind: "contact", id: genId(), addr: "I0.0", neg: false, edge: null };
@@ -162,14 +164,25 @@ function collectAllNodeIds(nodes, arr) {
     }
   });
 }
-export function bumpUidPastImportedRungs(rungs) {
+// Igual que bumpUidPastImportedRungs, pero recorriendo los 3 namespaces de
+// id que ahora comparten el mismo contador (_uid): nodos de rung ("n"),
+// bloques ("b") y parámetros de interfaz ("p"). El id "main" del bloque
+// principal no matchea ninguno de los 3 patrones y se ignora sin más.
+export function bumpUidPastImportedBlocks(blocks) {
   let maxNum = -1;
-  rungs.forEach((r) => {
-    const ids = [];
-    collectAllNodeIds(r.logic, ids);
-    ids.forEach((id) => {
-      const m = /^n(\d+)$/.exec(id);
-      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  const bump = (id, prefix) => {
+    const m = new RegExp(`^${prefix}(\\d+)$`).exec(id);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  };
+  blocks.forEach((b) => {
+    bump(b.id, "b");
+    ["in", "out"].forEach((dir) => {
+      (b.interface?.[dir] || []).forEach((p) => bump(p.id, "p"));
+    });
+    b.rungs.forEach((r) => {
+      const ids = [];
+      collectAllNodeIds(r.logic, ids);
+      ids.forEach((id) => bump(id, "n"));
     });
   });
   if (maxNum >= _uid) _uid = maxNum + 1;
