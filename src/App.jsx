@@ -17,6 +17,20 @@ function zeroInputs() {
   return Object.fromEntries(INPUT_ADDR.map((a) => [a, false]));
 }
 
+// timerDisplay ahora indexa por ruta de llamada completa ("main:7" o
+// "main:2>fc1:3", ver scanCycle.js), no por rung.id a secas — para pintar el
+// segmento de un bloque cualquiera hay que buscar la última clave (la
+// llamada más reciente este tick) cuyo tramo final sea justo
+// "blockId:rungId", igual que hace clearTimer en useSimulation.js.
+function timerValueFor(timerDisplay, blockId, rungId) {
+  const suffix = `${blockId}:${rungId}`;
+  let found;
+  Object.keys(timerDisplay).forEach((key) => {
+    if (key === suffix || key.endsWith(`>${suffix}`)) found = timerDisplay[key];
+  });
+  return found;
+}
+
 // ---------------------------------------------------------------------------
 // App Principal
 // ---------------------------------------------------------------------------
@@ -46,13 +60,11 @@ export default function PlcEmulator() {
   const activeBlock = project.blocks.find((b) => b.id === activeBlockId) || mainBlock;
   const isMainActive = activeBlock.id === "main";
 
-  // El motor de scan todavía solo ejecuta Main (el motor recursivo que
-  // también ejecuta los FC llega en una fase posterior) — así que la
-  // simulación sigue atada a mainBlock.rungs pase lo que pase en la pestaña
-  // activa, y los FC son "de momento" editables pero no llamables.
+  // El motor de scan recorre Main y, desde ahí, cualquier llamada a FC —
+  // por eso recibe todos los bloques, no solo el que se está editando.
   const sim = useSimulation({
     inputs,
-    rungs: mainBlock.rungs,
+    blocks: project.blocks,
     deviceMap: project.deviceMap,
     wiringMap: project.wiringMap,
     soundOn,
@@ -233,14 +245,15 @@ export default function PlcEmulator() {
               </div>
             )}
             {activeBlock.rungs.map((rung, idx) => {
-              // Solo Main se ejecuta de verdad hoy — al editar un FC se
-              // pintan sus contactos con la memoria física (sin sim.outputs,
-              // que pertenecen únicamente al ciclo de scan de Main) y sin
-              // estado de salida/temporizador, para no mostrar valores que
-              // en realidad pertenecen a un rung distinto de Main con el
-              // mismo id numérico.
-              const mem = isMainActive ? { ...effectiveInputs, ...sim.outputs } : effectiveInputs;
-              const states = computeStates(rung.logic, mem, isMainActive ? sim.prevMem : {});
+              // El motor recorre todos los bloques, así que cualquier
+              // bloque que se esté editando refleja simulación real — para
+              // un FC, sus #param se resuelven con el último marco
+              // (lastCallFrames) con el que se ejecutó ese ciclo (decisión
+              // ya confirmada: "último marco ejecutado", no multi-instancia).
+              const frame = sim.lastCallFrames[activeBlock.id] || {};
+              const mem = { ...effectiveInputs, ...sim.outputs, ...frame };
+              const states = computeStates(rung.logic, mem, sim.prevMem);
+              const rawTimer = timerValueFor(sim.timerDisplay, activeBlock.id, rung.id);
               return (
                 <TiaSegment
                   key={rung.id}
@@ -254,19 +267,18 @@ export default function PlcEmulator() {
                   onChange={(next) => project.setBlockRungs(activeBlock.id, activeBlock.rungs.map((r, i) => (i === idx ? next : r)))}
                   onDelete={() => {
                     const removedId = activeBlock.rungs[idx].id;
-                    if (isMainActive) sim.clearTimer(removedId);
+                    sim.clearTimer(activeBlock.id, removedId);
                     project.setBlockRungs(activeBlock.id, activeBlock.rungs.filter((_, i) => i !== idx));
                   }}
                   evalResult={{
                     states,
-                    outputState: isMainActive ? sim.outputs[rung.outAddr] : undefined,
-                    timerElapsed: isMainActive
-                      ? rung.outType === "ton" || rung.outType === "tof"
-                        ? sim.timerDisplay[rung.id] ?? 0
+                    outputState: rung.outAddr?.startsWith("#") ? frame[rung.outAddr] : sim.outputs[rung.outAddr],
+                    timerElapsed:
+                      rung.outType === "ton" || rung.outType === "tof"
+                        ? rawTimer ?? 0
                         : rung.outType === "tp"
-                          ? sim.timerDisplay[rung.id]?.elapsed ?? 0
-                          : undefined
-                      : undefined,
+                          ? rawTimer?.elapsed ?? 0
+                          : undefined,
                   }}
                 />
               );
@@ -311,13 +323,12 @@ export default function PlcEmulator() {
         restoredFromAutosave={project.restoredFromAutosave}
         onDismissRestoredNotice={project.dismissRestoredNotice}
         onClear={clearAll}
-        rungs={mainBlock.rungs}
+        blocks={project.blocks}
         wiringMap={project.wiringMap}
         onChallengeResultChange={setChallengeBadge}
         usedAddresses={collectUsedAddressesAcrossBlocks(project.blocks)}
         symbols={project.symbols}
         onChangeSymbol={project.setSymbolFor}
-        blocks={project.blocks}
         onAddBlock={project.addBlock}
         onRenameBlock={project.renameBlock}
         onRemoveBlock={project.removeBlock}

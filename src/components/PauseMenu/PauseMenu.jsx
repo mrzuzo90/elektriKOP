@@ -39,7 +39,6 @@ export default function PauseMenu({
   restoredFromAutosave,
   onDismissRestoredNotice,
   onClear,
-  rungs,
   wiringMap,
   onChallengeResultChange,
   usedAddresses,
@@ -149,7 +148,7 @@ export default function PauseMenu({
           </Section>
 
           <Section icon="🎯" title="Modo Desafío">
-            <ChallengePanel rungs={rungs} wiringMap={wiringMap} onResultChange={onChallengeResultChange} />
+            <ChallengePanel blocks={blocks} wiringMap={wiringMap} onResultChange={onChallengeResultChange} />
           </Section>
         </div>
       </div>
