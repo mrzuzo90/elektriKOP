@@ -13,7 +13,9 @@ export function collectUsedAddresses(rungs) {
   const set = new Set();
   rungs.forEach((rung) => {
     collectContactAddrs(rung.logic, set);
-    set.add(rung.outAddr);
+    // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
+    // — no es una dirección realmente escrita, no debe marcarse "en uso".
+    if (rung.outType !== "call") set.add(rung.outAddr);
   });
   return [...INPUT_ADDR, ...OUTPUT_ADDR].filter((a) => set.has(a));
 }

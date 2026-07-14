@@ -249,6 +249,8 @@ export default function PlcEmulator() {
                   symbols={symbolsForEditor}
                   addrOptions={contactAddrOptions}
                   outputAddrOptions={outputAddrOptions}
+                  blocks={project.blocks}
+                  currentBlockId={activeBlock.id}
                   onChange={(next) => project.setBlockRungs(activeBlock.id, activeBlock.rungs.map((r, i) => (i === idx ? next : r)))}
                   onDelete={() => {
                     const removedId = activeBlock.rungs[idx].id;
