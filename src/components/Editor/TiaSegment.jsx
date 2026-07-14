@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { T, OUTPUT_ADDR } from "../../utils/constants";
+import { T } from "../../utils/constants";
 import {
   newContactNode,
   newParallelNode,
@@ -25,7 +25,7 @@ const OUT_TYPES = [
   { value: "tp", label: "Temp", sub: "TP" },
 ];
 
-export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols }) {
+export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols, addrOptions, outputAddrOptions }) {
   const actions = {
     totalContacts: () => countContacts(rung.logic),
     addContact: (containerId) => onChange({ ...rung, logic: mapContainer(rung.logic, containerId, (nodes) => [...nodes, newContactNode()]) }),
@@ -139,7 +139,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
         {/* Left Power Rail */}
         <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginRight: 4 }} />
 
-        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actions} depth={0} flowIn={true} symbols={symbols} dnd={dnd} />
+        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actions} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
 
         {/* Main Line + Output Device, agrupados en una única zona de
             aterrizaje: soltar aquí un tipo de salida arrastrado desde la
@@ -185,7 +185,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
             ) : (
                <TiaCoil active={evalResult?.outputState} flowIn={flowToOut} />
             )}
-            <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={OUTPUT_ADDR} isOut={true} symbols={symbols} />
+            <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={outputAddrOptions} isOut={true} symbols={symbols} />
           </div>
         </div>
 

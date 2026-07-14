@@ -152,9 +152,6 @@ export function useProject() {
   }, [project]);
 
   const setProjectName = (name) => applyChange({ projectName: name });
-  // Passthrough temporal sobre el bloque "main" — se retira en sub-fase B,
-  // cuando App.jsx pasa a usar blocks/setBlockRungs directamente.
-  const setRungs = (rungs) => applyChange({ blocks: setBlockRungsPure(projectRef.current.blocks, "main", rungs) });
   const setDeviceType = (addr, type) => applyChange({ deviceMap: { ...projectRef.current.deviceMap, [addr]: type } });
   const setWiringFor = (addr, wiring) => applyChange({ wiringMap: { ...projectRef.current.wiringMap, [addr]: wiring } });
   const setSymbolFor = (addr, name) => applyChange({ symbols: { ...projectRef.current.symbols, [addr]: name } });
@@ -235,7 +232,6 @@ export function useProject() {
 
   return {
     projectName: project.projectName, setProjectName,
-    rungs: project.blocks.find((b) => b.id === "main")?.rungs, setRungs,
     blocks: project.blocks,
     addBlock, renameBlock, removeBlock, setBlockRungs,
     addParam, renameParam, removeParam,

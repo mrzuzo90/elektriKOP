@@ -4,6 +4,7 @@ import { pixelBorderStyle } from "../../styles/pixelStyles";
 import PixelBtn from "../shared/PixelBtn";
 import ChallengePanel from "../Challenge/ChallengePanel";
 import SymbolsPanel from "../SymbolsPanel";
+import BlocksPanel from "./BlocksPanel";
 
 // Una sección con el mismo lenguaje visual de card que ya usan
 // SymbolsPanel/ChallengePanel (header gris + cuerpo blanco tipo TIA
@@ -44,6 +45,13 @@ export default function PauseMenu({
   usedAddresses,
   symbols,
   onChangeSymbol,
+  blocks,
+  onAddBlock,
+  onRenameBlock,
+  onRemoveBlock,
+  onAddParam,
+  onRenameParam,
+  onRemoveParam,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -126,6 +134,18 @@ export default function PauseMenu({
 
           <Section icon="🏷️" title="Tabla de variables">
             <SymbolsPanel usedAddresses={usedAddresses} symbols={symbols} onChangeSymbol={onChangeSymbol} />
+          </Section>
+
+          <Section icon="🧩" title="Bloques (FC)">
+            <BlocksPanel
+              blocks={blocks}
+              onAddBlock={onAddBlock}
+              onRenameBlock={onRenameBlock}
+              onRemoveBlock={onRemoveBlock}
+              onAddParam={onAddParam}
+              onRenameParam={onRenameParam}
+              onRemoveParam={onRemoveParam}
+            />
           </Section>
 
           <Section icon="🎯" title="Modo Desafío">

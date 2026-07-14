@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { T, INPUT_ADDR, OUTPUT_ADDR } from "../../utils/constants";
+import { T } from "../../utils/constants";
 import { TiaLine, TiaContact } from "./TiaGraphics";
 import { TiaSelect, TiaMiniBtn } from "./TiaControls";
 import { BRANCH_H, BRANCH_GAP, STEP } from "./parallelGeometry";
@@ -100,7 +100,7 @@ function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
   );
 }
 
-export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols, dnd }) {
+export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols, addrOptions, dnd }) {
   let currentFlow = flowIn;
 
   return (
@@ -129,7 +129,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                   style={{ position: "absolute", top: 8, left: -11, fontSize: 11, lineHeight: 1, color: "#AAA", userSelect: "none" }}
                   title="Arrastrar para mover este contacto"
                 >⠿</span>
-                <TiaSelect value={n.addr} onChange={(v) => actions.updateContact(n.id, { addr: v })} options={[...INPUT_ADDR, ...OUTPUT_ADDR]} symbols={symbols} />
+                <TiaSelect value={n.addr} onChange={(v) => actions.updateContact(n.id, { addr: v })} options={addrOptions} symbols={symbols} />
                 <div
                   onClick={() => actions.updateContact(n.id, cycleContactMode(n))}
                   style={{ cursor: "pointer" }} title={contactModeTitle(n)}
@@ -147,7 +147,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                 )}
               </div>
             ) : (
-              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} dnd={dnd} />
+              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
             )}
           </React.Fragment>
         );
@@ -158,7 +158,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
   );
 }
 
-export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols, dnd }) {
+export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols, addrOptions, dnd }) {
   const branches = node.branches;
   // Recorrido vertical de los rieles: de la rama 0 (arriba) a la última.
   const railHeight = (branches.length - 1) * STEP;
@@ -182,7 +182,7 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
         {branches.map((br, i) => (
           <div key={br.id} style={{ display: "flex", alignItems: "flex-start", position: "relative", marginTop: i === 0 ? 0 : BRANCH_GAP }}>
             <TiaLine active={flowIn} size={12} />
-            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} dnd={dnd} />
+            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
             <TiaLine active={states[br.id]?.flowOut || false} size={12} />
             {branches.length > 2 && (
               <button onClick={() => actions.removeBranch(node.id, br.id)} style={{ alignSelf: "center", color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>✕</button>
