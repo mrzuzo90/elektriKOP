@@ -96,7 +96,7 @@ export default function PauseMenu({
               onChange={(e) => onRenameProject(e.target.value)}
               style={{
                 width: "100%", boxSizing: "border-box", fontFamily: T.mono, fontSize: 14, fontWeight: "bold",
-                color: T.tiaText, border: `1px solid ${T.dwGrey}`, padding: "6px 8px", marginBottom: 12,
+                color: "#FFFFFF", backgroundColor: T.dwDark, border: `1px solid ${T.dwGrey}`, padding: "6px 8px", marginBottom: 12,
               }}
             />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
