@@ -57,11 +57,17 @@ export function TiaContact({ neg, edge, stateObj }) {
           <line x1="8" y1="5" x2="8" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
           <line x1="16" y1="5" x2="16" y2="25" stroke={color} strokeWidth="3" strokeLinecap="square" />
           {neg && !edge && <line x1="6" y1="26" x2="18" y2="4" stroke={color} strokeWidth="3" strokeLinecap="square" />}
-          {/* Flanco P/N: triángulo justo encima de las barras, apuntando
-              hacia dentro (P, flanco de subida) o hacia fuera (N, bajada) —
-              convención habitual de TIA Portal para estas instrucciones. */}
-          {edge === "P" && <polygon points="12,0 8,5 16,5" fill={color} />}
-          {edge === "N" && <polygon points="12,5 8,0 16,0" fill={color} />}
+          {/* Flanco P/N: chapa amarilla con la letra, siempre con los
+              mismos colores fijos (no siguen active/hasFlow) para que se
+              distinga de un NA a simple vista sin depender del estado —
+              antes era un triángulo del mismo color que las barras y se
+              confundía con un contacto normal. */}
+          {edge && (
+            <g>
+              <rect x="4" y="0" width="16" height="9" fill={T.dwYellow} stroke={T.dwBlack} strokeWidth="1.5" rx="1" />
+              <text x="12" y="7.3" textAnchor="middle" fontSize="8" fontWeight="900" fill={T.dwBlack} fontFamily="Arial, sans-serif">{edge}</text>
+            </g>
+          )}
         </svg>
       </div>
       <TiaLine active={active} size={8} />
