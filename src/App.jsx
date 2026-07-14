@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { T, INPUT_ADDR, OUTPUT_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
-import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflicts } from "./utils/plcIO";
+import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
 import { newRung } from "./utils/ladderTree";
 import { fontStyles } from "./styles/pixelStyles";
 import PixelBtn from "./components/shared/PixelBtn";
@@ -127,6 +127,13 @@ export default function PlcEmulator() {
   const contactAddrOptions = [...INPUT_ADDR, ...OUTPUT_ADDR, ...localParams.map((p) => `#${p.id}`)];
   const outputAddrOptions = [...OUTPUT_ADDR, ...localOut.map((p) => `#${p.id}`)];
 
+  // Mismo orden que collectOutputConflictsAcrossBlocks (blocks.flatMap(b =>
+  // b.rungs)), con el nombre del bloque adjunto — así el aviso de "salida
+  // repetida" puede señalar en qué bloque vive cada rung en conflicto,
+  // necesario ahora que el aviso cubre todo el proyecto y no solo Main.
+  const flatRungsWithBlock = project.blocks.flatMap((b) => b.rungs.map((rung) => ({ rung, blockName: b.name })));
+  const outputConflicts = collectOutputConflictsAcrossBlocks(project.blocks);
+
   return (
     <>
       <style>{fontStyles}</style>
@@ -236,11 +243,11 @@ export default function PlcEmulator() {
           </div>
 
           <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
-            {collectOutputConflicts(activeBlock.rungs).length > 0 && (
+            {outputConflicts.length > 0 && (
               <div style={{ background: "#FFF3CD", border: "1px solid #FFB300", color: "#7A5200", padding: "8px 12px", marginBottom: 16, fontSize: 13 }}>
-                ⚠️ Direcciones de salida repetidas sin ser SET/RESET:{" "}
-                {collectOutputConflicts(activeBlock.rungs)
-                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => activeBlock.rungs[i].title).join(", ")})`)
+                ⚠️ Direcciones de salida repetidas sin ser SET/RESET (en todo el proyecto, no solo en este bloque):{" "}
+                {outputConflicts
+                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => `${flatRungsWithBlock[i].blockName}:${flatRungsWithBlock[i].rung.title}`).join(", ")})`)
                   .join(" · ")}
               </div>
             )}

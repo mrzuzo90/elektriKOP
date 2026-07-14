@@ -1,0 +1,77 @@
+{
+  "version": 2,
+  "projectName": "Ejercicio 4 - Dos cintas con arranque temporizado (FC)",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "CINTA_1",
+          "comment": "Llama al FC de arranque temporizado para la cinta 1.",
+          "logic": [
+            { "kind": "contact", "id": "n0", "addr": "I0.0", "neg": false }
+          ],
+          "outAddr": "Q0.0",
+          "outType": "call",
+          "preset": 2,
+          "callTarget": "fc1",
+          "paramWiring": { "pMarcha": "I0.1", "pMotor": "Q0.0" }
+        },
+        {
+          "id": 1,
+          "title": "CINTA_2",
+          "comment": "Llama al MISMO FC para la cinta 2 - cada llamada mantiene su propio tiempo.",
+          "logic": [
+            { "kind": "contact", "id": "n1", "addr": "I0.0", "neg": false }
+          ],
+          "outAddr": "Q0.1",
+          "outType": "call",
+          "preset": 2,
+          "callTarget": "fc1",
+          "paramWiring": { "pMarcha": "I0.2", "pMotor": "Q0.1" }
+        }
+      ],
+      "interface": { "in": [], "out": [] }
+    },
+    {
+      "id": "fc1",
+      "kind": "fc",
+      "name": "Arranque_Temporizado",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "T_ARRANQUE",
+          "comment": "Arranca el motor 3s despues de recibir Marcha.",
+          "logic": [
+            { "kind": "contact", "id": "n2", "addr": "#pMarcha", "neg": false }
+          ],
+          "outAddr": "#pMotor",
+          "outType": "ton",
+          "preset": 3
+        }
+      ],
+      "interface": {
+        "in": [{ "id": "pMarcha", "name": "Marcha" }],
+        "out": [{ "id": "pMotor", "name": "Motor" }]
+      }
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "interruptor",
+    "I0.1": "pulsador",
+    "I0.2": "pulsador",
+    "Q0.0": "cinta",
+    "Q0.1": "cinta"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Marcha_Sistema",
+    "I0.1": "Marcha_Cinta1",
+    "I0.2": "Marcha_Cinta2",
+    "Q0.0": "Motor_Cinta1",
+    "Q0.1": "Motor_Cinta2"
+  }
+}
