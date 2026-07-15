@@ -48,6 +48,31 @@ describe("computeScanTick — bobina directa", () => {
   });
 });
 
+describe("computeScanTick — marcas (M)", () => {
+  it("una marca se comporta como cualquier bit de memoria: se puede SET/leer como contacto, y el llamador debe encadenar el campo `marks` devuelto (igual que ya hace con `outputs`) para que persista entre ciclos", () => {
+    const blocks = mainBlocks([
+      contactRung("r1", "I0.0", "M0.0", "set"),
+      contactRung("r2", "M0.0", "Q0.0", "coil"),
+    ]);
+    const tick1 = computeScanTick(blocks, { "I0.0": true, "M0.0": false }, {});
+    expect(tick1.marks["M0.0"]).toBe(true);
+    expect(tick1.outputs["Q0.0"]).toBe(true);
+
+    // I0.0 ya se soltó, pero la marca (enclavada por SET) debe seguir activa
+    // — el llamador reconstruye mem con el `marks` del tick anterior, tal
+    // como hace useSimulation.js (mem = {...inputs, ...outputs, ...marks}).
+    const tick2 = computeScanTick(blocks, { "I0.0": false, "M0.0": tick1.marks["M0.0"] }, {});
+    expect(tick2.marks["M0.0"]).toBe(true);
+    expect(tick2.outputs["Q0.0"]).toBe(true);
+  });
+
+  it("una marca NO usada nunca aparece en `marks` como true (arranca a false)", () => {
+    const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "coil")]);
+    const { marks } = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(Object.values(marks).every((v) => v === false)).toBe(true);
+  });
+});
+
 describe("computeScanTick — SET / RESET", () => {
   it("SET enclava la salida a true y no la suelta cuando la condición deja de cumplirse", () => {
     const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "set")]);
@@ -404,5 +429,97 @@ describe("computeScanTick — instrucción 'Llamar a bloque'", () => {
 
     ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, timers, scanMem, "main", localParams));
     expect(outputs["Q0.5"]).toBe(false); // ya no es flanco, aunque I0.1 se mantenga a true
+  });
+});
+
+describe("computeScanTick — contadores CTU/CTD", () => {
+  it("CTU cuenta flancos de subida de CU hasta PV y se satura (no sigue subiendo)", () => {
+    const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "ctu", { preset: 3, resetAddr: "I0.1" })]);
+    let timers = {};
+
+    // 1er pulso: sube -> cuenta 1
+    ({ timers } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers));
+    expect(timers["main:r1"].count).toBe(1);
+
+    // se mantiene a true: NO debe seguir contando (solo cuenta en el flanco)
+    ({ timers } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers));
+    expect(timers["main:r1"].count).toBe(1);
+
+    // baja y vuelve a subir -> 2º pulso
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    let tick;
+    (tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers));
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(2);
+    expect(tick.outputs["Q0.0"]).toBe(false); // 2 < 3, todavía no alcanzado
+
+    // 3er pulso: alcanza PV, la salida se activa
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(3);
+    expect(tick.outputs["Q0.0"]).toBe(true);
+
+    // 4º pulso: se satura en 3, no sigue subiendo
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    expect(tick.timers["main:r1"].count).toBe(3);
+  });
+
+  it("el pin de Reset de un CTU pone CV a 0 y tiene prioridad sobre un pulso simultáneo", () => {
+    const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "ctu", { preset: 2, resetAddr: "I0.1" })]);
+    let timers = {};
+    ({ timers } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers));
+    expect(timers["main:r1"].count).toBe(1);
+
+    // Reset activo a la vez que un pulso de subida: Reset gana, cuenta a 0
+    const { timers: t2, outputs } = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    expect(t2["main:r1"].count).toBe(0);
+    expect(outputs["Q0.0"]).toBe(false);
+  });
+
+  it("CTD cuenta flancos de CD hacia abajo desde PV hasta 0 y se satura", () => {
+    const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "ctd", { preset: 2, resetAddr: "I0.1" })]);
+    let timers = {};
+
+    // Carga (LD) a PV=2
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers));
+    expect(timers["main:r1"].count).toBe(2);
+
+    // 1er pulso de cuenta atrás
+    let tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(1);
+    expect(tick.outputs["Q0.0"]).toBe(false); // 1 > 0, todavía no llega a cero
+
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(0);
+    expect(tick.outputs["Q0.0"]).toBe(true); // llegó a 0
+
+    // se satura en 0, no baja de ahí
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    expect(tick.timers["main:r1"].count).toBe(0);
+  });
+
+  it("un contador dentro de un FC llamado desde 2 sitios distintos mantiene cuentas independientes", () => {
+    const inParam = { id: "pIn", name: "Pulso" };
+    const fc1 = fcBlock("fc1", "FC1", { in: [inParam], out: [] }, [
+      { id: "c1", title: "c1", comment: "", logic: [{ kind: "contact", id: "c1-c", addr: "#pIn", neg: false }], outAddr: "Q0.0", outType: "ctu", preset: 5 },
+    ]);
+    const blocks = mainBlocks(
+      [
+        callRung("r1", "fc1", { [inParam.id]: "I0.1" }, { logic: [{ kind: "contact", id: "r1-en", addr: "I0.0", neg: false }] }),
+        callRung("r2", "fc1", { [inParam.id]: "I0.2" }, { logic: [{ kind: "contact", id: "r2-en", addr: "I0.0", neg: false }] }),
+      ],
+      [fc1]
+    );
+
+    // Solo el sitio r1 recibe un pulso (I0.1) — r2 (I0.2=false) no cuenta.
+    const { timers } = computeScanTick(blocks, { "I0.0": true, "I0.1": true, "I0.2": false }, {});
+    expect(timers["main:r1>fc1:c1"].count).toBe(1);
+    expect(timers["main:r2>fc1:c1"].count).toBe(0);
   });
 });

@@ -15,6 +15,7 @@ con ElektriKOP. Cada carpeta tiene:
 | 2 | [Semáforo con temporizadores](02-semaforo-temporizadores/enunciado.md) | ⭐⭐ | Temporizador TON, encadenado de temporizadores, marcas auxiliares en `Q` |
 | 3 | [Puerta automática con finales de carrera](03-puerta-automatica-finales-carrera/enunciado.md) | ⭐⭐⭐ | Interbloqueo cruzado, finales de carrera, cableado físico NA/NC real |
 | 4 | [Dos cintas transportadoras con arranque temporizado (bloque FC)](04-cintas-transportadoras-fc/enunciado.md) | ⭐⭐⭐ | Bloques FC, interfaz IN/OUT, instrucción Llamar, temporizadores independientes por sitio de llamada |
+| 5 | [Contador de piezas con marca interna](05-contador-piezas-marca/enunciado.md) | ⭐⭐ | Contador CTU, pin de Reset, marcas (M), interbloqueo por marca |
 
 ## Cómo usarlos
 
@@ -26,7 +27,7 @@ con ElektriKOP. Cada carpeta tiene:
 
 ## Progresión pensada
 
-Los cuatro ejercicios están diseñados para construirse uno sobre otro:
+Los cinco ejercicios están diseñados para construirse uno sobre otro:
 
 - El **Ejercicio 1** enseña el enclavamiento con un contacto NC *lógico*
   (dibujado en el segmento) sobre un pulsador cableado NA por defecto — la
@@ -43,6 +44,12 @@ Los cuatro ejercicios están diseñados para construirse uno sobre otro:
   lógica idéntica para dos máquinas iguales, la escribes una vez y la llamas
   dos veces, comprobando que cada llamada mantiene su propio temporizador
   interno de forma independiente.
+- El **Ejercicio 5** cierra el conjunto de instrucciones básicas con el
+  **contador CTU** y las **marcas (M)**: sustituye el apaño de usar una `Q`
+  libre como bandera interna (visto en el Ejercicio 2) por una marca de
+  verdad, y la usa para interbloquear un motor — el mismo patrón que
+  cualquier condición interna (fallo detectado, lote completo, etc.) usaría
+  en un programa real.
 
 ## ¿Tienes un ejercicio propio?
 

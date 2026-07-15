@@ -17,10 +17,10 @@ export function runChallenge(blocks, wiringMap, steps, mainBlockId = "main") {
   const tick = () => {
     const effectiveInputs = applyWiring(physicalInputs, wiringMap);
     const combinedMem = { ...effectiveInputs, ...mem };
-    const { outputs, timers: nextTimers, mem: nextScanMem, localParams: nextLocalParams } = computeScanTick(
+    const { outputs, marks, timers: nextTimers, mem: nextScanMem, localParams: nextLocalParams } = computeScanTick(
       blocks, combinedMem, timers, scanMem, mainBlockId, localParams
     );
-    mem = outputs;
+    mem = { ...outputs, ...marks };
     timers = nextTimers;
     scanMem = nextScanMem;
     localParams = nextLocalParams;

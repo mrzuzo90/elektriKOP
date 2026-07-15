@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "projectName": "Ejercicio 5 - Contador de piezas con marca interna",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "CONTAR_PIEZAS",
+          "comment": "Cuenta pulsos de Sensor_Pieza; a las 5 marca Lote_Completo.",
+          "logic": [
+            { "kind": "contact", "id": "n0", "addr": "I0.0", "neg": false }
+          ],
+          "outAddr": "M0.0",
+          "outType": "ctu",
+          "preset": 5,
+          "resetAddr": "I0.1"
+        },
+        {
+          "id": 1,
+          "title": "ALARMA_LOTE",
+          "comment": "La alarma sigue a la marca Lote_Completo.",
+          "logic": [
+            { "kind": "contact", "id": "n1", "addr": "M0.0", "neg": false }
+          ],
+          "outAddr": "Q0.0",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 2,
+          "title": "MOTOR_CINTA",
+          "comment": "El motor se detiene mientras el lote este completo (interbloqueo por marca).",
+          "logic": [
+            { "kind": "contact", "id": "n2", "addr": "M0.0", "neg": true }
+          ],
+          "outAddr": "Q0.1",
+          "outType": "coil",
+          "preset": 2
+        }
+      ],
+      "interface": { "in": [], "out": [] }
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "sensor",
+    "I0.1": "pulsador",
+    "Q0.0": "alarma",
+    "Q0.1": "cinta"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Sensor_Pieza",
+    "I0.1": "Reset_Contador",
+    "Q0.0": "Alarma_Lote_Completo",
+    "Q0.1": "Motor_Cinta",
+    "M0.0": "Lote_Completo"
+  }
+}

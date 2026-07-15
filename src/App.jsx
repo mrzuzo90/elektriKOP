@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { T, INPUT_ADDR, OUTPUT_ADDR, MAX_RUNGS } from "./utils/constants";
+import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
 import { newRung } from "./utils/ladderTree";
@@ -124,8 +124,8 @@ export default function PlcEmulator() {
     ...project.symbols,
     ...Object.fromEntries(localParams.map((p) => [`#${p.id}`, p.name])),
   };
-  const contactAddrOptions = [...INPUT_ADDR, ...OUTPUT_ADDR, ...localParams.map((p) => `#${p.id}`)];
-  const outputAddrOptions = [...OUTPUT_ADDR, ...localOut.map((p) => `#${p.id}`)];
+  const contactAddrOptions = [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...localParams.map((p) => `#${p.id}`)];
+  const outputAddrOptions = [...OUTPUT_ADDR, ...MARK_ADDR, ...localOut.map((p) => `#${p.id}`)];
 
   // Mismo orden que collectOutputConflictsAcrossBlocks (blocks.flatMap(b =>
   // b.rungs)), con el nombre del bloque adjunto — así el aviso de "salida
@@ -258,7 +258,7 @@ export default function PlcEmulator() {
               // (lastCallFrames) con el que se ejecutó ese ciclo (decisión
               // ya confirmada: "último marco ejecutado", no multi-instancia).
               const frame = sim.lastCallFrames[activeBlock.id] || {};
-              const mem = { ...effectiveInputs, ...sim.outputs, ...frame };
+              const mem = { ...effectiveInputs, ...sim.outputs, ...sim.marks, ...frame };
               const states = computeStates(rung.logic, mem, sim.prevMem);
               const rawTimer = timerValueFor(sim.timerDisplay, activeBlock.id, rung.id);
               return (
@@ -279,13 +279,14 @@ export default function PlcEmulator() {
                   }}
                   evalResult={{
                     states,
-                    outputState: rung.outAddr?.startsWith("#") ? frame[rung.outAddr] : sim.outputs[rung.outAddr],
+                    outputState: rung.outAddr?.startsWith("#") ? frame[rung.outAddr] : (sim.outputs[rung.outAddr] ?? sim.marks[rung.outAddr]),
                     timerElapsed:
                       rung.outType === "ton" || rung.outType === "tof"
                         ? rawTimer ?? 0
                         : rung.outType === "tp"
                           ? rawTimer?.elapsed ?? 0
                           : undefined,
+                    counterValue: rung.outType === "ctu" || rung.outType === "ctd" ? rawTimer?.count ?? 0 : undefined,
                   }}
                 />
               );
@@ -304,7 +305,7 @@ export default function PlcEmulator() {
             Desafío viven ahora en el menú de pausa (ver PauseMenu). */}
         <div style={{ width: 320, flexShrink: 0, backgroundColor: T.dwGrey, borderLeft: `4px solid ${T.dwBlack}`, padding: 20, overflowY: "auto" }}>
           <ProcessPanel
-            addresses={collectUsedAddressesAcrossBlocks(project.blocks)}
+            addresses={collectUsedAddressesAcrossBlocks(project.blocks).filter((a) => !a.startsWith("M"))}
             deviceMap={project.deviceMap}
             onChangeType={project.setDeviceType}
             wiringMap={project.wiringMap}
@@ -336,6 +337,8 @@ export default function PlcEmulator() {
         usedAddresses={collectUsedAddressesAcrossBlocks(project.blocks)}
         symbols={project.symbols}
         onChangeSymbol={project.setSymbolFor}
+        marks={sim.marks}
+        simRunning={sim.running}
         onAddBlock={project.addBlock}
         onRenameBlock={project.renameBlock}
         onRemoveBlock={project.removeBlock}

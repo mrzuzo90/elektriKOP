@@ -1,4 +1,4 @@
-import { INPUT_ADDR, OUTPUT_ADDR } from "./constants";
+import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR } from "./constants";
 
 // Direcciones I/Q realmente referenciadas en un segmento (contactos + su
 // propia salida), usado para no mostrar en "Proceso simulado" direcciones
@@ -16,8 +16,11 @@ export function collectUsedAddresses(rungs) {
     // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
     // — no es una dirección realmente escrita, no debe marcarse "en uso".
     if (rung.outType !== "call") set.add(rung.outAddr);
+    // El pin de Reset/Carga de un CTU/CTD también es una dirección real
+    // (se lee cada scan), aunque no forme parte de rung.logic.
+    if (rung.resetAddr) set.add(rung.resetAddr);
   });
-  return [...INPUT_ADDR, ...OUTPUT_ADDR].filter((a) => set.has(a));
+  return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR].filter((a) => set.has(a));
 }
 
 // Convierte el estado "físico" de cada entrada (¿está el pulsador pulsado?,
