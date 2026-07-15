@@ -8,10 +8,11 @@ function zeroOutputs() {
 }
 
 // Encapsula el ciclo de scan del PLC: lee entradas + salidas previas,
-// ejecuta los segmentos en orden y escribe las salidas resultantes. Se
-// dispara tanto desde el intervalo de RUN como desde el botón de PASO
-// (stepOnce) — misma lógica, distinto disparador.
-export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) {
+// ejecuta los segmentos en orden (recorriendo también las llamadas a FC) y
+// escribe las salidas resultantes. Se dispara tanto desde el intervalo de
+// RUN como desde el botón de PASO (stepOnce) — misma lógica, distinto
+// disparador.
+export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn }) {
   const [running, setRunning] = useState(false);
   const [outputs, setOutputs] = useState(zeroOutputs);
   const [timerDisplay, setTimerDisplay] = useState({});
@@ -20,11 +21,15 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
   // App.jsx para pintar los contactos de flanco (P/N), que necesitan
   // comparar el ciclo actual contra el anterior.
   const [prevMem, setPrevMem] = useState({});
+  // Último marco (valores de parámetros IN/OUT) con el que se ejecutó cada
+  // FC este ciclo, indexado por blockId — App.jsx lo usa para pintar el
+  // flujo dentro del FC que se está editando, aunque no sea Main.
+  const [lastCallFrames, setLastCallFrames] = useState({});
 
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
-  const rungsRef = useRef(rungs);
-  rungsRef.current = rungs;
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
   const deviceMapRef = useRef(deviceMap);
   deviceMapRef.current = deviceMap;
   const wiringMapRef = useRef(wiringMap);
@@ -38,6 +43,11 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
   // usan los contactos de flanco P/N de computeScanTick para comparar
   // ciclo contra ciclo (ver comentario en scanCycle.js).
   const scanMemRef = useRef({});
+  // Valores de los #param de cada sitio de llamada tal cual quedaron al
+  // terminar el último scan — necesarios para que un contacto de flanco P/N
+  // sobre un parámetro de un FC detecte una transición real entre ciclos
+  // (ver comentario en scanCycle.js sobre prevLocalParams).
+  const localParamsRef = useRef({});
   const audioCtxRef = useRef(null);
   const prevAlarmRef = useRef({});
 
@@ -98,14 +108,22 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
 
   const runScanTick = () => {
     const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current };
-    const { outputs: nextOutputs, timers: nextTimerDisplay, mem: nextMem } = computeScanTick(rungsRef.current, mem, timersRef.current, scanMemRef.current);
+    const {
+      outputs: nextOutputs,
+      timers: nextTimerDisplay,
+      mem: nextMem,
+      localParams: nextLocalParams,
+      lastFrameByBlock,
+    } = computeScanTick(blocksRef.current, mem, timersRef.current, scanMemRef.current, "main", localParamsRef.current);
 
     timersRef.current = nextTimerDisplay;
     outputsRef.current = nextOutputs;
     scanMemRef.current = nextMem;
+    localParamsRef.current = nextLocalParams;
     setOutputs(nextOutputs);
     setTimerDisplay(nextTimerDisplay);
     setPrevMem(nextMem);
+    setLastCallFrames(lastFrameByBlock);
     setScanCount((n) => n + 1);
     checkAlarms(nextOutputs);
   };
@@ -130,18 +148,26 @@ export function useSimulation({ inputs, rungs, deviceMap, wiringMap, soundOn }) 
     outputsRef.current = zeroOut;
     timersRef.current = {};
     scanMemRef.current = {};
+    localParamsRef.current = {};
     setTimerDisplay({});
     setPrevMem({});
+    setLastCallFrames({});
     setScanCount(0);
     prevAlarmRef.current = {};
   };
 
   // Al borrar un segmento hay que limpiar también su temporizador TON
   // acumulado, para que no quede memoria residual si más adelante se
-  // reutiliza el mismo id.
-  const clearTimer = (rungId) => {
-    delete timersRef.current[rungId];
+  // reutiliza el mismo id. Los timers ahora se namespacean por ruta de
+  // llamada completa ("main:7" o "main:2>fc1:3", ver scanCycle.js) — hay que
+  // borrar toda clave cuyo último tramo sea justo blockId:rungId, sin
+  // importar cuántos niveles de llamada la precedan.
+  const clearTimer = (blockId, rungId) => {
+    const suffix = `${blockId}:${rungId}`;
+    Object.keys(timersRef.current).forEach((key) => {
+      if (key === suffix || key.endsWith(`>${suffix}`)) delete timersRef.current[key];
+    });
   };
 
-  return { running, setRunning, outputs, timerDisplay, prevMem, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
+  return { running, setRunning, outputs, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
 }

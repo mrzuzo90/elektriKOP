@@ -2,24 +2,28 @@ import { computeScanTick } from "./scanCycle";
 import { applyWiring } from "./plcIO";
 
 // Simulador "headless" del Modo Desafío: ejecuta un guion de pasos contra un
-// ladder (rungs + wiringMap) usando el mismo motor puro que useSimulation.js
-// usa en producción (computeScanTick + applyWiring), pero en un bucle
-// síncrono en vez de setInterval — no depende de React ni de temporizadores
-// reales, así que es instantáneo y fácil de testear.
-export function runChallenge(rungs, wiringMap, steps) {
+// proyecto (blocks + wiringMap) usando el mismo motor puro que
+// useSimulation.js usa en producción (computeScanTick + applyWiring), pero
+// en un bucle síncrono en vez de setInterval — no depende de React ni de
+// temporizadores reales, así que es instantáneo y fácil de testear.
+export function runChallenge(blocks, wiringMap, steps, mainBlockId = "main") {
   let physicalInputs = {};
   let mem = {};
   let timers = {};
   let scanMem = {};
+  let localParams = {};
   const results = [];
 
   const tick = () => {
     const effectiveInputs = applyWiring(physicalInputs, wiringMap);
     const combinedMem = { ...effectiveInputs, ...mem };
-    const { outputs, timers: nextTimers, mem: nextScanMem } = computeScanTick(rungs, combinedMem, timers, scanMem);
+    const { outputs, timers: nextTimers, mem: nextScanMem, localParams: nextLocalParams } = computeScanTick(
+      blocks, combinedMem, timers, scanMem, mainBlockId, localParams
+    );
     mem = outputs;
     timers = nextTimers;
     scanMem = nextScanMem;
+    localParams = nextLocalParams;
   };
 
   steps.forEach((step) => {

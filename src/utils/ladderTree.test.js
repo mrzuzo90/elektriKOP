@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { insertNodeAt, moveNode, countContacts } from "./ladderTree";
+import { insertNodeAt, moveNode, countContacts, genId, genBlockId, genParamId, bumpUidPastImportedBlocks } from "./ladderTree";
 
 function contact(id, addr = "I0.0") {
   return { kind: "contact", id, addr, neg: false, edge: null };
@@ -95,5 +95,55 @@ describe("moveNode", () => {
     const result = moveNode(tree, "p1", "root", 0);
     expect(result[0].id).toBe("p1");
     expect(countContacts(result)).toBe(countContacts(tree));
+  });
+});
+
+describe("genBlockId / genParamId", () => {
+  it("no colisionan entre sí ni con genId(), y comparten el mismo contador creciente", () => {
+    const ids = [genId(), genBlockId(), genParamId(), genId(), genBlockId()];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids[0]).toMatch(/^n\d+$/);
+    expect(ids[1]).toMatch(/^b\d+$/);
+    expect(ids[2]).toMatch(/^p\d+$/);
+  });
+});
+
+describe("bumpUidPastImportedBlocks", () => {
+  function rungWith(id, nodeIds) {
+    return {
+      id,
+      title: `${id}`,
+      comment: "",
+      logic: nodeIds.map((nid) => contact(nid)),
+      outAddr: "Q0.0",
+      outType: "coil",
+      preset: 2,
+    };
+  }
+
+  it("adelanta el contador tras importar ids en los 3 namespaces (n, b, p)", () => {
+    const blocks = [
+      { id: "main", kind: "main", name: "Main", rungs: [rungWith(0, ["n5"])], interface: { in: [], out: [] } },
+      {
+        id: "b3",
+        kind: "fc",
+        name: "FC1",
+        rungs: [rungWith(0, ["n1"])],
+        interface: { in: [{ id: "p2", name: "X" }], out: [] },
+      },
+    ];
+    bumpUidPastImportedBlocks(blocks);
+    // El próximo id generado debe ser estrictamente posterior al mayor
+    // número visto en cualquiera de los 3 namespaces (n5, b3, p2 -> max 5).
+    const nextIds = [genId(), genBlockId(), genParamId()];
+    nextIds.forEach((id) => {
+      const n = parseInt(id.slice(1), 10);
+      expect(n).toBeGreaterThan(5);
+    });
+  });
+
+  it("ignora el id 'main' del bloque principal sin romperse", () => {
+    const blocks = [{ id: "main", kind: "main", name: "Main", rungs: [rungWith(0, [])], interface: { in: [], out: [] } }];
+    expect(() => bumpUidPastImportedBlocks(blocks)).not.toThrow();
   });
 });

@@ -13,7 +13,9 @@ export function collectUsedAddresses(rungs) {
   const set = new Set();
   rungs.forEach((rung) => {
     collectContactAddrs(rung.logic, set);
-    set.add(rung.outAddr);
+    // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
+    // — no es una dirección realmente escrita, no debe marcarse "en uso".
+    if (rung.outType !== "call") set.add(rung.outAddr);
   });
   return [...INPUT_ADDR, ...OUTPUT_ADDR].filter((a) => set.has(a));
 }
@@ -40,6 +42,10 @@ export function applyWiring(inputs, wiringMap) {
 export function collectOutputConflicts(rungs) {
   const byAddr = {};
   rungs.forEach((r, idx) => {
+    // Un rung "call" (instrucción "Llamar a bloque") conserva un outAddr
+    // heredado/ignorado (ver TiaSegment) — no es una dirección realmente
+    // escrita, así que no debe contar para el aviso de "salida duplicada".
+    if (r.outType === "call") return;
     if (!byAddr[r.outAddr]) byAddr[r.outAddr] = [];
     byAddr[r.outAddr].push(idx);
   });
@@ -51,4 +57,13 @@ export function collectOutputConflicts(rungs) {
     // despiste.
     return idxs.some((i) => ["coil", "ton", "tof", "tp"].includes(rungs[i].outType));
   });
+}
+
+// Variantes que agregan sobre todos los bloques del proyecto (Main + FCs),
+// reutilizando las funciones de un solo bloque internamente.
+export function collectUsedAddressesAcrossBlocks(blocks) {
+  return collectUsedAddresses(blocks.flatMap((b) => b.rungs));
+}
+export function collectOutputConflictsAcrossBlocks(blocks) {
+  return collectOutputConflicts(blocks.flatMap((b) => b.rungs));
 }

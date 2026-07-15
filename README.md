@@ -34,6 +34,12 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
 - Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
 
+**Bloques FC**
+- Además de Main [OB1], crea bloques de función (FC) adicionales con su propia interfaz de parámetros IN/OUT — funciones reutilizables, igual que en TIA Portal.
+- Llama a un FC desde Main o desde otro FC con la instrucción **Llamar**, cableando cada parámetro a una dirección física o a otro parámetro propio. La UI nunca deja crear un ciclo de llamadas.
+- Dos sitios de llamada al mismo FC mantienen temporizadores y contactos de flanco (P/N) internos totalmente independientes entre sí.
+- Los FC no tienen memoria de instancia persistente (a diferencia de un FB de TIA Portal, fuera de alcance por ahora): sus variables se recalculan en cada ciclo de scan.
+
 **Simulación**
 - 10 entradas digitales (I0.0–I0.9) y 10 salidas digitales (Q0.0–Q0.9).
 - Ciclo de scan automático o **modo paso a paso**, para ver exactamente qué pasa en cada pasada.
@@ -114,6 +120,8 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 - [x] Más tipos de temporizador (TOF, TP) y contactos de flanco (P/N).
 - [x] Arrastrar y soltar en el editor KOP (insertar y mover contactos/bloques paralelos, elegir el tipo de salida).
 - [x] Menú de pausa: agrupa proyecto, tabla de variables y Modo Desafío fuera del flujo principal del editor.
+- [x] Bloques FC: funciones reutilizables con interfaz IN/OUT, llamables desde Main o desde otro FC.
+- [ ] Bloques FB (con memoria de instancia propia, tipo DB) — ronda futura sobre los bloques FC.
 - [ ] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
 - [ ] Comparadores numéricos (`>=`, `==`) sobre valores simulados.
 - [ ] Compartir proyectos mediante un enlace, sin necesidad de archivo.

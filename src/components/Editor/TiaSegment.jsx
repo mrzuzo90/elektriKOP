@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { T, OUTPUT_ADDR } from "../../utils/constants";
+import { T } from "../../utils/constants";
 import {
   newContactNode,
   newParallelNode,
@@ -15,6 +15,8 @@ import {
 import { TiaCoil, TiaSetReset, TiaTonBox } from "./TiaGraphics";
 import { TiaSelect, TiaInstructionBtn } from "./TiaControls";
 import { LogicSeries } from "./LogicSeries";
+import TiaCallBox from "./TiaCallBox";
+import { findBlock, validCallTargets } from "../../utils/blocks";
 
 const OUT_TYPES = [
   { value: "coil", label: "Bobina", sub: "-( )-" },
@@ -23,9 +25,10 @@ const OUT_TYPES = [
   { value: "ton", label: "Temp", sub: "TON" },
   { value: "tof", label: "Temp", sub: "TOF" },
   { value: "tp", label: "Temp", sub: "TP" },
+  { value: "call", label: "Llamar", sub: "CALL" },
 ];
 
-export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols }) {
+export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols, addrOptions, outputAddrOptions, blocks = [], currentBlockId }) {
   const actions = {
     totalContacts: () => countContacts(rung.logic),
     addContact: (containerId) => onChange({ ...rung, logic: mapContainer(rung.logic, containerId, (nodes) => [...nodes, newContactNode()]) }),
@@ -97,6 +100,9 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
      flowToOut = flowToOut && evalResult?.states?.[n.id]?.state;
   });
 
+  const availableCallTargets = validCallTargets(blocks, currentBlockId);
+  const callTargetBlock = rung.outType === "call" ? findBlock(blocks, rung.callTarget) : undefined;
+
   return (
     <div style={{ backgroundColor: T.tiaBg, border: `2px solid ${T.dwBlack}`, boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.25)", marginBottom: 20 }}>
       {/* Header TIA Portal */}
@@ -139,7 +145,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
         {/* Left Power Rail */}
         <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginRight: 4 }} />
 
-        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actions} depth={0} flowIn={true} symbols={symbols} dnd={dnd} />
+        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actions} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
 
         {/* Main Line + Output Device, agrupados en una única zona de
             aterrizaje: soltar aquí un tipo de salida arrastrado desde la
@@ -178,14 +184,27 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
 
           {/* Output Device */}
           <div style={{ position: "relative", marginRight: 8, display: "flex", alignItems: "center" }}>
-            {rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
+            {rung.outType === "call" ? (
+              <TiaCallBox
+                rung={rung}
+                targetBlock={callTargetBlock}
+                availableTargets={availableCallTargets}
+                onChangeTarget={(blockId) => onChange({ ...rung, callTarget: blockId, paramWiring: {} })}
+                onChangeWiring={(paramId, addr) => onChange({ ...rung, paramWiring: { ...(rung.paramWiring || {}), [paramId]: addr } })}
+                addrOptions={addrOptions}
+                symbols={symbols}
+                flowIn={flowToOut}
+              />
+            ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
             ) : rung.outType === "set" || rung.outType === "reset" ? (
                <TiaSetReset active={evalResult?.outputState} flowIn={flowToOut} type={rung.outType} />
             ) : (
                <TiaCoil active={evalResult?.outputState} flowIn={flowToOut} />
             )}
-            <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={OUTPUT_ADDR} isOut={true} symbols={symbols} />
+            {rung.outType !== "call" && (
+              <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={outputAddrOptions} isOut={true} symbols={symbols} />
+            )}
           </div>
         </div>
 

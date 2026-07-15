@@ -79,4 +79,27 @@ export const CHALLENGES = [
       { type: "assert", addr: "Q0.1", value: false, label: "Cerrar se detiene al llegar al final de carrera cerrada" },
     ],
   },
+  {
+    id: "04-cintas-transportadoras-fc",
+    title: "Cintas con FC",
+    steps: [
+      { type: "set", addr: "I0.0", value: true }, // Marcha_Sistema
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: false, label: "Cinta 1 parada mientras no se pulse su marcha" },
+      { type: "assert", addr: "Q0.1", value: false, label: "Cinta 2 parada mientras no se pulse su marcha" },
+      { type: "set", addr: "I0.1", value: true }, // Marcha_Cinta1
+      { type: "wait", scans: 25 }, // t = 2.5s desde Marcha_Cinta1
+      { type: "assert", addr: "Q0.0", value: false, label: "Cinta 1 aún no arranca a los 2.5s (preset 3s)" },
+      { type: "wait", scans: 10 }, // t = 3.5s desde Marcha_Cinta1
+      { type: "assert", addr: "Q0.0", value: true, label: "Cinta 1 arranca a los 3s de pulsar su marcha" },
+      { type: "assert", addr: "Q0.1", value: false, label: "Cinta 2 sigue parada: nunca se pulsó su marcha" },
+      { type: "set", addr: "I0.2", value: true }, // Marcha_Cinta2
+      { type: "wait", scans: 10 }, // t = 1.0s desde Marcha_Cinta2
+      { type: "assert", addr: "Q0.1", value: false, label: "Cinta 2 aún no arranca al segundo de pulsar su marcha" },
+      { type: "assert", addr: "Q0.0", value: true, label: "Cinta 1 no se ve afectada por el arranque de la cinta 2" },
+      { type: "wait", scans: 20 }, // t = 3.0s desde Marcha_Cinta2
+      { type: "assert", addr: "Q0.1", value: true, label: "Cinta 2 arranca a los 3s de SU PROPIA marcha, con temporizador independiente" },
+      { type: "assert", addr: "Q0.0", value: true, label: "Cinta 1 sigue en marcha, cada llamada mantuvo su propio tiempo" },
+    ],
+  },
 ];

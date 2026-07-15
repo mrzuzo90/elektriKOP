@@ -32,3 +32,7 @@ export const INPUT_ADDR = ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6
 export const OUTPUT_ADDR = ["Q0.0", "Q0.1", "Q0.2", "Q0.3", "Q0.4", "Q0.5", "Q0.6", "Q0.7", "Q1.0", "Q1.1"];
 export const MAX_RUNGS = 10;
 export const SCAN_MS = 100;
+// Defensa en profundidad: la UI ya impide crear un ciclo de llamadas entre
+// bloques (wouldCreateCycle), pero un JSON importado a mano podría traer uno
+// — este límite corta la recursión del motor de scan sin colgar la pestaña.
+export const MAX_CALL_DEPTH = 16;

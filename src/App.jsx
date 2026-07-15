@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { T, INPUT_ADDR, MAX_RUNGS } from "./utils/constants";
+import { T, INPUT_ADDR, OUTPUT_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
-import { applyWiring, collectUsedAddresses, collectOutputConflicts } from "./utils/plcIO";
+import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
 import { newRung } from "./utils/ladderTree";
 import { fontStyles } from "./styles/pixelStyles";
 import PixelBtn from "./components/shared/PixelBtn";
@@ -17,6 +17,20 @@ function zeroInputs() {
   return Object.fromEntries(INPUT_ADDR.map((a) => [a, false]));
 }
 
+// timerDisplay ahora indexa por ruta de llamada completa ("main:7" o
+// "main:2>fc1:3", ver scanCycle.js), no por rung.id a secas — para pintar el
+// segmento de un bloque cualquiera hay que buscar la última clave (la
+// llamada más reciente este tick) cuyo tramo final sea justo
+// "blockId:rungId", igual que hace clearTimer en useSimulation.js.
+function timerValueFor(timerDisplay, blockId, rungId) {
+  const suffix = `${blockId}:${rungId}`;
+  let found;
+  Object.keys(timerDisplay).forEach((key) => {
+    if (key === suffix || key.endsWith(`>${suffix}`)) found = timerDisplay[key];
+  });
+  return found;
+}
+
 // ---------------------------------------------------------------------------
 // App Principal
 // ---------------------------------------------------------------------------
@@ -26,6 +40,9 @@ export default function PlcEmulator() {
   const [soundOn, setSoundOn] = useState(true);
   const [booting, setBooting] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Bloque que se está editando en el centro (Main o un FC) — vive fuera de
+  // `project` porque es solo un foco de UI, no dato de proyecto.
+  const [activeBlockId, setActiveBlockId] = useState("main");
   // Copia ligera del último resultado de Modo Desafío, solo para el
   // distintivo flotante — el estado "de verdad" (ejercicio elegido,
   // resultado completo) sigue viviendo dentro de ChallengePanel, que se
@@ -39,9 +56,15 @@ export default function PlcEmulator() {
   }, []);
 
   const project = useProject();
+  const mainBlock = project.blocks.find((b) => b.id === "main");
+  const activeBlock = project.blocks.find((b) => b.id === activeBlockId) || mainBlock;
+  const isMainActive = activeBlock.id === "main";
+
+  // El motor de scan recorre Main y, desde ahí, cualquier llamada a FC —
+  // por eso recibe todos los bloques, no solo el que se está editando.
   const sim = useSimulation({
     inputs,
-    rungs: project.rungs,
+    blocks: project.blocks,
     deviceMap: project.deviceMap,
     wiringMap: project.wiringMap,
     soundOn,
@@ -67,6 +90,7 @@ export default function PlcEmulator() {
     setInputs(zeroInputs());
     sim.resetSimulation();
     setChallengeBadge(null);
+    setActiveBlockId("main");
   };
 
   const handleFileSelected = (file) => {
@@ -74,6 +98,7 @@ export default function PlcEmulator() {
       onSuccess: () => {
         setInputs(zeroInputs());
         sim.resetSimulation();
+        setActiveBlockId("main");
       },
     });
   };
@@ -82,6 +107,32 @@ export default function PlcEmulator() {
   // dispositivo — esto es lo que realmente "ve" el autómata y lo que debe
   // pintarse en los LEDs del PLC y en la lógica del editor.
   const effectiveInputs = applyWiring(inputs, project.wiringMap);
+
+  // Direccionamiento local de un FC: sus parámetros IN/OUT se referencian
+  // como "#<paramId>" (opaco, no el nombre) en los desplegables de
+  // contacto/salida del editor — así renombrar un parámetro no rompe el
+  // cableado existente. symbolsForEditor añade el alias solo para mostrarlo.
+  // Un contacto puede leer cualquier I/Q físico y cualquier parámetro propio
+  // (IN u OUT); la salida de un rung (bobina/SET/RESET/temporizador) solo
+  // puede escribir en Q físico o en un OUT propio — nunca en un IN (es de
+  // solo lectura dentro del FC) ni en una dirección física de entrada.
+  const isFc = activeBlock.kind === "fc";
+  const localIn = isFc ? activeBlock.interface.in : [];
+  const localOut = isFc ? activeBlock.interface.out : [];
+  const localParams = [...localIn, ...localOut];
+  const symbolsForEditor = {
+    ...project.symbols,
+    ...Object.fromEntries(localParams.map((p) => [`#${p.id}`, p.name])),
+  };
+  const contactAddrOptions = [...INPUT_ADDR, ...OUTPUT_ADDR, ...localParams.map((p) => `#${p.id}`)];
+  const outputAddrOptions = [...OUTPUT_ADDR, ...localOut.map((p) => `#${p.id}`)];
+
+  // Mismo orden que collectOutputConflictsAcrossBlocks (blocks.flatMap(b =>
+  // b.rungs)), con el nombre del bloque adjunto — así el aviso de "salida
+  // repetida" puede señalar en qué bloque vive cada rung en conflicto,
+  // necesario ahora que el aviso cubre todo el proyecto y no solo Main.
+  const flatRungsWithBlock = project.blocks.flatMap((b) => b.rungs.map((rung) => ({ rung, blockName: b.name })));
+  const outputConflicts = collectOutputConflictsAcrossBlocks(project.blocks);
 
   return (
     <>
@@ -154,59 +205,92 @@ export default function PlcEmulator() {
         {/* Centro: TIA Portal Editor — solo los segmentos */}
         <div style={{ flex: 1, minWidth: 0, backgroundColor: "#EBEBEB", display: "flex", flexDirection: "column" }}>
 
-          <div style={{ backgroundColor: "#F0F0F0", borderBottom: "1px solid #CCC", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-             <div>
-                <div style={{ fontSize: 20, fontWeight: "bold", color: T.tiaText }}>Main [OB1]</div>
-                <div style={{ fontSize: 14, color: "#666" }}>Program block (Ladder Logic)</div>
-             </div>
-             <div style={{ display: "flex", gap: 8 }}>
-               <PixelBtn small color="dwGrey" onClick={project.undo} disabled={!project.canUndo} title="Deshacer (Ctrl+Z)">⟲ Deshacer</PixelBtn>
-               <PixelBtn small color="dwGrey" onClick={project.redo} disabled={!project.canRedo} title="Rehacer (Ctrl+Shift+Z)">⟳ Rehacer</PixelBtn>
-               <PixelBtn small color="dwGrey" disabled={project.rungs.length >= MAX_RUNGS} onClick={() => {
-                  if (project.rungs.length < MAX_RUNGS) {
-                    project.setRungs([...project.rungs, newRung(project.rungs.length ? Math.max(...project.rungs.map(r => r.id)) + 1 : 0)]);
-                  }
-               }}>+ Segmento</PixelBtn>
-             </div>
+          <div style={{ backgroundColor: "#F0F0F0", borderBottom: "1px solid #CCC" }}>
+            {/* Pestañas de bloque: Main + cada FC. El bloque activo es solo
+                un foco de UI (activeBlockId), no cambia qué se simula. */}
+            <div style={{ display: "flex", gap: 4, padding: "8px 20px 0", flexWrap: "wrap" }}>
+              {project.blocks.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => setActiveBlockId(b.id)}
+                  title={b.kind === "main" ? "Main [OB1]" : `Función ${b.name}`}
+                  style={{
+                    fontFamily: T.mono, fontWeight: "bold", fontSize: 13, padding: "6px 14px", cursor: "pointer",
+                    border: `2px solid ${T.dwBlack}`, borderBottom: "none",
+                    backgroundColor: b.id === activeBlock.id ? T.tiaBg : "#D8D8D8",
+                    color: T.tiaText,
+                  }}
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+            <div style={{ padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${T.dwBlack}` }}>
+               <div>
+                  <div style={{ fontSize: 20, fontWeight: "bold", color: T.tiaText }}>{activeBlock.name} [{isMainActive ? "OB1" : "FC"}]</div>
+                  <div style={{ fontSize: 14, color: "#666" }}>Program block (Ladder Logic)</div>
+               </div>
+               <div style={{ display: "flex", gap: 8 }}>
+                 <PixelBtn small color="dwGrey" onClick={project.undo} disabled={!project.canUndo} title="Deshacer (Ctrl+Z)">⟲ Deshacer</PixelBtn>
+                 <PixelBtn small color="dwGrey" onClick={project.redo} disabled={!project.canRedo} title="Rehacer (Ctrl+Shift+Z)">⟳ Rehacer</PixelBtn>
+                 <PixelBtn small color="dwGrey" disabled={activeBlock.rungs.length >= MAX_RUNGS} onClick={() => {
+                    if (activeBlock.rungs.length < MAX_RUNGS) {
+                      project.setBlockRungs(activeBlock.id, [...activeBlock.rungs, newRung(activeBlock.rungs.length ? Math.max(...activeBlock.rungs.map(r => r.id)) + 1 : 0)]);
+                    }
+                 }}>+ Segmento</PixelBtn>
+               </div>
+            </div>
           </div>
 
           <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
-            {collectOutputConflicts(project.rungs).length > 0 && (
+            {outputConflicts.length > 0 && (
               <div style={{ background: "#FFF3CD", border: "1px solid #FFB300", color: "#7A5200", padding: "8px 12px", marginBottom: 16, fontSize: 13 }}>
-                ⚠️ Direcciones de salida repetidas sin ser SET/RESET:{" "}
-                {collectOutputConflicts(project.rungs)
-                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => project.rungs[i].title).join(", ")})`)
+                ⚠️ Direcciones de salida repetidas sin ser SET/RESET (en todo el proyecto, no solo en este bloque):{" "}
+                {outputConflicts
+                  .map(([addr, idxs]) => `${addr} (${idxs.map((i) => `${flatRungsWithBlock[i].blockName}:${flatRungsWithBlock[i].rung.title}`).join(", ")})`)
                   .join(" · ")}
               </div>
             )}
-            {project.rungs.map((rung, idx) => {
-              const states = computeStates(rung.logic, { ...effectiveInputs, ...sim.outputs }, sim.prevMem);
+            {activeBlock.rungs.map((rung, idx) => {
+              // El motor recorre todos los bloques, así que cualquier
+              // bloque que se esté editando refleja simulación real — para
+              // un FC, sus #param se resuelven con el último marco
+              // (lastCallFrames) con el que se ejecutó ese ciclo (decisión
+              // ya confirmada: "último marco ejecutado", no multi-instancia).
+              const frame = sim.lastCallFrames[activeBlock.id] || {};
+              const mem = { ...effectiveInputs, ...sim.outputs, ...frame };
+              const states = computeStates(rung.logic, mem, sim.prevMem);
+              const rawTimer = timerValueFor(sim.timerDisplay, activeBlock.id, rung.id);
               return (
                 <TiaSegment
                   key={rung.id}
                   rung={rung}
-                  canDelete={project.rungs.length > 1}
-                  symbols={project.symbols}
-                  onChange={(next) => project.setRungs(project.rungs.map((r, i) => (i === idx ? next : r)))}
+                  canDelete={activeBlock.rungs.length > 1}
+                  symbols={symbolsForEditor}
+                  addrOptions={contactAddrOptions}
+                  outputAddrOptions={outputAddrOptions}
+                  blocks={project.blocks}
+                  currentBlockId={activeBlock.id}
+                  onChange={(next) => project.setBlockRungs(activeBlock.id, activeBlock.rungs.map((r, i) => (i === idx ? next : r)))}
                   onDelete={() => {
-                    const removedId = project.rungs[idx].id;
-                    sim.clearTimer(removedId);
-                    project.setRungs(project.rungs.filter((_, i) => i !== idx));
+                    const removedId = activeBlock.rungs[idx].id;
+                    sim.clearTimer(activeBlock.id, removedId);
+                    project.setBlockRungs(activeBlock.id, activeBlock.rungs.filter((_, i) => i !== idx));
                   }}
                   evalResult={{
                     states,
-                    outputState: sim.outputs[rung.outAddr],
+                    outputState: rung.outAddr?.startsWith("#") ? frame[rung.outAddr] : sim.outputs[rung.outAddr],
                     timerElapsed:
                       rung.outType === "ton" || rung.outType === "tof"
-                        ? sim.timerDisplay[rung.id] ?? 0
+                        ? rawTimer ?? 0
                         : rung.outType === "tp"
-                          ? sim.timerDisplay[rung.id]?.elapsed ?? 0
+                          ? rawTimer?.elapsed ?? 0
                           : undefined,
                   }}
                 />
               );
             })}
-            {project.rungs.length >= MAX_RUNGS && <div style={{ color: "red", textAlign: "center", marginTop: 10 }}>Límite de segmentos alcanzado ({MAX_RUNGS})</div>}
+            {activeBlock.rungs.length >= MAX_RUNGS && <div style={{ color: "red", textAlign: "center", marginTop: 10 }}>Límite de segmentos alcanzado ({MAX_RUNGS})</div>}
           </div>
 
         </div>
@@ -220,7 +304,7 @@ export default function PlcEmulator() {
             Desafío viven ahora en el menú de pausa (ver PauseMenu). */}
         <div style={{ width: 320, flexShrink: 0, backgroundColor: T.dwGrey, borderLeft: `4px solid ${T.dwBlack}`, padding: 20, overflowY: "auto" }}>
           <ProcessPanel
-            addresses={collectUsedAddresses(project.rungs)}
+            addresses={collectUsedAddressesAcrossBlocks(project.blocks)}
             deviceMap={project.deviceMap}
             onChangeType={project.setDeviceType}
             wiringMap={project.wiringMap}
@@ -246,12 +330,18 @@ export default function PlcEmulator() {
         restoredFromAutosave={project.restoredFromAutosave}
         onDismissRestoredNotice={project.dismissRestoredNotice}
         onClear={clearAll}
-        rungs={project.rungs}
+        blocks={project.blocks}
         wiringMap={project.wiringMap}
         onChallengeResultChange={setChallengeBadge}
-        usedAddresses={collectUsedAddresses(project.rungs)}
+        usedAddresses={collectUsedAddressesAcrossBlocks(project.blocks)}
         symbols={project.symbols}
         onChangeSymbol={project.setSymbolFor}
+        onAddBlock={project.addBlock}
+        onRenameBlock={project.renameBlock}
+        onRemoveBlock={project.removeBlock}
+        onAddParam={project.addParam}
+        onRenameParam={project.renameParam}
+        onRemoveParam={project.removeParam}
       />
     </>
   );

@@ -8,7 +8,7 @@ import PixelBtn from "../shared/PixelBtn";
 // Vive como sección dentro del menú de pausa (PauseMenu) — ya no es un
 // panel colapsable propio, así que no lleva su propia card/borde ni
 // visible/onToggle: el menú entero ya cumple ese papel.
-export default function ChallengePanel({ rungs, wiringMap, onResultChange }) {
+export default function ChallengePanel({ blocks, wiringMap, onResultChange }) {
   const [selectedId, setSelectedId] = useState(CHALLENGES[0].id);
   const [result, setResult] = useState(null);
 
@@ -23,7 +23,7 @@ export default function ChallengePanel({ rungs, wiringMap, onResultChange }) {
   const challenge = CHALLENGES.find((c) => c.id === selectedId);
 
   const check = () => {
-    const r = runChallenge(rungs, wiringMap, challenge.steps);
+    const r = runChallenge(blocks, wiringMap, challenge.steps);
     setResult(r);
     onResultChange?.({ title: challenge.title, pass: r.pass });
   };

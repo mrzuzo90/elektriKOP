@@ -14,6 +14,7 @@ con ElektriKOP. Cada carpeta tiene:
 | 1 | [Marcha/Paro con enclavamiento](01-marcha-paro-enclavamiento/enunciado.md) | ⭐ | Contacto NA/NC, enclavamiento, bobina directa |
 | 2 | [Semáforo con temporizadores](02-semaforo-temporizadores/enunciado.md) | ⭐⭐ | Temporizador TON, encadenado de temporizadores, marcas auxiliares en `Q` |
 | 3 | [Puerta automática con finales de carrera](03-puerta-automatica-finales-carrera/enunciado.md) | ⭐⭐⭐ | Interbloqueo cruzado, finales de carrera, cableado físico NA/NC real |
+| 4 | [Dos cintas transportadoras con arranque temporizado (bloque FC)](04-cintas-transportadoras-fc/enunciado.md) | ⭐⭐⭐ | Bloques FC, interfaz IN/OUT, instrucción Llamar, temporizadores independientes por sitio de llamada |
 
 ## Cómo usarlos
 
@@ -25,7 +26,7 @@ con ElektriKOP. Cada carpeta tiene:
 
 ## Progresión pensada
 
-Los tres ejercicios están diseñados para construirse uno sobre otro:
+Los cuatro ejercicios están diseñados para construirse uno sobre otro:
 
 - El **Ejercicio 1** enseña el enclavamiento con un contacto NC *lógico*
   (dibujado en el segmento) sobre un pulsador cableado NA por defecto — la
@@ -38,6 +39,10 @@ Los tres ejercicios están diseñados para construirse uno sobre otro:
   cableado el sensor en la instalación" y "qué contacto dibujas en el
   programa" es una de las características distintivas de este emulador
   frente a un simple editor de diagramas.
+- El **Ejercicio 4** da el salto a los **bloques FC**: en vez de duplicar
+  lógica idéntica para dos máquinas iguales, la escribes una vez y la llamas
+  dos veces, comprobando que cada llamada mantiene su propio temporizador
+  interno de forma independiente.
 
 ## ¿Tienes un ejercicio propio?
 
