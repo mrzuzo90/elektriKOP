@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
@@ -78,6 +78,45 @@ export default function PlcEmulator() {
     if (val) sim.playClickSound();
     setInputs((prev) => ({ ...prev, [addr]: val }));
   };
+
+  // Atajos de teclado del Panel HMI (idea del usuario, 2026-07-15): las
+  // teclas 0-9 mapean 1:1 al orden de INPUT_ADDR (0→I0.0 ... 7→I0.7,
+  // 8→I1.0, 9→I1.1), para poder operar entradas sin ratón en clase. Un
+  // pulsador se mantiene activo mientras se mantiene la tecla (igual que el
+  // ratón); cualquier otro tipo (interruptor, seta de PARO...) alterna con
+  // cada pulsación, igual que un clic — misma distinción que ya hace
+  // HmiPanel.jsx entre onToggle/onPulse. Refs para no reenganchar el
+  // listener en cada render (mismo patrón que undo/redo en useProject.js).
+  const deviceMapRef = useRef(project.deviceMap);
+  deviceMapRef.current = project.deviceMap;
+  const toggleInputRef = useRef(toggleInput);
+  toggleInputRef.current = toggleInput;
+  const setInputMomentaryRef = useRef(setInputMomentary);
+  setInputMomentaryRef.current = setInputMomentary;
+
+  useEffect(() => {
+    const isTextTarget = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    const addrForKey = (key) => (/^[0-9]$/.test(key) ? INPUT_ADDR[Number(key)] : undefined);
+    const onKeyDown = (e) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTextTarget(e.target)) return;
+      const addr = addrForKey(e.key);
+      if (!addr) return;
+      if (deviceMapRef.current?.[addr] === "pulsador") setInputMomentaryRef.current(addr, true);
+      else toggleInputRef.current(addr);
+    };
+    const onKeyUp = (e) => {
+      if (isTextTarget(e.target)) return;
+      const addr = addrForKey(e.key);
+      if (!addr) return;
+      if (deviceMapRef.current?.[addr] === "pulsador") setInputMomentaryRef.current(addr, false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   const resetAll = () => {
     setInputs(zeroInputs());

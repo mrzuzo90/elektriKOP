@@ -53,6 +53,7 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 **Panel HMI**
 - Interruptores, pulsadores momentáneos y una seta de PARO con enclavamiento — los tres tipos de entrada más habituales en campo.
 - Pantalla LCD retro con estado del sistema y temporizadores activos.
+- **Atajos de teclado**: las teclas `0`-`9` activan/desactivan las entradas físicas sin necesidad de ratón (`0`→I0.0 ... `8`→I1.0, `9`→I1.1) — un pulsador se mantiene activo mientras mantienes la tecla, igual que con el ratón.
 
 **Cableado físico NA/NC**
 - Cada entrada puede marcarse como normalmente abierta o normalmente cerrada a nivel de dispositivo físico (por ejemplo, un termostato NC), independientemente del contacto que uses en el segmento — igual que en una instalación real.
@@ -103,7 +104,7 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
 4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, TON, TOF, TP, CTU o CTD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD) también necesita cablear su pin de Reset/Carga a una dirección.
 5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
-6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha).
+6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha) — o el teclado (`0`-`9`) si no quieres soltar el ratón del editor.
 7. Pulsa el logo **ElektriKOP** (arriba a la izquierda) para abrir el **menú de pausa**: ahí puedes renombrar el proyecto, exportar/importar en JSON, nombrar variables y comprobar tu solución en Modo Desafío. Nada de esto es imprescindible en el día a día — tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.
 8. Si estás resolviendo uno de los [ejercicios propuestos](docs/ejercicios/), abre el menú, entra en **Modo Desafío**, elige el ejercicio y pulsa **Comprobar** — el resultado queda visible en un distintivo junto al logo aunque cierres el menú.
 

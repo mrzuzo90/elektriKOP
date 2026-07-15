@@ -58,8 +58,11 @@ export default function HmiPanel({ inputs, onToggle, onPulse, running, timers, d
         border: `4px solid ${T.dwGrey}`,
         boxShadow: 'inset 4px 4px 0px rgba(0,0,0,0.8)'
       }}>
-        <div style={{ fontSize: 16, marginBottom: 10, textAlign: "center", borderBottom: `2px dashed ${T.dwGrey}`, paddingBottom: 4 }}>
+        <div style={{ fontSize: 16, textAlign: "center", borderBottom: `2px dashed ${T.dwGrey}`, paddingBottom: 4 }}>
           ESTADO ENTRADAS
+        </div>
+        <div style={{ fontSize: 10, color: "#888", textAlign: "center", marginBottom: 10, marginTop: 2 }} title="0→I0.0, 1→I0.1 ... 8→I1.0, 9→I1.1">
+          atajo: teclado 0-9
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
           {INPUT_ADDR.map((a) => {

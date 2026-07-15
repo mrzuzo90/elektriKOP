@@ -206,14 +206,21 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
         </div>
       </div>
       {removable && (
-         // top:6/left:-14 en vez de top:-6/left:-6: ese hueco de arriba es
+         // top:6/left:-8 en vez de top:-6/left:-6: ese hueco de arriba es
          // justo donde cae el desplegable de dirección (top:-20) del primer
          // contacto de CUALQUIER rama, incluida la segunda (que por el
          // BRANCH_GAP tan ajustado queda casi a la misma altura que el
          // borde superior del bloque) — se solapaban. Metiéndolo dentro de
          // la fila de la rama 1 pero más a la izquierda (antes de donde
          // empieza el primer contacto) no coincide con ningún desplegable.
-         <button onClick={() => actions.removeNode(node.id)} title="Eliminar bloque paralelo" style={{ position: "absolute", top: 6, left: -14, color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
+         // left ajustado de -14 a -8 (2026-07-15): cuando un contacto suelto
+         // precede al bloque paralelo, su propio "✕" (right:-10 dentro de
+         // los 4px de margen del contacto) tocaba este botón sin dejar hueco
+         // (0px de separación medido con Playwright) — con -8 queda
+         // separado, y -8 sigue estando a la izquierda de donde empieza el
+         // contenido de cualquier rama, así que el desplegable de dirección
+         // sigue sin verse afectado.
+         <button onClick={() => actions.removeNode(node.id)} title="Eliminar bloque paralelo" style={{ position: "absolute", top: 6, left: -8, color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>✕</button>
       )}
     </div>
   );
