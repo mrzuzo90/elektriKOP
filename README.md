@@ -29,7 +29,7 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 **Editor KOP**
 - Segmentos con contactos en serie y en paralelo (ramas anidadas, sin límite artificial de profundidad).
 - Contactos NA / NC / flanco positivo (P) / flanco negativo (N), conmutables con un clic.
-- Bobina directa, SET, RESET y temporizadores TON, TOF y TP — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
+- Bobina directa, SET, RESET, temporizadores TON/TOF/TP y contadores CTU/CTD — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
 - **Arrastrar y soltar** dentro del esquema: inserta contactos/bloques paralelos en cualquier posición, o mueve uno ya colocado a otra rama, con zonas de aterrizaje visuales mientras arrastras.
 - Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
 - Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
@@ -39,6 +39,11 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - Llama a un FC desde Main o desde otro FC con la instrucción **Llamar**, cableando cada parámetro a una dirección física o a otro parámetro propio. La UI nunca deja crear un ciclo de llamadas.
 - Dos sitios de llamada al mismo FC mantienen temporizadores y contactos de flanco (P/N) internos totalmente independientes entre sí.
 - Los FC no tienen memoria de instancia persistente (a diferencia de un FB de TIA Portal, fuera de alcance por ahora): sus variables se recalculan en cada ciclo de scan.
+
+**Contadores y marcas (M)**
+- **CTU** (cuenta arriba) y **CTD** (cuenta abajo): rail principal = pulso de cuenta (detecta flanco de subida), pin adicional de Reset/Carga cableable a cualquier dirección, valor preestablecido (PV) configurable y valor actual (CV) visible en la propia caja.
+- **16 marcas internas** (`M0.0`–`M1.7`): memoria auxiliar sin dispositivo físico asociado, para banderas de secuencia o interbloqueos — sustituye el apaño de usar una `Q` libre como marca. Se nombran igual que cualquier dirección en la Tabla de variables, con un punto de estado en vivo mientras corre la simulación.
+- Un contador dentro de un bloque FC llamado desde varios sitios mantiene su cuenta totalmente independiente en cada sitio de llamada (mismo mecanismo que ya usan los temporizadores).
 
 **Simulación**
 - 10 entradas digitales (I0.0–I0.9) y 10 salidas digitales (Q0.0–Q0.9).
@@ -96,7 +101,7 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 1. **Añade un segmento** con el botón correspondiente en el editor.
 2. **Añade contactos** en serie (`+C`) o en paralelo (`+P`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I o Q) en el desplegable.
 3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
-4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, TON, TOF o TP) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento.
+4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, TON, TOF, TP, CTU o CTD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD) también necesita cablear su pin de Reset/Carga a una dirección.
 5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
 6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha).
 7. Pulsa el logo **ElektriKOP** (arriba a la izquierda) para abrir el **menú de pausa**: ahí puedes renombrar el proyecto, exportar/importar en JSON, nombrar variables y comprobar tu solución en Modo Desafío. Nada de esto es imprescindible en el día a día — tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.
@@ -109,6 +114,8 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 1. [Marcha/Paro con enclavamiento](docs/ejercicios/01-marcha-paro-enclavamiento/enunciado.md) ⭐
 2. [Semáforo con temporizadores](docs/ejercicios/02-semaforo-temporizadores/enunciado.md) ⭐⭐
 3. [Puerta automática con finales de carrera](docs/ejercicios/03-puerta-automatica-finales-carrera/enunciado.md) ⭐⭐⭐
+4. [Dos cintas transportadoras con arranque temporizado (bloque FC)](docs/ejercicios/04-cintas-transportadoras-fc/enunciado.md) ⭐⭐⭐
+5. [Contador de piezas con marca interna](docs/ejercicios/05-contador-piezas-marca/enunciado.md) ⭐⭐
 
 > Si te animas a crear más ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
 
@@ -121,10 +128,12 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 - [x] Arrastrar y soltar en el editor KOP (insertar y mover contactos/bloques paralelos, elegir el tipo de salida).
 - [x] Menú de pausa: agrupa proyecto, tabla de variables y Modo Desafío fuera del flujo principal del editor.
 - [x] Bloques FC: funciones reutilizables con interfaz IN/OUT, llamables desde Main o desde otro FC.
+- [x] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
 - [ ] Bloques FB (con memoria de instancia propia, tipo DB) — ronda futura sobre los bloques FC.
-- [ ] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
 - [ ] Comparadores numéricos (`>=`, `==`) sobre valores simulados.
 - [ ] Compartir proyectos mediante un enlace, sin necesidad de archivo.
+
+Con esta ronda, ElektriKOP cubre el conjunto básico de instrucciones que se enseña en un ciclo de automatización con S7-1200 (contactos, bobinas, set/reset, temporizadores, flancos, contadores, marcas y modularidad con bloques FC). El resto de ideas de esta lista son mejoras posteriores, no huecos del núcleo didáctico.
 
 Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real de aula es bienvenida.
 

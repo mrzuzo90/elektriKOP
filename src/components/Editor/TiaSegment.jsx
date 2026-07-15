@@ -16,6 +16,7 @@ import { TiaCoil, TiaSetReset, TiaTonBox } from "./TiaGraphics";
 import { TiaSelect, TiaInstructionBtn } from "./TiaControls";
 import { LogicSeries } from "./LogicSeries";
 import TiaCallBox from "./TiaCallBox";
+import TiaCounterBox from "./TiaCounterBox";
 import { findBlock, validCallTargets } from "../../utils/blocks";
 
 const OUT_TYPES = [
@@ -25,6 +26,8 @@ const OUT_TYPES = [
   { value: "ton", label: "Temp", sub: "TON" },
   { value: "tof", label: "Temp", sub: "TOF" },
   { value: "tp", label: "Temp", sub: "TP" },
+  { value: "ctu", label: "Cont.", sub: "CTU" },
+  { value: "ctd", label: "Cont.", sub: "CTD" },
   { value: "call", label: "Llamar", sub: "CALL" },
 ];
 
@@ -197,6 +200,16 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
               />
             ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
+            ) : rung.outType === "ctu" || rung.outType === "ctd" ? (
+               <TiaCounterBox
+                 rung={rung}
+                 onChangeResetAddr={(v) => onChange({ ...rung, resetAddr: v })}
+                 addrOptions={addrOptions}
+                 symbols={symbols}
+                 active={evalResult?.outputState}
+                 flowIn={flowToOut}
+                 count={evalResult?.counterValue}
+               />
             ) : rung.outType === "set" || rung.outType === "reset" ? (
                <TiaSetReset active={evalResult?.outputState} flowIn={flowToOut} type={rung.outType} />
             ) : (
@@ -234,6 +247,16 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
                <span style={{color: T.tiaText}}>PT (segs):</span>
                <input
                   type="number" min={1} max={30} value={rung.preset}
+                  onChange={(e) => onChange({...rung, preset: Number(e.target.value) || 1})}
+                  style={{ width: 50, fontFamily: T.mono, fontSize: 14, textAlign: "center" }}
+               />
+            </div>
+         )}
+         {(rung.outType === "ctu" || rung.outType === "ctd") && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+               <span style={{color: T.tiaText}}>PV (cuenta):</span>
+               <input
+                  type="number" min={1} max={999} value={rung.preset}
                   onChange={(e) => onChange({...rung, preset: Number(e.target.value) || 1})}
                   style={{ width: 50, fontFamily: T.mono, fontSize: 14, textAlign: "center" }}
                />

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { OUTPUT_ADDR, SCAN_MS } from "../utils/constants";
+import { OUTPUT_ADDR, MARK_ADDR, SCAN_MS } from "../utils/constants";
 import { applyWiring } from "../utils/plcIO";
 import { computeScanTick } from "../utils/scanCycle";
 
 function zeroOutputs() {
   return Object.fromEntries(OUTPUT_ADDR.map((a) => [a, false]));
+}
+function zeroMarks() {
+  return Object.fromEntries(MARK_ADDR.map((a) => [a, false]));
 }
 
 // Encapsula el ciclo de scan del PLC: lee entradas + salidas previas,
@@ -25,6 +28,7 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
   // FC este ciclo, indexado por blockId — App.jsx lo usa para pintar el
   // flujo dentro del FC que se está editando, aunque no sea Main.
   const [lastCallFrames, setLastCallFrames] = useState({});
+  const [marks, setMarks] = useState(zeroMarks);
 
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
@@ -38,6 +42,11 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
   soundOnRef.current = soundOn;
 
   const outputsRef = useRef(outputs);
+  // Igual que outputsRef pero para marcas (M) — necesitan el mismo
+  // tratamiento de persistencia entre ciclos que las salidas Q, en un ref
+  // aparte para no cambiar la forma de `outputs` (HMI/ProcessPanel/
+  // detección de conflictos asumen que son exactamente las 10 Q).
+  const marksRef = useRef(marks);
   const timersRef = useRef({});
   // Memoria completa (I+Q) tal cual quedó al terminar el último scan — la
   // usan los contactos de flanco P/N de computeScanTick para comparar
@@ -107,9 +116,10 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
   };
 
   const runScanTick = () => {
-    const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current };
+    const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current, ...marksRef.current };
     const {
       outputs: nextOutputs,
+      marks: nextMarks,
       timers: nextTimerDisplay,
       mem: nextMem,
       localParams: nextLocalParams,
@@ -118,9 +128,11 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
 
     timersRef.current = nextTimerDisplay;
     outputsRef.current = nextOutputs;
+    marksRef.current = nextMarks;
     scanMemRef.current = nextMem;
     localParamsRef.current = nextLocalParams;
     setOutputs(nextOutputs);
+    setMarks(nextMarks);
     setTimerDisplay(nextTimerDisplay);
     setPrevMem(nextMem);
     setLastCallFrames(lastFrameByBlock);
@@ -144,8 +156,11 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
   const resetSimulation = () => {
     setRunning(false);
     const zeroOut = zeroOutputs();
+    const zeroM = zeroMarks();
     setOutputs(zeroOut);
     outputsRef.current = zeroOut;
+    setMarks(zeroM);
+    marksRef.current = zeroM;
     timersRef.current = {};
     scanMemRef.current = {};
     localParamsRef.current = {};
@@ -169,5 +184,5 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
     });
   };
 
-  return { running, setRunning, outputs, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
+  return { running, setRunning, outputs, marks, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
 }

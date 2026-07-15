@@ -23,6 +23,23 @@ describe("collectUsedAddresses con rungs 'call'", () => {
   });
 });
 
+describe("collectUsedAddresses con marcas (M)", () => {
+  it("incluye una marca usada como contacto o como salida", () => {
+    const rungs = [
+      contactRung(0, "M0.0", "Q0.0", "coil"),
+      contactRung(1, "I0.0", "M1.1", "set"),
+    ];
+    const used = collectUsedAddresses(rungs);
+    expect(used).toContain("M0.0");
+    expect(used).toContain("M1.1");
+  });
+
+  it("incluye el pin de Reset/Carga de un CTU/CTD aunque no forme parte de la lógica en serie", () => {
+    const rungs = [contactRung(0, "I0.0", "Q0.0", "ctu", { resetAddr: "M0.2" })];
+    expect(collectUsedAddresses(rungs)).toContain("M0.2");
+  });
+});
+
 describe("collectOutputConflicts con rungs 'call'", () => {
   it("un rung 'call' con outAddr heredado no genera un aviso de salida duplicada fantasma", () => {
     const rungs = [

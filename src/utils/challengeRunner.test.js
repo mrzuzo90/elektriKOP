@@ -5,12 +5,14 @@ import solucion01 from "../../docs/ejercicios/01-marcha-paro-enclavamiento/soluc
 import solucion02 from "../../docs/ejercicios/02-semaforo-temporizadores/solucion.json";
 import solucion03 from "../../docs/ejercicios/03-puerta-automatica-finales-carrera/solucion.json";
 import solucion04 from "../../docs/ejercicios/04-cintas-transportadoras-fc/solucion.json";
+import solucion05 from "../../docs/ejercicios/05-contador-piezas-marca/solucion.json";
 
 const SOLUCIONES = {
   "01-marcha-paro-enclavamiento": solucion01,
   "02-semaforo-temporizadores": solucion02,
   "03-puerta-automatica-finales-carrera": solucion03,
   "04-cintas-transportadoras-fc": solucion04,
+  "05-contador-piezas-marca": solucion05,
 };
 
 // Los 3 primeros solucion.json de docs/ejercicios/ siguen en formato v1
@@ -64,6 +66,19 @@ describe("runChallenge", () => {
     };
     const blocksRotos = [solucion04.blocks[0], fc1Roto];
     const { pass } = runChallenge(blocksRotos, solucion04.wiringMap, CHALLENGES.find((c) => c.id === "04-cintas-transportadoras-fc").steps);
+    expect(pass).toBe(false);
+  });
+
+  it("detecta un fallo real: si el contacto de la marca en MOTOR_CINTA queda en NA en vez de NC, el interbloqueo se invierte y no debe pasar", () => {
+    const mainRoto = {
+      ...solucion05.blocks[0],
+      rungs: solucion05.blocks[0].rungs.map((rung) =>
+        // Contacto NA en vez de NC: el motor arrancaría justo al revés
+        // (parado en reposo, en marcha con el lote completo).
+        rung.title === "MOTOR_CINTA" ? { ...rung, logic: [{ ...rung.logic[0], neg: false }] } : rung
+      ),
+    };
+    const { pass } = runChallenge([mainRoto], solucion05.wiringMap, CHALLENGES.find((c) => c.id === "05-contador-piezas-marca").steps);
     expect(pass).toBe(false);
   });
 

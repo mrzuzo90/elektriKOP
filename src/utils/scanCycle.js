@@ -1,4 +1,4 @@
-import { OUTPUT_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
+import { OUTPUT_ADDR, MARK_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
 import { evalSeries } from "./evalNode";
 
 // Ejecuta un ciclo de scan completo: evalúa cada segmento en orden sobre la
@@ -124,6 +124,32 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         if (pulseActive) elapsed = Math.min(elapsed + SCAN_MS / 1000, rung.preset);
         nextTimers[timerKey] = { elapsed, prevCombined: combined };
         write(rung.outAddr, pulseActive);
+      } else if (rung.outType === "ctu" || rung.outType === "ctd") {
+        // Contador (CTU cuenta hacia arriba, CTD hacia abajo). El rail
+        // principal (`combined`) es el pulso de cuenta (CU/CD) — se detecta
+        // el flanco de subida igual que en TP, para que mantener la entrada
+        // a 1 no siga incrementando/decrementando cada scan. `resetAddr` es
+        // un pin adicional (mismo mecanismo que los pines de una llamada a
+        // bloque): en CTU pone CV a 0 (Reset), en CTD lo recarga a PV
+        // (Carga) — y tiene prioridad sobre un pulso de cuenta simultáneo,
+        // convención habitual de un contador real. CV es un número interno
+        // (mismo tratamiento que `elapsed` en los temporizadores): se
+        // muestra en la caja pero no es una dirección direccionable, no
+        // hace falta inventar memoria numérica para esto.
+        const prevState = prevTimers[timerKey] || { count: 0, prevPulse: false };
+        const resetVal = rung.resetAddr ? !!readMem[rung.resetAddr] : false;
+        const rising = combined && !prevState.prevPulse;
+        let count = prevState.count;
+        if (rung.outType === "ctu") {
+          if (resetVal) count = 0;
+          else if (rising) count = Math.min(count + 1, rung.preset);
+        } else {
+          if (resetVal) count = rung.preset;
+          else if (rising) count = Math.max(count - 1, 0);
+        }
+        nextTimers[timerKey] = { count, prevPulse: combined };
+        const reached = rung.outType === "ctu" ? count >= rung.preset : count <= 0;
+        write(rung.outAddr, reached);
       } else {
         // ton
         const prevElapsed = prevTimers[timerKey] || 0;
@@ -138,5 +164,10 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
   runBlock(mainBlockId, {}, {}, mainBlockId, 0);
 
   const outputs = Object.fromEntries(OUTPUT_ADDR.map((a) => [a, !!nextMem[a]]));
-  return { outputs, timers: nextTimers, mem: nextMem, localParams: nextLocalParams, lastFrameByBlock };
+  // Marcas (M): igual que las salidas Q, necesitan persistir de un scan al
+  // siguiente — se devuelven aparte (no mezcladas en `outputs`) para no
+  // arriesgar a los consumidores que asumen que `outputs` tiene exactamente
+  // las 10 claves de OUTPUT_ADDR (HMI, ProcessPanel, detección de conflictos).
+  const marks = Object.fromEntries(MARK_ADDR.map((a) => [a, !!nextMem[a]]));
+  return { outputs, marks, timers: nextTimers, mem: nextMem, localParams: nextLocalParams, lastFrameByBlock };
 }

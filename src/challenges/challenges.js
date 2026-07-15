@@ -102,4 +102,35 @@ export const CHALLENGES = [
       { type: "assert", addr: "Q0.0", value: true, label: "Cinta 1 sigue en marcha, cada llamada mantuvo su propio tiempo" },
     ],
   },
+  {
+    id: "05-contador-piezas-marca",
+    title: "Contador de piezas",
+    steps: [
+      { type: "wait", scans: 1 },
+      { type: "assert", addr: "Q0.1", value: true, label: "El motor arranca en reposo (lote no completo)" },
+      { type: "assert", addr: "M0.0", value: false, label: "La marca Lote_Completo empieza a false" },
+      // 4 pulsos de pieza (flanco de subida cada vez) — todavía no llega a 5.
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: false, label: "Con 4 piezas contadas, el lote todavía no está completo" },
+      { type: "assert", addr: "Q0.1", value: true, label: "El motor sigue en marcha con 4 piezas" },
+      // 5º pulso: completa el lote.
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: true, label: "A la 5ª pieza, la marca Lote_Completo se activa" },
+      { type: "assert", addr: "Q0.0", value: true, label: "La alarma se enciende al completar el lote" },
+      { type: "assert", addr: "Q0.1", value: false, label: "El motor se detiene por el interbloqueo con la marca" },
+      // Reset: libera la marca y el motor, sin necesidad de un segmento aparte.
+      { type: "set", addr: "I0.1", value: true }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: false, label: "Reset libera la marca Lote_Completo" },
+      { type: "assert", addr: "Q0.0", value: false, label: "La alarma se apaga tras el Reset" },
+      { type: "assert", addr: "Q0.1", value: true, label: "El motor vuelve a arrancar tras el Reset" },
+    ],
+  },
 ];

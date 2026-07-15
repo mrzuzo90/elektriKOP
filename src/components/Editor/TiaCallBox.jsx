@@ -6,7 +6,7 @@ import { TiaLine } from "./TiaGraphics";
 // pero SIN su position:absolute (TiaSelect está pensado para flotar sobre
 // un único ancla pequeña, p.ej. un contacto; aquí necesitamos varias filas
 // en flujo normal dentro de la caja, así que se posiciona en línea).
-function PinWiringSelect({ value, onChange, options, symbols }) {
+export function PinWiringSelect({ value, onChange, options, symbols }) {
   const labelFor = (addr) => (symbols && symbols[addr] ? `${addr} · ${symbols[addr]}` : addr);
   return (
     <select

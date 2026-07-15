@@ -44,6 +44,8 @@ export default function PauseMenu({
   usedAddresses,
   symbols,
   onChangeSymbol,
+  marks,
+  simRunning,
   blocks,
   onAddBlock,
   onRenameBlock,
@@ -132,7 +134,7 @@ export default function PauseMenu({
           </Section>
 
           <Section icon="🏷️" title="Tabla de variables">
-            <SymbolsPanel usedAddresses={usedAddresses} symbols={symbols} onChangeSymbol={onChangeSymbol} />
+            <SymbolsPanel usedAddresses={usedAddresses} symbols={symbols} onChangeSymbol={onChangeSymbol} marks={marks} simRunning={simRunning} />
           </Section>
 
           <Section icon="🧩" title="Bloques (FC)">

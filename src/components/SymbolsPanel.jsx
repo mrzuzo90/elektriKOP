@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { T, INPUT_ADDR, OUTPUT_ADDR } from "../utils/constants";
+import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR } from "../utils/constants";
 import { pixelSelectStyle } from "../styles/pixelStyles";
 import PixelBtn from "./shared/PixelBtn";
 
-const ALL_ADDR = [...INPUT_ADDR, ...OUTPUT_ADDR];
+const ALL_ADDR = [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR];
 
 // Vive como sección dentro del menú de pausa — ya no es un panel
 // colapsable propio (ver ChallengePanel.jsx para el mismo cambio).
@@ -14,7 +14,7 @@ const ALL_ADDR = [...INPUT_ADDR, ...OUTPUT_ADDR];
 // y el botón "+" permite reservar y nombrar una dirección todavía sin usar
 // — así se puede planear el nombrado antes de montar el circuito, en vez
 // de esperar a haber colocado el contacto/bobina correspondiente.
-export default function SymbolsPanel({ usedAddresses, symbols, onChangeSymbol }) {
+export default function SymbolsPanel({ usedAddresses, symbols, onChangeSymbol, marks, simRunning }) {
   const [adding, setAdding] = useState(false);
   const [draftAddr, setDraftAddr] = useState("");
   const [draftName, setDraftName] = useState("");
@@ -49,6 +49,20 @@ export default function SymbolsPanel({ usedAddresses, symbols, onChangeSymbol })
             // contenido — sin esto, un <input> con flex:1 nunca se encoge
             // por debajo de su ancho intrínseco y se sale de la tarjeta.
             <div key={addr} style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+              {/* Punto de estado en vivo, solo para marcas (M): al ser
+                  memoria interna sin panel HMI/Proceso simulado propio,
+                  este es el único sitio donde se puede "ver" su valor sin
+                  montar un contacto de prueba. */}
+              {addr.startsWith("M") && (
+                <span
+                  title={simRunning ? (marks?.[addr] ? "Activa" : "Inactiva") : "Simulación parada"}
+                  style={{
+                    width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                    backgroundColor: simRunning && marks?.[addr] ? T.tiaLineActive : "#CCC",
+                    border: `1px solid ${T.dwGrey}`,
+                  }}
+                />
+              )}
               <span style={{ fontFamily: T.mono, fontSize: 13, color: T.tiaText, width: 46, flexShrink: 0 }}>{addr}</span>
               <input
                 value={symbols[addr] || ""}
