@@ -8,6 +8,10 @@ import { applyWiring } from "./plcIO";
 // temporizadores reales, así que es instantáneo y fácil de testear.
 export function runChallenge(blocks, wiringMap, steps, mainBlockId = "main") {
   let physicalInputs = {};
+  // Entradas analógicas (IW): aparte de physicalInputs porque applyWiring
+  // solo sabe convertir bits I/Q según NA/NC — un valor numérico de sensor
+  // no tiene cableado NA/NC que aplicar, pasa tal cual a la memoria del scan.
+  let analogInputs = {};
   let mem = {};
   let timers = {};
   let scanMem = {};
@@ -16,7 +20,7 @@ export function runChallenge(blocks, wiringMap, steps, mainBlockId = "main") {
 
   const tick = () => {
     const effectiveInputs = applyWiring(physicalInputs, wiringMap);
-    const combinedMem = { ...effectiveInputs, ...mem };
+    const combinedMem = { ...effectiveInputs, ...analogInputs, ...mem };
     const { outputs, marks, timers: nextTimers, mem: nextScanMem, localParams: nextLocalParams } = computeScanTick(
       blocks, combinedMem, timers, scanMem, mainBlockId, localParams
     );
@@ -28,11 +32,15 @@ export function runChallenge(blocks, wiringMap, steps, mainBlockId = "main") {
 
   steps.forEach((step) => {
     if (step.type === "set") {
-      physicalInputs = { ...physicalInputs, [step.addr]: step.value };
+      if (step.addr.startsWith("IW")) analogInputs = { ...analogInputs, [step.addr]: step.value };
+      else physicalInputs = { ...physicalInputs, [step.addr]: step.value };
     } else if (step.type === "wait") {
       for (let i = 0; i < step.scans; i++) tick();
     } else if (step.type === "assert") {
-      const actual = !!mem[step.addr];
+      // El valor esperado decide cómo leer la memoria: un número compara
+      // contra el valor numérico crudo (útil para depurar un ejercicio con
+      // CMP), un booleano contra el bit de siempre.
+      const actual = typeof step.value === "number" ? Number(mem[step.addr]) || 0 : !!mem[step.addr];
       results.push({ label: step.label, addr: step.addr, expected: step.value, actual, pass: actual === step.value });
     }
   });

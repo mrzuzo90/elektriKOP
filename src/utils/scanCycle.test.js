@@ -571,3 +571,139 @@ describe("computeScanTick — contadores CTU/CTD", () => {
     expect(timers["main:r2>fc1:c1"].count).toBe(0);
   });
 });
+
+// --- Bloques FB: memoria STATIC por sitio de llamada ---
+
+function fbBlock(id, name, { in: ins = [], out: outs = [], static: stat = [] } = {}, rungs = []) {
+  return { id, kind: "fb", name, rungs, interface: { in: ins, out: outs, static: stat } };
+}
+
+// FB "Alternador": cada flanco de subida de #pIn invierte su propio bit
+// STATIC #pEstado y lo refleja en #pOut — el toggle se implementa con UN
+// único rung "sr" (S y R evaluados contra el mismo readMem, antes de que
+// cualquiera de los dos escriba) en vez de dos rungs SET/RESET separados,
+// que sí tendrían una condición de carrera: el segundo leería el #pEstado
+// ya mutado por el primero dentro del mismo tick y se dispararía también.
+function toggleFb() {
+  return fbBlock(
+    "fb1",
+    "Alternador",
+    { in: [{ id: "pIn", name: "Activar" }], out: [{ id: "pOut", name: "Salida" }], static: [{ id: "pEstado", name: "Estado" }] },
+    [
+      {
+        id: "s0",
+        title: "TOGGLE_ESTADO",
+        comment: "",
+        logic: [
+          { kind: "contact", id: "s0-a", addr: "#pIn", neg: false, edge: "P" },
+          { kind: "contact", id: "s0-b", addr: "#pEstado", neg: true },
+        ],
+        logicR: [
+          { kind: "contact", id: "s0-c", addr: "#pIn", neg: false, edge: "P" },
+          { kind: "contact", id: "s0-d", addr: "#pEstado", neg: false },
+        ],
+        outAddr: "#pEstado",
+        outType: "sr",
+        preset: 2,
+      },
+      {
+        id: "s1",
+        title: "SALIDA",
+        comment: "",
+        logic: [{ kind: "contact", id: "s1-a", addr: "#pEstado", neg: false }],
+        outAddr: "#pOut",
+        outType: "coil",
+        preset: 2,
+      },
+    ]
+  );
+}
+
+describe("computeScanTick — bloques FB (memoria STATIC)", () => {
+  it("la memoria STATIC persiste entre ciclos de scan en el mismo sitio de llamada (toggle)", () => {
+    const fb1 = toggleFb();
+    const blocks = mainBlocks([callRung("r1", "fb1", { pIn: "I0.1", pOut: "Q0.5" })], [fb1]);
+
+    let timers = {}, scanMem = {}, localParams = {}, outputs;
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers, scanMem, "main", localParams));
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true); // flanco de subida: toggle a true
+
+    // Soltar el pulsador: sin flanco, debe QUEDARSE en true (memoria persistente, no un valor recalculado desde cero).
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true);
+
+    // Nuevo flanco de subida: toggle de vuelta a false.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(false);
+  });
+
+  it("dos sitios de llamada al mismo FB mantienen su STATIC totalmente independiente entre sí", () => {
+    const fb1 = toggleFb();
+    const blocks = mainBlocks(
+      [
+        callRung("r1", "fb1", { pIn: "I0.1", pOut: "Q0.5" }),
+        callRung("r2", "fb1", { pIn: "I0.2", pOut: "Q0.6" }),
+      ],
+      [fb1]
+    );
+
+    let timers = {}, scanMem = {}, localParams = {}, outputs;
+    // Solo el sitio r1 recibe un flanco de subida.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": false, "I0.2": false }, timers, scanMem, "main", localParams));
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": true, "I0.2": false }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true);
+    expect(outputs["Q0.6"]).toBe(false); // r2 nunca recibió su propio flanco: su instancia sigue en reposo
+  });
+
+  it("la memoria STATIC se conserva aunque EN esté a false varios ciclos (no se pierde por saltarse un ciclo)", () => {
+    const fb1 = toggleFb();
+    const blocks = mainBlocks([callRung("r1", "fb1", { pIn: "I0.1", pOut: "Q0.5" })], [fb1]);
+
+    let timers = {}, scanMem = {}, localParams = {}, outputs;
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers, scanMem, "main", localParams));
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true);
+
+    // EN=false (I0.0=false) durante varios ciclos: la llamada no se ejecuta en absoluto.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers, scanMem, "main", localParams));
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers, scanMem, "main", localParams));
+
+    // Al reactivar EN sin nuevo flanco, el estado sigue siendo el que tenía.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true);
+  });
+
+  it("la memoria STATIC empieza en false si el sitio de llamada nunca se ha ejecutado antes", () => {
+    const fb1 = toggleFb();
+    const blocks = mainBlocks([callRung("r1", "fb1", { pIn: "I0.1", pOut: "Q0.5" })], [fb1]);
+    const { outputs } = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, {});
+    expect(outputs["Q0.5"]).toBe(false);
+  });
+
+  it("un #param de IN se sigue muestreando aunque EN esté a false, para no perder un flanco real ocurrido durante el hueco", () => {
+    // Caso real (ejercicio 7): EN y el propio #pIn están cableados al MISMO
+    // pulsador (I0.0). Si al saltarse la llamada (EN=false) se congelara
+    // también el valor de IN en vez de seguir muestreándolo, la próxima vez
+    // que EN volviera a 1 el flanco compararía contra un IN "de antes"
+    // desfasado (el pulsador bajó y volvió a subir sin que nadie lo
+    // registrara) y no detectaría el segundo pulso como una transición real.
+    const fb1 = toggleFb();
+    const blocks = mainBlocks(
+      [{ ...callRung("r1", "fb1", { pIn: "I0.0", pOut: "Q0.5" }), logic: [{ kind: "contact", id: "r1-en", addr: "I0.0", neg: false }] }],
+      [fb1]
+    );
+
+    let timers = {}, scanMem = {}, localParams = {}, outputs;
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": false }, timers, scanMem, "main", localParams));
+    // Primer pulso: EN e IN suben juntos (mismo pulsador) -> toggle a true.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(true);
+    // Soltar: EN=false, la llamada se salta varios ciclos.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": false }, timers, scanMem, "main", localParams));
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": false }, timers, scanMem, "main", localParams));
+    // Segundo pulso: debe detectarse como un flanco NUEVO y volver a alternar.
+    ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true }, timers, scanMem, "main", localParams));
+    expect(outputs["Q0.5"]).toBe(false);
+  });
+});

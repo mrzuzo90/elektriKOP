@@ -64,18 +64,46 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
       };
 
       if (rung.outType === "call") {
-        if (!combined || !rung.callTarget) return; // EN=false: OUT no se tocan, quedan "congelados"
+        if (!rung.callTarget) return;
         const target = blockById.get(rung.callTarget);
         if (!target) return;
-        const calleeParams = {};
+        const calleePrevParams = prevLocalParams[timerKey] || {};
+
+        // IN se muestrea SIEMPRE, haya o no EN — si esto se congelara junto
+        // con el resto de la memoria cuando EN=false, un contacto de flanco
+        // P/N sobre un #param de IN compararía, la próxima vez que EN
+        // volviera a 1, contra un valor de "antes" que en realidad quedó
+        // desfasado durante todo el hueco sin llamar (el IN real pudo subir
+        // Y bajar mientras tanto sin que nadie lo registrara) — perdiendo o
+        // retrasando el flanco real. Direcciones físicas (readMem) siempre
+        // están disponibles, con o sin EN.
+        const calleeIn = {};
         target.interface.in.forEach((p) => {
           const addr = rung.paramWiring?.[p.id];
-          calleeParams[`#${p.id}`] = addr ? !!readMem[addr] : false;
+          calleeIn[`#${p.id}`] = addr ? !!readMem[addr] : false;
         });
+
+        if (!combined) {
+          // EN=false: el bloque no ejecuta sus propios rungs este ciclo (OUT
+          // no se toca, queda "congelado") — pero conserva el IN recién
+          // muestreado y el resto de su memoria (STATIC de un FB) tal cual
+          // estaba, no se pierde solo por saltarse un ciclo.
+          nextLocalParams[timerKey] = { ...calleePrevParams, ...calleeIn };
+          return;
+        }
+        const calleeParams = { ...calleeIn };
         target.interface.out.forEach((p) => {
           calleeParams[`#${p.id}`] = false;
         });
-        const calleePrevParams = prevLocalParams[timerKey] || {};
+        // STATIC (solo bloques FB): a diferencia de IN/OUT, NO se reinicia
+        // en cada llamada — se siembra con el valor que tenía al terminar
+        // el ciclo anterior en ESTE MISMO sitio de llamada (namespaced por
+        // timerKey, igual que un timer), así que dos sitios de llamada al
+        // mismo FB mantienen su propia memoria de instancia totalmente
+        // independiente entre sí, sin gestión manual de DB.
+        (target.interface.static || []).forEach((p) => {
+          calleeParams[`#${p.id}`] = calleePrevParams[`#${p.id}`] ?? false;
+        });
         runBlock(rung.callTarget, calleeParams, calleePrevParams, `${pathPrefix}:${rung.id}>${rung.callTarget}`, depth + 1);
         nextLocalParams[timerKey] = calleeParams;
         lastFrameByBlock[rung.callTarget] = calleeParams;

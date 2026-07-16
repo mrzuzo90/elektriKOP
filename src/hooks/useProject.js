@@ -11,6 +11,7 @@ import {
   removeParam as removeParamPure,
 } from "../utils/blocks";
 import { CURRENT_VERSION, migrateProjectData } from "../utils/projectFormat";
+import { buildShareUrl, readProjectFromLocation, clearShareParam } from "../utils/shareLink";
 
 const STORAGE_KEY = "elektrikop.autosave.v1";
 const HISTORY_LIMIT = 50;
@@ -49,17 +50,45 @@ function loadFromStorage() {
 // cableado, símbolos), su serialización a/desde JSON, su historial de
 // deshacer/rehacer y su autoguardado en localStorage. La simulación
 // (inputs/outputs/timers) vive aparte en useSimulation.
+function loadFromShareLink() {
+  try {
+    const migrated = migrateProjectData(readProjectFromLocation());
+    if (!migrated) return null;
+    return {
+      projectName: migrated.projectName || "Proyecto compartido",
+      blocks: migrated.blocks,
+      deviceMap: migrated.deviceMap || {},
+      wiringMap: migrated.wiringMap || {},
+      symbols: migrated.symbols || {},
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useProject() {
-  // Se lee localStorage una sola vez, de forma síncrona, para poder sembrar
-  // tanto el estado inicial como el aviso de "restaurado" sin parpadeo.
+  // Un enlace compartido tiene prioridad sobre el autoguardado (es la razón
+  // por la que se abrió esa URL) — se consulta primero, síncronamente igual
+  // que localStorage, para sembrar el estado inicial sin parpadeo. En
+  // cuanto se ha leído, se limpia el parámetro de la URL: a partir de ahí es
+  // un proyecto local normal (autoguardado), no un enlace que siga viviendo
+  // pegado a la barra de direcciones.
   const loadedOnceRef = useRef(undefined);
+  const loadedFromShareRef = useRef(false);
   if (loadedOnceRef.current === undefined) {
-    loadedOnceRef.current = loadFromStorage();
+    loadedOnceRef.current = loadFromShareLink();
+    if (loadedOnceRef.current) {
+      loadedFromShareRef.current = true;
+      clearShareParam();
+    } else {
+      loadedOnceRef.current = loadFromStorage();
+    }
     if (loadedOnceRef.current) bumpUidPastImportedBlocks(loadedOnceRef.current.blocks);
   }
 
   const [project, setProjectState] = useState(() => loadedOnceRef.current || initialProject());
-  const [restoredFromAutosave, setRestoredFromAutosave] = useState(() => !!loadedOnceRef.current);
+  const [restoredFromAutosave, setRestoredFromAutosave] = useState(() => !!loadedOnceRef.current && !loadedFromShareRef.current);
+  const [loadedFromShareLink, setLoadedFromShareLink] = useState(() => loadedFromShareRef.current);
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
   const [importError, setImportError] = useState("");
@@ -156,13 +185,23 @@ export function useProject() {
   const setWiringFor = (addr, wiring) => applyChange({ wiringMap: { ...projectRef.current.wiringMap, [addr]: wiring } });
   const setSymbolFor = (addr, name) => applyChange({ symbols: { ...projectRef.current.symbols, [addr]: name } });
 
-  const addBlock = () => applyChange({ blocks: addBlockPure(projectRef.current.blocks) });
+  const addBlock = (kind) => applyChange({ blocks: addBlockPure(projectRef.current.blocks, kind) });
   const renameBlock = (blockId, name) => applyChange({ blocks: renameBlockPure(projectRef.current.blocks, blockId, name) });
   const removeBlock = (blockId) => applyChange({ blocks: removeBlockPure(projectRef.current.blocks, blockId) });
   const setBlockRungs = (blockId, rungs) => applyChange({ blocks: setBlockRungsPure(projectRef.current.blocks, blockId, rungs) });
   const addParam = (blockId, direction, name) => applyChange({ blocks: addParamPure(projectRef.current.blocks, blockId, direction, name) });
   const renameParam = (blockId, direction, paramId, name) => applyChange({ blocks: renameParamPure(projectRef.current.blocks, blockId, direction, paramId, name) });
   const removeParam = (blockId, direction, paramId) => applyChange({ blocks: removeParamPure(projectRef.current.blocks, blockId, direction, paramId) });
+
+  // Copia al portapapeles una URL que reconstruye el proyecto actual entero
+  // (mismo JSON que exportProject) — quien la abra lo recibe cargado, sin
+  // necesidad de pasarse un archivo. Devuelve la URL para que la UI pueda
+  // mostrar feedback ("✓ Enlace copiado") sin tener que reconstruirla.
+  const copyShareLink = async () => {
+    const url = buildShareUrl(projectRef.current);
+    await navigator.clipboard.writeText(url);
+    return url;
+  };
 
   const exportProject = () => {
     const data = { version: CURRENT_VERSION, ...project };
@@ -240,11 +279,14 @@ export function useProject() {
     symbols: project.symbols, setSymbolFor,
     importError,
     exportProject, importProject, clearProject,
+    copyShareLink,
     fileInputRef,
     undo, redo,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
     restoredFromAutosave,
     dismissRestoredNotice: () => setRestoredFromAutosave(false),
+    loadedFromShareLink,
+    dismissShareLinkNotice: () => setLoadedFromShareLink(false),
   };
 }

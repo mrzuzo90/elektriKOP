@@ -1,8 +1,16 @@
 import React, { useState } from "react";
-import { T } from "../../utils/constants";
-import { TiaLine, TiaContact } from "./TiaGraphics";
+import { T, CMP_OPS } from "../../utils/constants";
+import { TiaLine, TiaContact, TiaCompareBox } from "./TiaGraphics";
 import { TiaSelect, TiaMiniBtn } from "./TiaControls";
 import { BRANCH_H, BRANCH_GAP, STEP } from "./parallelGeometry";
+
+// Un clic en el operador de un comparador recorre sus 6 variantes en el
+// mismo orden en que se listan en la paleta de TIA Portal (>=, <=, ==, <>,
+// <, >) — mismo patrón que cycleContactMode para NA/NC/P/N.
+function cycleCmpOp(op) {
+  const idx = CMP_OPS.indexOf(op);
+  return CMP_OPS[(idx + 1) % CMP_OPS.length];
+}
 
 // Un clic en el contacto recorre sus 4 variantes: NA → NC → flanco P
 // (subida) → flanco N (bajada) → NA. neg y edge son mutuamente excluyentes.
@@ -88,6 +96,11 @@ function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
           draggable={!atLimit} onDragStart={dnd.startNewDrag("contact")} onDragEnd={dnd.endDrag}
           title="Añadir contacto (o arrastrar hasta cualquier posición del esquema)"
         >+C</TiaMiniBtn>
+        <TiaMiniBtn
+          onClick={() => actions.addCompare(containerId)} disabled={atLimit}
+          draggable={!atLimit} onDragStart={dnd.startNewDrag("compare")} onDragEnd={dnd.endDrag}
+          title="Añadir comparador numérico sobre una entrada analógica (o arrastrar hasta cualquier posición del esquema)"
+        >+CMP</TiaMiniBtn>
         {depth === 0 && (
           <TiaMiniBtn
             onClick={() => actions.addParallel(containerId)} disabled={atLimit}
@@ -100,7 +113,7 @@ function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
   );
 }
 
-export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols, addrOptions, dnd }) {
+export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn, symbols, addrOptions, analogAddrOptions, dnd }) {
   let currentFlow = flowIn;
 
   return (
@@ -146,8 +159,34 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                   <button onClick={() => actions.removeNode(n.id)} title="Eliminar contacto" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
                 )}
               </div>
+            ) : n.kind === "compare" ? (
+              <div
+                draggable
+                onDragStart={dnd.startNodeDrag(n.id)}
+                onDragEnd={dnd.endDrag}
+                style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", margin: "0 4px", cursor: "grab" }}
+              >
+                <span
+                  style={{ position: "absolute", top: 8, left: -11, fontSize: 11, lineHeight: 1, color: "#AAA", userSelect: "none" }}
+                  title="Arrastrar para mover este comparador"
+                >⠿</span>
+                <TiaCompareBox
+                  addr={n.addr}
+                  op={n.op}
+                  value={n.value}
+                  addrOptions={analogAddrOptions}
+                  active={nodeState?.state}
+                  flowIn={prevFlow}
+                  onChangeAddr={(v) => actions.updateContact(n.id, { addr: v })}
+                  onCycleOp={() => actions.updateContact(n.id, { op: cycleCmpOp(n.op) })}
+                  onChangeValue={(v) => actions.updateContact(n.id, { value: v })}
+                />
+                {nodes.length > 1 && (
+                  <button onClick={() => actions.removeNode(n.id)} title="Eliminar comparador" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
+                )}
+              </div>
             ) : (
-              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
+              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dnd} />
             )}
           </React.Fragment>
         );
@@ -158,7 +197,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
   );
 }
 
-export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols, addrOptions, dnd }) {
+export function ParallelBlock({ node, states, actions, removable, depth, flowIn, symbols, addrOptions, analogAddrOptions, dnd }) {
   const branches = node.branches;
   // Recorrido vertical de los rieles: de la rama 0 (arriba) a la última.
   const railHeight = (branches.length - 1) * STEP;
@@ -182,7 +221,7 @@ export function ParallelBlock({ node, states, actions, removable, depth, flowIn,
         {branches.map((br, i) => (
           <div key={br.id} style={{ display: "flex", alignItems: "flex-start", position: "relative", marginTop: i === 0 ? 0 : BRANCH_GAP }}>
             <TiaLine active={flowIn} size={12} />
-            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} addrOptions={addrOptions} dnd={dnd} />
+            <LogicSeries containerId={br.id} nodes={br.nodes} states={states} actions={actions} depth={depth + 1} flowIn={flowIn} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dnd} />
             <TiaLine active={states[br.id]?.flowOut || false} size={12} />
             {branches.length > 2 && (
               <button onClick={() => actions.removeBranch(node.id, br.id)} style={{ alignSelf: "center", color: "red", background: "none", border: "none", cursor: "pointer", fontSize: 12 }}>✕</button>

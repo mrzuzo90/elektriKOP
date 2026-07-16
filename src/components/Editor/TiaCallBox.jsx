@@ -53,7 +53,7 @@ export default function TiaCallBox({ rung, targetBlock, availableTargets, onChan
           onChange={(e) => onChangeTarget(e.target.value || null)}
           style={pixelSelectStyle({ width: "100%", fontFamily: T.mono, fontSize: 12, color: T.tiaText, margin: "4px 0" })}
         >
-          <option value="">— elegir FC —</option>
+          <option value="">— elegir FC/FB —</option>
           {availableTargets.map((b) => (
             <option key={b.id} value={b.id}>{b.name}</option>
           ))}
@@ -61,7 +61,7 @@ export default function TiaCallBox({ rung, targetBlock, availableTargets, onChan
 
         {!targetBlock ? (
           <div style={{ fontSize: 11, color: T.red, fontStyle: "italic", padding: "2px 0" }}>
-            Elige un bloque FC destino para esta llamada.
+            Elige un bloque FC o FB destino para esta llamada.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

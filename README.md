@@ -34,11 +34,15 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
 - Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
 
-**Bloques FC**
-- Además de Main [OB1], crea bloques de función (FC) adicionales con su propia interfaz de parámetros IN/OUT — funciones reutilizables, igual que en TIA Portal.
-- Llama a un FC desde Main o desde otro FC con la instrucción **Llamar**, cableando cada parámetro a una dirección física o a otro parámetro propio. La UI nunca deja crear un ciclo de llamadas.
-- Dos sitios de llamada al mismo FC mantienen temporizadores y contactos de flanco (P/N) internos totalmente independientes entre sí.
-- Los FC no tienen memoria de instancia persistente (a diferencia de un FB de TIA Portal, fuera de alcance por ahora): sus variables se recalculan en cada ciclo de scan.
+**Bloques FC y FB**
+- Además de Main [OB1], crea bloques de función (FC) o bloques de función con memoria (FB) adicionales con su propia interfaz de parámetros — funciones reutilizables, igual que en TIA Portal.
+- Llama a un FC/FB desde Main o desde otro FC/FB con la instrucción **Llamar**, cableando cada parámetro a una dirección física o a otro parámetro propio. La UI nunca deja crear un ciclo de llamadas.
+- Dos sitios de llamada al mismo bloque mantienen temporizadores, contadores y contactos de flanco (P/N) internos totalmente independientes entre sí.
+- Un FC no tiene memoria propia: sus parámetros IN/OUT se recalculan enteros en cada llamada. Un **FB** añade una tercera categoría de parámetro, **STATIC**, que sí persiste entre ciclos de scan — memoria de instancia propia por sitio de llamada, sin necesidad de gestionar un DB de instancia a mano.
+
+**Comparadores (CMP) y entrada analógica**
+- **Comparador numérico**: instrucción "+CMP" en el esquema (junto a "+C"), con dirección analógica, operador (`>=`, `<=`, `==`, `<>`, `<`, `>` — cicla con un clic, igual que NA/NC en un contacto) y valor constante editable.
+- **Entrada analógica (`IW0`)**: a diferencia de una `I` normal, su valor no es un bit sino un número (0-100) — se controla con un slider en Proceso simulado, y solo un comparador puede leerla.
 
 **Contadores y marcas (M)**
 - **CTU** (cuenta arriba) y **CTD** (cuenta abajo): rail principal = pulso de cuenta (detecta flanco de subida), pin adicional de Reset/Carga cableable a cualquier dirección, valor preestablecido (PV) configurable y valor actual (CV) visible en la propia caja.
@@ -100,7 +104,7 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 ## Cómo usar
 
 1. **Añade un segmento** con el botón correspondiente en el editor.
-2. **Añade contactos** en serie (`+C`) o en paralelo (`+P`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I o Q) en el desplegable.
+2. **Añade contactos** en serie (`+C`), en paralelo (`+P`) o un **comparador** (`+CMP`, sobre la entrada analógica `IW0`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I, Q o IW) en el desplegable.
 3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
 4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, SR/RS, TON, TOF, TP, CTU o CTD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD) también necesita cablear su pin de Reset/Carga a una dirección, y un bloque SR/RS necesita su propia rama de entrada R1.
 5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
@@ -117,6 +121,8 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 3. [Puerta automática con finales de carrera](docs/ejercicios/03-puerta-automatica-finales-carrera/enunciado.md) ⭐⭐⭐
 4. [Dos cintas transportadoras con arranque temporizado (bloque FC)](docs/ejercicios/04-cintas-transportadoras-fc/enunciado.md) ⭐⭐⭐
 5. [Contador de piezas con marca interna](docs/ejercicios/05-contador-piezas-marca/enunciado.md) ⭐⭐
+6. [Tanque con sensor analógico y comparadores](docs/ejercicios/06-tanque-nivel-comparador/enunciado.md) ⭐⭐⭐
+7. [Alternador con bloque FB (memoria STATIC)](docs/ejercicios/07-alternador-fb-static/enunciado.md) ⭐⭐⭐
 
 > Si te animas a crear más ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
 
@@ -131,11 +137,11 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 - [x] Bloques FC: funciones reutilizables con interfaz IN/OUT, llamables desde Main o desde otro FC.
 - [x] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
 - [x] Bloque SR/RS combinado (bistable con prioridad invertible entre Set y Reset).
-- [ ] Bloques FB (con memoria de instancia propia, tipo DB) — ronda futura sobre los bloques FC.
-- [ ] Comparadores numéricos (`>=`, `==`) sobre valores simulados.
-- [ ] Compartir proyectos mediante un enlace, sin necesidad de archivo.
+- [x] Comparadores numéricos (`>=`, `<=`, `==`, `<>`, `<`, `>`) sobre una entrada analógica simulada.
+- [x] Compartir proyectos mediante un enlace, sin necesidad de archivo.
+- [x] Bloques FB (con memoria de instancia propia STATIC, sin gestión manual de DB).
 
-Con esta ronda, ElektriKOP cubre el conjunto básico de instrucciones que se enseña en un ciclo de automatización con S7-1200 (contactos, bobinas, set/reset, temporizadores, flancos, contadores, marcas y modularidad con bloques FC). El resto de ideas de esta lista son mejoras posteriores, no huecos del núcleo didáctico.
+Con esta ronda, ElektriKOP cubre el conjunto básico de instrucciones que se enseña en un ciclo de automatización con S7-1200 (contactos, bobinas, set/reset, comparadores, temporizadores, flancos, contadores, marcas y modularidad con bloques FC/FB). El resto de ideas de esta lista son mejoras posteriores, no huecos del núcleo didáctico.
 
 Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real de aula es bienvenida.
 

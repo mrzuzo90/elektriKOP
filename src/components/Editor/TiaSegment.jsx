@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { T } from "../../utils/constants";
 import {
   newContactNode,
+  newCompareNode,
   newParallelNode,
   countContacts,
   mapContainer,
@@ -43,8 +44,10 @@ function makeActions(rung, onChange, field) {
   return {
     totalContacts: () => countContacts(rung[field]),
     addContact: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newContactNode()]) }),
+    addCompare: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newCompareNode()]) }),
     addParallel: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newParallelNode()]) }),
     insertContact: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newContactNode()) }),
+    insertCompare: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newCompareNode()) }),
     insertParallel: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newParallelNode()) }),
     moveNode: (nodeId, containerId, index) => onChange({ ...rung, [field]: moveNode(rung[field], nodeId, containerId, index) }),
     removeNode: (nodeId) => onChange({ ...rung, [field]: removeNodeEverywhere(rung[field], nodeId) }),
@@ -58,11 +61,21 @@ function makeActions(rung, onChange, field) {
 // insertar contacto o paralelo nuevo). Se instancia una vez por red —
 // TiaSegment siempre crea dos (S y R1) para poder tener hooks
 // incondicionales, aunque solo un bloque SR/RS use la segunda.
+// kind ("contact" | "compare" | "parallel") -> { dragKind, insertAction } —
+// única fuente de verdad para qué botón/drag corresponde a qué acción de
+// inserción, así que añadir un tipo nuevo de nodo arrastrable (como
+// "compare") no obliga a tocar cada rama de active/startNewDrag/dropAt.
+const NEW_NODE_KINDS = {
+  contact: { dragKind: "new-contact", insert: "insertContact" },
+  compare: { dragKind: "new-compare", insert: "insertCompare" },
+  parallel: { dragKind: "new-parallel", insert: "insertParallel" },
+};
+
 function useLogicDnd(actions) {
-  const [dragKind, setDragKind] = useState(null); // null | 'move' | 'new-contact' | 'new-parallel'
+  const [dragKind, setDragKind] = useState(null); // null | 'move' | 'new-contact' | 'new-compare' | 'new-parallel'
   const payloadRef = useRef(null);
   return {
-    active: dragKind === "move" || dragKind === "new-contact" || dragKind === "new-parallel",
+    active: dragKind !== null,
     startNodeDrag: (nodeId) => (e) => {
       payloadRef.current = { type: "move", nodeId };
       e.dataTransfer.effectAllowed = "move";
@@ -70,10 +83,11 @@ function useLogicDnd(actions) {
       setDragKind("move");
     },
     startNewDrag: (kind) => (e) => {
-      payloadRef.current = { type: kind === "contact" ? "new-contact" : "new-parallel" };
+      const { dragKind: dk } = NEW_NODE_KINDS[kind];
+      payloadRef.current = { type: dk };
       e.dataTransfer.effectAllowed = "copy";
       e.dataTransfer.setData("text/plain", kind);
-      setDragKind(kind === "contact" ? "new-contact" : "new-parallel");
+      setDragKind(dk);
     },
     endDrag: () => {
       payloadRef.current = null;
@@ -81,16 +95,16 @@ function useLogicDnd(actions) {
     },
     dropAt: (containerId, index) => {
       const payload = payloadRef.current;
+      const newKind = Object.values(NEW_NODE_KINDS).find((k) => k.dragKind === payload?.type);
       if (payload?.type === "move") actions.moveNode(payload.nodeId, containerId, index);
-      else if (payload?.type === "new-contact" && actions.totalContacts() < 8) actions.insertContact(containerId, index);
-      else if (payload?.type === "new-parallel" && actions.totalContacts() < 8) actions.insertParallel(containerId, index);
+      else if (newKind && actions.totalContacts() < 8) actions[newKind.insert](containerId, index);
       payloadRef.current = null;
       setDragKind(null);
     },
   };
 }
 
-export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols, addrOptions, outputAddrOptions, blocks = [], currentBlockId }) {
+export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols, addrOptions, analogAddrOptions, outputAddrOptions, blocks = [], currentBlockId }) {
   const actionsS = makeActions(rung, onChange, "logic");
   const actionsR = makeActions(rung, onChange, "logicR");
   const dndS = useLogicDnd(actionsS);
@@ -201,14 +215,14 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
           <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
             {/* Fila S */}
             <div style={{ display: "flex", alignItems: "flex-start" }}>
-              <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actionsS} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} dnd={dndS} />
+              <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actionsS} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dndS} />
               <div style={{ flex: 1, minWidth: 20, height: 30, display: "flex", alignItems: "center" }}>
                 <div style={{ width: "100%", height: 3, backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine }} />
               </div>
             </div>
             {/* Fila R1 */}
             <div style={{ display: "flex", alignItems: "flex-start" }}>
-              <LogicSeries containerId="root" nodes={rung.logicR || []} states={evalResult?.states || {}} actions={actionsR} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} dnd={dndR} />
+              <LogicSeries containerId="root" nodes={rung.logicR || []} states={evalResult?.states || {}} actions={actionsR} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dndR} />
               <div style={{ flex: 1, minWidth: 20, height: 30, display: "flex", alignItems: "center" }}>
                 <div style={{ width: "100%", height: 3, backgroundColor: flowR ? T.tiaLineActive : T.tiaLine }} />
               </div>
@@ -250,7 +264,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
         {/* Left Power Rail */}
         <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginRight: 4 }} />
 
-        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actionsS} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} dnd={dndS} />
+        <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actionsS} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dndS} />
 
         {/* Main Line + Output Device, agrupados en una única zona de
             aterrizaje: soltar aquí un tipo de salida arrastrado desde la

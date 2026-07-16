@@ -36,6 +36,14 @@ export const OUTPUT_ADDR = ["Q0.0", "Q0.1", "Q0.2", "Q0.3", "Q0.4", "Q0.5", "Q0.
 // banderas de secuencia sin tener que seguir gastando una Q libre como
 // apaño (patrón que ya aparecía en el ejercicio del semáforo).
 export const MARK_ADDR = ["M0.0", "M0.1", "M0.2", "M0.3", "M0.4", "M0.5", "M0.6", "M0.7", "M1.0", "M1.1", "M1.2", "M1.3", "M1.4", "M1.5", "M1.6", "M1.7"];
+// Entrada analógica (IW, "input word"): a diferencia de I/Q/M, su valor no
+// es un bit sino un número (0-100, como el porcentaje de un sensor de nivel
+// o temperatura simulado) — la controla un slider en Proceso simulado en
+// vez de un dispositivo NA/NC, y solo un comparador (nodo "compare") puede
+// leerla, nunca un contacto normal.
+export const ANALOG_ADDR = ["IW0"];
+export const ANALOG_MAX = 100;
+export const CMP_OPS = [">=", "<=", "==", "<>", "<", ">"];
 export const MAX_RUNGS = 10;
 export const SCAN_MS = 100;
 // Defensa en profundidad: la UI ya impide crear un ciclo de llamadas entre

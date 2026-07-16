@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "projectName": "Ejercicio 7 - Alternador con bloque FB (memoria STATIC)",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "LAMPARA_1",
+          "comment": "Llama al FB Alternador: cada pulso de I0.0 alterna Q0.0.",
+          "logic": [{ "kind": "contact", "id": "n1", "addr": "I0.0", "neg": false }],
+          "outAddr": "Q0.0",
+          "outType": "call",
+          "preset": 2,
+          "callTarget": "fb1",
+          "paramWiring": { "pIn": "I0.0", "pOut": "Q0.0" }
+        },
+        {
+          "id": 1,
+          "title": "LAMPARA_2",
+          "comment": "Llama al MISMO FB Alternador: cada pulso de I0.1 alterna Q0.1, totalmente independiente de LAMPARA_1.",
+          "logic": [{ "kind": "contact", "id": "n2", "addr": "I0.1", "neg": false }],
+          "outAddr": "Q0.1",
+          "outType": "call",
+          "preset": 2,
+          "callTarget": "fb1",
+          "paramWiring": { "pIn": "I0.1", "pOut": "Q0.1" }
+        }
+      ],
+      "interface": { "in": [], "out": [] }
+    },
+    {
+      "id": "fb1",
+      "kind": "fb",
+      "name": "Alternador",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "TOGGLE_ESTADO",
+          "comment": "Cada flanco de subida de Activar invierte Estado (S y R evaluados contra el mismo valor previo, sin condición de carrera).",
+          "logic": [
+            { "kind": "contact", "id": "n3", "addr": "#pIn", "neg": false, "edge": "P" },
+            { "kind": "contact", "id": "n4", "addr": "#pEstado", "neg": true }
+          ],
+          "logicR": [
+            { "kind": "contact", "id": "n5", "addr": "#pIn", "neg": false, "edge": "P" },
+            { "kind": "contact", "id": "n6", "addr": "#pEstado", "neg": false }
+          ],
+          "outAddr": "#pEstado",
+          "outType": "sr",
+          "preset": 2
+        },
+        {
+          "id": 1,
+          "title": "SALIDA",
+          "comment": "Refleja el bit STATIC en la salida del bloque.",
+          "logic": [{ "kind": "contact", "id": "n7", "addr": "#pEstado", "neg": false }],
+          "outAddr": "#pOut",
+          "outType": "coil",
+          "preset": 2
+        }
+      ],
+      "interface": {
+        "in": [{ "id": "pIn", "name": "Activar" }],
+        "out": [{ "id": "pOut", "name": "Salida" }],
+        "static": [{ "id": "pEstado", "name": "Estado" }]
+      }
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "pulsador",
+    "I0.1": "pulsador",
+    "Q0.0": "lampara",
+    "Q0.1": "lampara"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Pulsador_L1",
+    "I0.1": "Pulsador_L2",
+    "Q0.0": "Lampara_1",
+    "Q0.1": "Lampara_2"
+  }
+}

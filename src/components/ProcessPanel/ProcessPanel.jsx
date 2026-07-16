@@ -8,7 +8,7 @@ import { DEVICE_TYPES } from "./deviceTypes";
 // diminutos en ese ancho, y con 1 sola el panel crecería demasiado rápido
 // según se añaden dispositivos, obligando a hacer scroll antes de lo
 // necesario.
-export default function ProcessPanel({ addresses, deviceMap, onChangeType, wiringMap, onChangeWiring, inputs, outputs, visible, onToggle }) {
+export default function ProcessPanel({ addresses, deviceMap, onChangeType, wiringMap, onChangeWiring, inputs, outputs, analogInputs, onChangeAnalog, visible, onToggle }) {
   return (
     <div style={{ backgroundColor: T.tiaBg, border: `2px solid ${T.dwBlack}`, boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.25)", marginBottom: 20 }}>
       <div
@@ -34,6 +34,30 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
             </span>
           ) : (
             addresses.map((addr) => {
+              // Entrada analógica (IW): antes de la comprobación "empieza
+              // por I" de más abajo, porque "IW0" también la cumpliría y se
+              // trataría como un bit digital — un sensor de nivel/temperatura
+              // simulado no tiene NA/NC ni icono de dispositivo, se controla
+              // con un slider numérico (0-100), no un clic on/off.
+              if (addr.startsWith("IW")) {
+                const value = analogInputs?.[addr] ?? 0;
+                return (
+                  <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13, color: T.tiaText, fontWeight: "bold" }}>{addr}</span>
+                    <span style={{ fontSize: 32, lineHeight: 1 }} title="Sensor analógico simulado">🌡️</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={value}
+                      onChange={(e) => onChangeAnalog(addr, Number(e.target.value))}
+                      style={{ width: "100%" }}
+                      title={`${addr}: ${value}`}
+                    />
+                    <span style={{ fontSize: 12, color: T.tiaText, fontWeight: "bold" }}>{value}</span>
+                  </div>
+                );
+              }
               const isInput = addr.startsWith("I");
               const active = isInput ? !!inputs[addr] : !!outputs[addr];
               const type = deviceMap[addr] || "none";

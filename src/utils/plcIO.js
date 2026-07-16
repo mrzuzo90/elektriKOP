@@ -1,11 +1,11 @@
-import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR } from "./constants";
+import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR } from "./constants";
 
-// Direcciones I/Q realmente referenciadas en un segmento (contactos + su
-// propia salida), usado para no mostrar en "Proceso simulado" direcciones
-// que no se usan en ningún sitio todavía.
+// Direcciones I/Q/IW realmente referenciadas en un segmento (contactos,
+// comparadores + su propia salida), usado para no mostrar en "Proceso
+// simulado" direcciones que no se usan en ningún sitio todavía.
 function collectContactAddrs(nodes, set) {
   nodes.forEach((n) => {
-    if (n.kind === "contact") set.add(n.addr);
+    if (n.kind === "contact" || n.kind === "compare") set.add(n.addr);
     else n.branches.forEach((b) => collectContactAddrs(b.nodes, set));
   });
 }
@@ -24,7 +24,7 @@ export function collectUsedAddresses(rungs) {
     // (se lee cada scan), aunque no forme parte de rung.logic.
     if (rung.resetAddr) set.add(rung.resetAddr);
   });
-  return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR].filter((a) => set.has(a));
+  return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...ANALOG_ADDR].filter((a) => set.has(a));
 }
 
 // Convierte el estado "físico" de cada entrada (¿está el pulsador pulsado?,

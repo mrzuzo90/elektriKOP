@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { T } from "../../utils/constants";
 import { pixelBorderStyle } from "../../styles/pixelStyles";
 import PixelBtn from "../shared/PixelBtn";
@@ -38,6 +38,9 @@ export default function PauseMenu({
   importError,
   restoredFromAutosave,
   onDismissRestoredNotice,
+  onShare,
+  loadedFromShareLink,
+  onDismissShareLinkNotice,
   onClear,
   wiringMap,
   onChallengeResultChange,
@@ -54,6 +57,18 @@ export default function PauseMenu({
   onRenameParam,
   onRemoveParam,
 }) {
+  const [shareFeedback, setShareFeedback] = useState("");
+
+  const handleShare = async () => {
+    try {
+      await onShare();
+      setShareFeedback("✓ Enlace copiado al portapapeles");
+    } catch {
+      setShareFeedback("No se pudo copiar el enlace");
+    }
+    setTimeout(() => setShareFeedback(""), 3000);
+  };
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e) => {
@@ -111,8 +126,10 @@ export default function PauseMenu({
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <PixelBtn small color="dwGrey" onClick={onExport}>💾 Exportar</PixelBtn>
               <PixelBtn small color="dwGrey" onClick={onImportClick}>📂 Importar</PixelBtn>
+              <PixelBtn small color="dwGrey" onClick={handleShare} title="Copia un enlace que carga este proyecto entero, sin necesidad de archivo">🔗 Compartir</PixelBtn>
               <PixelBtn small color="red" onClick={onClear} title="Borra segmentos, variables y estado de la simulación">🗑 Limpiar Todo</PixelBtn>
             </div>
+            {shareFeedback && <div style={{ color: T.tiaText, fontSize: 12, marginTop: 8 }}>{shareFeedback}</div>}
             <input
               ref={fileInputRef}
               type="file"
@@ -131,13 +148,19 @@ export default function PauseMenu({
                 <button onClick={onDismissRestoredNotice} style={{ border: "none", background: "none", color: "#0D47A1", cursor: "pointer", fontWeight: "bold" }}>✕</button>
               </div>
             )}
+            {loadedFromShareLink && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#E8F5E9", border: "1px solid #66BB6A", color: "#1B5E20", padding: "6px 10px", marginTop: 8, fontSize: 12 }}>
+                <span>🔗 Proyecto cargado desde un enlace compartido.</span>
+                <button onClick={onDismissShareLinkNotice} style={{ border: "none", background: "none", color: "#1B5E20", cursor: "pointer", fontWeight: "bold" }}>✕</button>
+              </div>
+            )}
           </Section>
 
           <Section icon="🏷️" title="Tabla de variables">
             <SymbolsPanel usedAddresses={usedAddresses} symbols={symbols} onChangeSymbol={onChangeSymbol} marks={marks} simRunning={simRunning} />
           </Section>
 
-          <Section icon="🧩" title="Bloques (FC)">
+          <Section icon="🧩" title="Bloques (FC / FB)">
             <BlocksPanel
               blocks={blocks}
               onAddBlock={onAddBlock}

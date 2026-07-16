@@ -13,6 +13,9 @@ function branch(id, nodes) {
 function parallel(id, branches) {
   return { kind: "parallel", id, branches };
 }
+function compare(addr, op, value) {
+  return { kind: "compare", id: `cmp-${addr}-${op}-${value}`, addr, op, value };
+}
 
 describe("evalNode", () => {
   it("un contacto NA vale lo mismo que el bit de memoria", () => {
@@ -41,6 +44,21 @@ describe("evalNode", () => {
     expect(evalNode(c, { "I0.0": false }, { "I0.0": true })).toBe(true);
     expect(evalNode(c, { "I0.0": false }, { "I0.0": false })).toBe(false);
     expect(evalNode(c, { "I0.0": true }, { "I0.0": true })).toBe(false);
+  });
+
+  it("un comparador evalúa el valor numérico de mem contra una constante", () => {
+    expect(evalNode(compare("IW0", ">=", 50), { IW0: 50 })).toBe(true);
+    expect(evalNode(compare("IW0", ">=", 50), { IW0: 49 })).toBe(false);
+    expect(evalNode(compare("IW0", "<=", 50), { IW0: 50 })).toBe(true);
+    expect(evalNode(compare("IW0", "==", 10), { IW0: 10 })).toBe(true);
+    expect(evalNode(compare("IW0", "<>", 10), { IW0: 10 })).toBe(false);
+    expect(evalNode(compare("IW0", "<", 10), { IW0: 5 })).toBe(true);
+    expect(evalNode(compare("IW0", ">", 10), { IW0: 5 })).toBe(false);
+  });
+
+  it("un comparador sin valor todavía en mem se trata como 0", () => {
+    expect(evalNode(compare("IW0", "==", 0), {})).toBe(true);
+    expect(evalNode(compare("IW0", ">=", 1), {})).toBe(false);
   });
 
   it("un nodo paralelo es true si al menos una rama pasa (OR)", () => {

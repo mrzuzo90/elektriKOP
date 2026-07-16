@@ -6,6 +6,8 @@ import solucion02 from "../../docs/ejercicios/02-semaforo-temporizadores/solucio
 import solucion03 from "../../docs/ejercicios/03-puerta-automatica-finales-carrera/solucion.json";
 import solucion04 from "../../docs/ejercicios/04-cintas-transportadoras-fc/solucion.json";
 import solucion05 from "../../docs/ejercicios/05-contador-piezas-marca/solucion.json";
+import solucion06 from "../../docs/ejercicios/06-tanque-nivel-comparador/solucion.json";
+import solucion07 from "../../docs/ejercicios/07-alternador-fb-static/solucion.json";
 
 const SOLUCIONES = {
   "01-marcha-paro-enclavamiento": solucion01,
@@ -13,6 +15,8 @@ const SOLUCIONES = {
   "03-puerta-automatica-finales-carrera": solucion03,
   "04-cintas-transportadoras-fc": solucion04,
   "05-contador-piezas-marca": solucion05,
+  "06-tanque-nivel-comparador": solucion06,
+  "07-alternador-fb-static": solucion07,
 };
 
 // Los 3 primeros solucion.json de docs/ejercicios/ siguen en formato v1
@@ -79,6 +83,60 @@ describe("runChallenge", () => {
       ),
     };
     const { pass } = runChallenge([mainRoto], solucion05.wiringMap, CHALLENGES.find((c) => c.id === "05-contador-piezas-marca").steps);
+    expect(pass).toBe(false);
+  });
+
+  it("detecta un fallo real: si la alarma del ejercicio 6 queda en serie con Sistema_Activo, no debe pasar (debe seguir sonando con el sistema parado)", () => {
+    const mainRoto = {
+      ...solucion06.blocks[0],
+      rungs: solucion06.blocks[0].rungs.map((rung) =>
+        rung.title === "ALARMA_NIVEL_ALTO"
+          ? { ...rung, logic: [{ kind: "contact", id: "n-extra", addr: "M0.0", neg: false }, ...rung.logic] }
+          : rung
+      ),
+    };
+    const { pass } = runChallenge([mainRoto], solucion06.wiringMap, CHALLENGES.find((c) => c.id === "06-tanque-nivel-comparador").steps);
+    expect(pass).toBe(false);
+  });
+
+  it("detecta un fallo real: si el comparador de la bomba usa '<=' en vez de '<', no debe pasar (la bomba no se pararía justo al 30%)", () => {
+    const mainRoto = {
+      ...solucion06.blocks[0],
+      rungs: solucion06.blocks[0].rungs.map((rung) =>
+        rung.title === "BOMBA_LLENADO"
+          ? { ...rung, logic: rung.logic.map((n) => (n.kind === "compare" ? { ...n, op: "<=" } : n)) }
+          : rung
+      ),
+    };
+    const { pass } = runChallenge([mainRoto], solucion06.wiringMap, CHALLENGES.find((c) => c.id === "06-tanque-nivel-comparador").steps);
+    expect(pass).toBe(false);
+  });
+
+  it("detecta un fallo real: si el toggle del ejercicio 7 se monta con SET+RESET separados (no un único SR) tiene una condición de carrera y no debe pasar", () => {
+    const fb1Roto = {
+      ...solucion07.blocks[1],
+      rungs: [
+        {
+          id: 0, title: "SET_ESTADO", comment: "",
+          logic: [
+            { kind: "contact", id: "n3", addr: "#pIn", neg: false, edge: "P" },
+            { kind: "contact", id: "n4", addr: "#pEstado", neg: true },
+          ],
+          outAddr: "#pEstado", outType: "set", preset: 2,
+        },
+        {
+          id: 1, title: "RESET_ESTADO", comment: "",
+          logic: [
+            { kind: "contact", id: "n5", addr: "#pIn", neg: false, edge: "P" },
+            { kind: "contact", id: "n6", addr: "#pEstado", neg: false },
+          ],
+          outAddr: "#pEstado", outType: "reset", preset: 2,
+        },
+        solucion07.blocks[1].rungs[1],
+      ],
+    };
+    const blocksRotos = [solucion07.blocks[0], fb1Roto];
+    const { pass } = runChallenge(blocksRotos, solucion07.wiringMap, CHALLENGES.find((c) => c.id === "07-alternador-fb-static").steps);
     expect(pass).toBe(false);
   });
 

@@ -16,6 +16,8 @@ con ElektriKOP. Cada carpeta tiene:
 | 3 | [Puerta automática con finales de carrera](03-puerta-automatica-finales-carrera/enunciado.md) | ⭐⭐⭐ | Interbloqueo cruzado, finales de carrera, cableado físico NA/NC real |
 | 4 | [Dos cintas transportadoras con arranque temporizado (bloque FC)](04-cintas-transportadoras-fc/enunciado.md) | ⭐⭐⭐ | Bloques FC, interfaz IN/OUT, instrucción Llamar, temporizadores independientes por sitio de llamada |
 | 5 | [Contador de piezas con marca interna](05-contador-piezas-marca/enunciado.md) | ⭐⭐ | Contador CTU, pin de Reset, marcas (M), interbloqueo por marca |
+| 6 | [Tanque con sensor analógico y comparadores](06-tanque-nivel-comparador/enunciado.md) | ⭐⭐⭐ | Entrada analógica (IW), comparador (CMP), combinación con marcha/paro y marcas |
+| 7 | [Alternador con bloque FB (memoria STATIC)](07-alternador-fb-static/enunciado.md) | ⭐⭐⭐ | Bloque FB, parámetro STATIC, memoria de instancia por sitio de llamada, contraste con FC |
 
 ## Cómo usarlos
 
@@ -27,7 +29,7 @@ con ElektriKOP. Cada carpeta tiene:
 
 ## Progresión pensada
 
-Los cinco ejercicios están diseñados para construirse uno sobre otro:
+Los siete ejercicios están diseñados para construirse uno sobre otro:
 
 - El **Ejercicio 1** enseña el enclavamiento con un contacto NC *lógico*
   (dibujado en el segmento) sobre un pulsador cableado NA por defecto — la
@@ -50,6 +52,16 @@ Los cinco ejercicios están diseñados para construirse uno sobre otro:
   verdad, y la usa para interbloquear un motor — el mismo patrón que
   cualquier condición interna (fallo detectado, lote completo, etc.) usaría
   en un programa real.
+- El **Ejercicio 6** da el segundo gran salto: de trabajar solo con bits
+  (0/1) a trabajar con un **valor numérico real** (una entrada analógica
+  `IW`) mediante la instrucción **comparador (CMP)**, combinándola con el
+  enclavamiento marcha/paro y las marcas ya vistas en ejercicios anteriores.
+- El **Ejercicio 7** cierra el conjunto con los **bloques FB**: la pieza que
+  se dejó fuera a propósito al construir los FC del Ejercicio 4 — memoria
+  **STATIC** propia por sitio de llamada, que persiste entre ciclos de scan
+  sin necesidad de una marca global ni de gestionar un DB de instancia a
+  mano. El enunciado explica en detalle por qué un FC no puede resolver este
+  ejercicio.
 
 ## ¿Tienes un ejercicio propio?
 

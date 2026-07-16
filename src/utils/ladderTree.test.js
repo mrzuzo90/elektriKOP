@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { insertNodeAt, moveNode, countContacts, genId, genBlockId, genParamId, bumpUidPastImportedBlocks } from "./ladderTree";
+import { insertNodeAt, moveNode, countContacts, updateContactEverywhere, genId, genBlockId, genParamId, bumpUidPastImportedBlocks } from "./ladderTree";
 
 function contact(id, addr = "I0.0") {
   return { kind: "contact", id, addr, neg: false, edge: null };
+}
+function compareNode(id, addr = "IW0") {
+  return { kind: "compare", id, addr, op: ">=", value: 50 };
 }
 function parallel(id, branches) {
   return { kind: "parallel", id, branches };
@@ -10,6 +13,21 @@ function parallel(id, branches) {
 function branch(id, nodes) {
   return { id, nodes };
 }
+
+describe("countContacts con nodos 'compare'", () => {
+  it("cuenta un comparador como un nodo hoja, igual que un contacto", () => {
+    expect(countContacts([contact("a"), compareNode("b")])).toBe(2);
+    expect(countContacts([parallel("p1", [branch("b1", [compareNode("x")]), branch("b2", [contact("y")])])])).toBe(2);
+  });
+});
+
+describe("updateContactEverywhere con nodos 'compare'", () => {
+  it("actualiza un comparador por id, no solo un contacto", () => {
+    const tree = [compareNode("cmp1")];
+    const result = updateContactEverywhere(tree, "cmp1", { op: "==", value: 10 });
+    expect(result[0]).toMatchObject({ op: "==", value: 10 });
+  });
+});
 
 describe("insertNodeAt", () => {
   it("inserta en el índice dado dentro de root", () => {

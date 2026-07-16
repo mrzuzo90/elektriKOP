@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, MAX_RUNGS } from "./utils/constants";
+import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
 import { newRung } from "./utils/ladderTree";
@@ -15,6 +15,9 @@ import { useProject } from "./hooks/useProject";
 
 function zeroInputs() {
   return Object.fromEntries(INPUT_ADDR.map((a) => [a, false]));
+}
+function zeroAnalog() {
+  return Object.fromEntries(ANALOG_ADDR.map((a) => [a, 0]));
 }
 
 // timerDisplay ahora indexa por ruta de llamada completa ("main:7" o
@@ -36,6 +39,7 @@ function timerValueFor(timerDisplay, blockId, rungId) {
 // ---------------------------------------------------------------------------
 export default function PlcEmulator() {
   const [inputs, setInputs] = useState(zeroInputs);
+  const [analogInputs, setAnalogInputs] = useState(zeroAnalog);
   const [showProcess, setShowProcess] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
   const [booting, setBooting] = useState(true);
@@ -64,6 +68,7 @@ export default function PlcEmulator() {
   // por eso recibe todos los bloques, no solo el que se está editando.
   const sim = useSimulation({
     inputs,
+    analogInputs,
     blocks: project.blocks,
     deviceMap: project.deviceMap,
     wiringMap: project.wiringMap,
@@ -78,6 +83,7 @@ export default function PlcEmulator() {
     if (val) sim.playClickSound();
     setInputs((prev) => ({ ...prev, [addr]: val }));
   };
+  const setAnalogInput = (addr, value) => setAnalogInputs((prev) => ({ ...prev, [addr]: value }));
 
   // Atajos de teclado del Panel HMI (idea del usuario, 2026-07-15): las
   // teclas 0-9 mapean 1:1 al orden de INPUT_ADDR (0→I0.0 ... 7→I0.7,
@@ -120,6 +126,7 @@ export default function PlcEmulator() {
 
   const resetAll = () => {
     setInputs(zeroInputs());
+    setAnalogInputs(zeroAnalog());
     sim.resetSimulation();
   };
 
@@ -127,6 +134,7 @@ export default function PlcEmulator() {
     if (!window.confirm("¿Limpiar todo? Se borrarán los segmentos, las variables y el estado de la simulación.")) return;
     project.clearProject();
     setInputs(zeroInputs());
+    setAnalogInputs(zeroAnalog());
     sim.resetSimulation();
     setChallengeBadge(null);
     setActiveBlockId("main");
@@ -136,6 +144,7 @@ export default function PlcEmulator() {
     project.importProject(file, {
       onSuccess: () => {
         setInputs(zeroInputs());
+        setAnalogInputs(zeroAnalog());
         sim.resetSimulation();
         setActiveBlockId("main");
       },
@@ -152,19 +161,25 @@ export default function PlcEmulator() {
   // contacto/salida del editor — así renombrar un parámetro no rompe el
   // cableado existente. symbolsForEditor añade el alias solo para mostrarlo.
   // Un contacto puede leer cualquier I/Q físico y cualquier parámetro propio
-  // (IN u OUT); la salida de un rung (bobina/SET/RESET/temporizador) solo
-  // puede escribir en Q físico o en un OUT propio — nunca en un IN (es de
-  // solo lectura dentro del FC) ni en una dirección física de entrada.
+  // (IN, OUT o, en un FB, STATIC); la salida de un rung (bobina/SET/RESET/
+  // temporizador) solo puede escribir en Q físico o en un OUT/STATIC propio
+  // — nunca en un IN (es de solo lectura dentro del bloque) ni en una
+  // dirección física de entrada. STATIC es exclusivo de un FB: a diferencia
+  // de IN/OUT (se recalculan en cada llamada), persiste entre ciclos de
+  // scan — es memoria propia del bloque, invisible para quien lo llama.
   const isFc = activeBlock.kind === "fc";
-  const localIn = isFc ? activeBlock.interface.in : [];
-  const localOut = isFc ? activeBlock.interface.out : [];
-  const localParams = [...localIn, ...localOut];
+  const isFb = activeBlock.kind === "fb";
+  const isCallableBlock = isFc || isFb;
+  const localIn = isCallableBlock ? activeBlock.interface.in : [];
+  const localOut = isCallableBlock ? activeBlock.interface.out : [];
+  const localStatic = isFb ? activeBlock.interface.static || [] : [];
+  const localParams = [...localIn, ...localOut, ...localStatic];
   const symbolsForEditor = {
     ...project.symbols,
     ...Object.fromEntries(localParams.map((p) => [`#${p.id}`, p.name])),
   };
   const contactAddrOptions = [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...localParams.map((p) => `#${p.id}`)];
-  const outputAddrOptions = [...OUTPUT_ADDR, ...MARK_ADDR, ...localOut.map((p) => `#${p.id}`)];
+  const outputAddrOptions = [...OUTPUT_ADDR, ...MARK_ADDR, ...localOut.map((p) => `#${p.id}`), ...localStatic.map((p) => `#${p.id}`)];
 
   // Mismo orden que collectOutputConflictsAcrossBlocks (blocks.flatMap(b =>
   // b.rungs)), con el nombre del bloque adjunto — así el aviso de "salida
@@ -252,7 +267,7 @@ export default function PlcEmulator() {
                 <button
                   key={b.id}
                   onClick={() => setActiveBlockId(b.id)}
-                  title={b.kind === "main" ? "Main [OB1]" : `Función ${b.name}`}
+                  title={b.kind === "main" ? "Main [OB1]" : b.kind === "fb" ? `Bloque de función (FB) ${b.name}` : `Función ${b.name}`}
                   style={{
                     fontFamily: T.mono, fontWeight: "bold", fontSize: 13, padding: "6px 14px", cursor: "pointer",
                     border: `2px solid ${T.dwBlack}`, borderBottom: "none",
@@ -266,7 +281,7 @@ export default function PlcEmulator() {
             </div>
             <div style={{ padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${T.dwBlack}` }}>
                <div>
-                  <div style={{ fontSize: 20, fontWeight: "bold", color: T.tiaText }}>{activeBlock.name} [{isMainActive ? "OB1" : "FC"}]</div>
+                  <div style={{ fontSize: 20, fontWeight: "bold", color: T.tiaText }}>{activeBlock.name} [{isMainActive ? "OB1" : activeBlock.kind === "fb" ? "FB" : "FC"}]</div>
                   <div style={{ fontSize: 14, color: "#666" }}>Program block (Ladder Logic)</div>
                </div>
                <div style={{ display: "flex", gap: 8 }}>
@@ -297,7 +312,7 @@ export default function PlcEmulator() {
               // (lastCallFrames) con el que se ejecutó ese ciclo (decisión
               // ya confirmada: "último marco ejecutado", no multi-instancia).
               const frame = sim.lastCallFrames[activeBlock.id] || {};
-              const mem = { ...effectiveInputs, ...sim.outputs, ...sim.marks, ...frame };
+              const mem = { ...effectiveInputs, ...analogInputs, ...sim.outputs, ...sim.marks, ...frame };
               const states = computeStates(rung.logic, mem, sim.prevMem);
               // Bloque SR/RS: red R1 aparte de la red S — se fusiona en el
               // mismo mapa `states` (los ids de nodo son únicos vía
@@ -314,6 +329,7 @@ export default function PlcEmulator() {
                   canDelete={activeBlock.rungs.length > 1}
                   symbols={symbolsForEditor}
                   addrOptions={contactAddrOptions}
+                  analogAddrOptions={ANALOG_ADDR}
                   outputAddrOptions={outputAddrOptions}
                   blocks={project.blocks}
                   currentBlockId={activeBlock.id}
@@ -358,6 +374,8 @@ export default function PlcEmulator() {
             onChangeWiring={project.setWiringFor}
             inputs={inputs}
             outputs={sim.outputs}
+            analogInputs={analogInputs}
+            onChangeAnalog={setAnalogInput}
             visible={showProcess}
             onToggle={() => setShowProcess((v) => !v)}
           />
@@ -376,6 +394,9 @@ export default function PlcEmulator() {
         importError={project.importError}
         restoredFromAutosave={project.restoredFromAutosave}
         onDismissRestoredNotice={project.dismissRestoredNotice}
+        onShare={project.copyShareLink}
+        loadedFromShareLink={project.loadedFromShareLink}
+        onDismissShareLinkNotice={project.dismissShareLinkNotice}
         onClear={clearAll}
         blocks={project.blocks}
         wiringMap={project.wiringMap}

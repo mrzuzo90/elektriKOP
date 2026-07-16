@@ -9,25 +9,36 @@ import { genBlockId, genParamId, newRung } from "./ladderTree";
 // (mainBlockId por defecto) lo asumen así en varios sitios; si se generara
 // con genBlockId() cada llamada (p.ej. clearProject) produciría un id
 // distinto cada vez y rompería esas referencias.
+// Un FB añade una tercera categoría de parámetro ("static") frente a un FC:
+// a diferencia de IN/OUT (se recalculan en cada llamada), STATIC persiste
+// entre ciclos de scan, namespaceada por sitio de llamada (ver scanCycle.js)
+// — así cada llamada al mismo FB tiene su propia memoria de instancia, sin
+// necesidad de gestionar un DB de instancia a mano como en TIA Portal real.
 export function newBlock(kind = "fc", name) {
   return {
     id: kind === "main" ? "main" : genBlockId(),
-    kind, // "main" | "fc"
-    name: name ?? (kind === "main" ? "Main" : "FC"),
+    kind, // "main" | "fc" | "fb"
+    name: name ?? (kind === "main" ? "Main" : kind === "fb" ? "FB" : "FC"),
     rungs: [newRung(0)],
-    interface: { in: [], out: [] },
+    interface: kind === "fb" ? { in: [], out: [], static: [] } : { in: [], out: [] },
   };
 }
 
-export function nextFcName(blocks) {
+function nextBlockName(blocks, prefix) {
   const used = new Set(blocks.map((b) => b.name));
   let n = 1;
-  while (used.has(`FC${n}`)) n++;
-  return `FC${n}`;
+  while (used.has(`${prefix}${n}`)) n++;
+  return `${prefix}${n}`;
+}
+export function nextFcName(blocks) {
+  return nextBlockName(blocks, "FC");
+}
+export function nextFbName(blocks) {
+  return nextBlockName(blocks, "FB");
 }
 
-export function addBlock(blocks) {
-  return [...blocks, newBlock("fc", nextFcName(blocks))];
+export function addBlock(blocks, kind = "fc") {
+  return [...blocks, newBlock(kind, kind === "fb" ? nextFbName(blocks) : nextFcName(blocks))];
 }
 
 export function renameBlock(blocks, blockId, name) {
@@ -113,7 +124,7 @@ export function wouldCreateCycle(blocks, callerId, calleeId) {
 }
 
 export function validCallTargets(blocks, callerId) {
-  return blocks.filter((b) => b.kind === "fc" && !wouldCreateCycle(blocks, callerId, b.id));
+  return blocks.filter((b) => (b.kind === "fc" || b.kind === "fb") && !wouldCreateCycle(blocks, callerId, b.id));
 }
 
 export function isBlockCalled(blocks, blockId) {

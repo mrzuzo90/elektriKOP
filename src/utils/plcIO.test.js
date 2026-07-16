@@ -49,6 +49,21 @@ describe("collectUsedAddresses con marcas (M)", () => {
     expect(used).toContain("I0.0");
     expect(used).toContain("I0.1");
   });
+
+  it("incluye la dirección analógica (IW) leída por un comparador", () => {
+    const rungs = [
+      {
+        id: 0,
+        title: "0",
+        comment: "",
+        logic: [{ kind: "compare", id: "0-cmp", addr: "IW0", op: ">=", value: 50 }],
+        outAddr: "Q0.0",
+        outType: "coil",
+        preset: 2,
+      },
+    ];
+    expect(collectUsedAddresses(rungs)).toContain("IW0");
+  });
 });
 
 describe("collectOutputConflicts con rungs 'call'", () => {

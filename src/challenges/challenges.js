@@ -133,4 +133,71 @@ export const CHALLENGES = [
       { type: "assert", addr: "Q0.1", value: true, label: "El motor vuelve a arrancar tras el Reset" },
     ],
   },
+  {
+    id: "06-tanque-nivel-comparador",
+    title: "Tanque con sensor analógico",
+    steps: [
+      { type: "wait", scans: 1 },
+      { type: "assert", addr: "Q0.0", value: false, label: "La bomba está parada en reposo (sistema no arrancado)" },
+      { type: "assert", addr: "Q0.1", value: false, label: "La alarma está apagada en reposo (nivel a 0%)" },
+      // Arranca el sistema con el tanque vacío: la bomba debe llenar sola.
+      { type: "set", addr: "I0.0", value: true },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: true, label: "El sistema queda activo al pulsar Marcha" },
+      { type: "assert", addr: "Q0.0", value: true, label: "La bomba llena sola con el sistema activo y el nivel por debajo del 30%" },
+      // El nivel llega justo al 30%: el comparador es estricto ('<'), así
+      // que la bomba debe pararse aquí mismo, no un poco después.
+      { type: "set", addr: "IW0", value: 30 },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: false, label: "La bomba se para justo al llegar al 30% (comparador estricto '<')" },
+      // Sube el nivel por encima del 30%: la bomba debe seguir parada.
+      { type: "set", addr: "IW0", value: 50 },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: false, label: "La bomba se para sola al superar el 30% (el comparador deja de cumplirse)" },
+      { type: "set", addr: "I0.0", value: false },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: true, label: "El sistema sigue activo al soltar Marcha (enclavamiento)" },
+      // El nivel llega al 90%: la alarma debe saltar sin importar la marcha.
+      { type: "set", addr: "IW0", value: 90 },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.1", value: true, label: "La alarma de nivel alto salta al llegar al 90%" },
+      { type: "set", addr: "I0.1", value: true },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "M0.0", value: false, label: "Paro desactiva el sistema" },
+      { type: "assert", addr: "Q0.1", value: true, label: "La alarma sigue activa aunque el sistema ya no esté en marcha" },
+      // El nivel vuelve a bajar: la alarma se apaga sola, la bomba no arranca (sistema parado).
+      { type: "set", addr: "IW0", value: 10 },
+      { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.1", value: false, label: "La alarma se apaga sola al bajar el nivel del 90%" },
+      { type: "assert", addr: "Q0.0", value: false, label: "La bomba no arranca aunque el nivel sea bajo: el sistema sigue parado" },
+    ],
+  },
+  {
+    id: "07-alternador-fb-static",
+    title: "Alternador con FB",
+    steps: [
+      { type: "wait", scans: 1 },
+      { type: "assert", addr: "Q0.0", value: false, label: "Lámpara 1 apagada en reposo" },
+      { type: "assert", addr: "Q0.1", value: false, label: "Lámpara 2 apagada en reposo" },
+      // Un pulso en L1: alterna a encendida. L2 no se ve afectada.
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: true, label: "Lámpara 1 se enciende con el primer pulso" },
+      { type: "assert", addr: "Q0.1", value: false, label: "Lámpara 2 sigue apagada: I0.0 no la afecta" },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: true, label: "Lámpara 1 sigue encendida al soltar (memoria STATIC, no un flanco recalculado)" },
+      // Segundo pulso en L1: alterna de vuelta a apagada.
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: false, label: "Lámpara 1 se apaga con el segundo pulso (toggle)" },
+      { type: "set", addr: "I0.0", value: false }, { type: "wait", scans: 2 },
+      // Un pulso en L2: alterna a encendida, sin afectar a L1 (que sigue apagada).
+      { type: "set", addr: "I0.1", value: true }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.1", value: true, label: "Lámpara 2 se enciende con su propio pulso" },
+      { type: "assert", addr: "Q0.0", value: false, label: "Lámpara 1 sigue apagada: la instancia de L2 es independiente" },
+      { type: "set", addr: "I0.1", value: false }, { type: "wait", scans: 2 },
+      // Un nuevo pulso en L1: se enciende, y L2 sigue encendida (memoria independiente en ambos sentidos).
+      { type: "set", addr: "I0.0", value: true }, { type: "wait", scans: 2 },
+      { type: "assert", addr: "Q0.0", value: true, label: "Lámpara 1 vuelve a encenderse con su tercer pulso" },
+      { type: "assert", addr: "Q0.1", value: true, label: "Lámpara 2 sigue encendida: no se ve afectada por el pulso de L1" },
+    ],
+  },
 ];

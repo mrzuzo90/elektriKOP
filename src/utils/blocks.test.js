@@ -3,6 +3,7 @@ import {
   newBlock,
   addBlock,
   nextFcName,
+  nextFbName,
   renameBlock,
   removeBlock,
   setBlockRungs,
@@ -40,6 +41,14 @@ describe("newBlock", () => {
     expect(b.kind).toBe("fc");
     expect(b.name).toBe("FC1");
   });
+
+  it("un bloque fb tiene id generado, kind 'fb' y una tercera categoría 'static' en su interfaz", () => {
+    const b = newBlock("fb", "FB1");
+    expect(b.id).toMatch(/^b\d+$/);
+    expect(b.kind).toBe("fb");
+    expect(b.name).toBe("FB1");
+    expect(b.interface).toEqual({ in: [], out: [], static: [] });
+  });
 });
 
 describe("addBlock / nextFcName", () => {
@@ -56,6 +65,15 @@ describe("addBlock / nextFcName", () => {
     const fc2Id = blocks.find((b) => b.name === "FC2").id;
     blocks = removeBlock(blocks, fc2Id);
     expect(nextFcName(blocks)).toBe("FC2");
+  });
+
+  it("addBlock(blocks, 'fb') crea un FB nombrado FB1, independiente de la numeración de los FC", () => {
+    let blocks = [newBlock("main")];
+    blocks = addBlock(blocks); // FC1
+    blocks = addBlock(blocks, "fb"); // FB1
+    expect(blocks.at(-1).kind).toBe("fb");
+    expect(blocks.at(-1).name).toBe("FB1");
+    expect(nextFbName(blocks)).toBe("FB2");
   });
 });
 
@@ -165,6 +183,13 @@ describe("validCallTargets", () => {
     blocks = blocks.map((b) => (b.id === fc1.id ? { ...b, rungs: [callRung(0, fc2.id)] } : b));
     const targets = validCallTargets(blocks, fc2.id).map((b) => b.id);
     expect(targets).not.toContain(fc1.id);
+  });
+
+  it("incluye bloques FB, no solo FC, como destino válido de una llamada", () => {
+    let blocks = [newBlock("main")];
+    blocks = addBlock(blocks, "fb");
+    const fb1 = blocks.find((b) => b.kind === "fb");
+    expect(validCallTargets(blocks, "main").map((b) => b.id)).toContain(fb1.id);
   });
 });
 

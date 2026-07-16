@@ -6,6 +6,9 @@ export const genParamId = () => `p${_uid++}`;
 export function newContactNode() {
   return { kind: "contact", id: genId(), addr: "I0.0", neg: false, edge: null };
 }
+export function newCompareNode() {
+  return { kind: "compare", id: genId(), addr: "IW0", op: ">=", value: 50 };
+}
 export function newBranch() {
   return { id: genId(), nodes: [newContactNode()] };
 }
@@ -25,9 +28,13 @@ export function newRung(id) {
 }
 
 // --- Tree Utilities (Mantienen tu lógica original intacta y robusta) ---
+// Cuenta nodos hoja (contacto o comparador) — cualquier kind que no sea
+// "parallel" es una hoja, mismo criterio que mapContainer/removeNodeEverywhere
+// más abajo, para que un tipo de hoja nuevo (como "compare") no tenga que
+// tocar esta función.
 export function countContacts(nodes) {
   return nodes.reduce(
-    (sum, n) => sum + (n.kind === "contact" ? 1 : n.branches.reduce((s, b) => s + countContacts(b.nodes), 0)),
+    (sum, n) => sum + (n.kind === "parallel" ? n.branches.reduce((s, b) => s + countContacts(b.nodes), 0) : 1),
     0
   );
 }
@@ -52,9 +59,12 @@ export function removeNodeEverywhere(nodes, nodeId) {
         : n
     );
 }
+// Actualiza el nodo hoja (contacto o comparador) con ese id — n.kind !==
+// "parallel" en vez de "=== contact" por el mismo motivo que countContacts:
+// cualquier hoja nueva queda cubierta sin tocar esta función.
 export function updateContactEverywhere(nodes, contactId, patch) {
   return nodes.map((n) => {
-    if (n.id === contactId && n.kind === "contact") return { ...n, ...patch };
+    if (n.id === contactId && n.kind !== "parallel") return { ...n, ...patch };
     if (n.kind === "parallel") {
       return { ...n, branches: n.branches.map((b) => ({ ...b, nodes: updateContactEverywhere(b.nodes, contactId, patch) })) };
     }

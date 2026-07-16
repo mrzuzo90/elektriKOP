@@ -15,7 +15,7 @@ function zeroMarks() {
 // escribe las salidas resultantes. Se dispara tanto desde el intervalo de
 // RUN como desde el botón de PASO (stepOnce) — misma lógica, distinto
 // disparador.
-export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn }) {
+export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringMap, soundOn }) {
   const [running, setRunning] = useState(false);
   const [outputs, setOutputs] = useState(zeroOutputs);
   const [timerDisplay, setTimerDisplay] = useState({});
@@ -32,6 +32,8 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
 
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
+  const analogInputsRef = useRef(analogInputs);
+  analogInputsRef.current = analogInputs;
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
   const deviceMapRef = useRef(deviceMap);
@@ -116,7 +118,7 @@ export function useSimulation({ inputs, blocks, deviceMap, wiringMap, soundOn })
   };
 
   const runScanTick = () => {
-    const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...outputsRef.current, ...marksRef.current };
+    const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...analogInputsRef.current, ...outputsRef.current, ...marksRef.current };
     const {
       outputs: nextOutputs,
       marks: nextMarks,

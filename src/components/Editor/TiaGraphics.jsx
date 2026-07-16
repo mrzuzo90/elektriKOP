@@ -75,6 +75,61 @@ export function TiaContact({ neg, edge, stateObj }) {
   );
 }
 
+// Comparador numérico (CMP): a diferencia de un TiaContact, no alterna
+// NA/NC/flanco con un clic — lleva 3 controles propios dentro de la misma
+// caja (dirección analógica, operador que sí cicla con un clic, y valor
+// constante editable), porque a diferencia de un contacto normal no basta
+// con elegir una dirección: hace falta también QUÉ comparar y CONTRA QUÉ.
+export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, onChangeAddr, onCycleOp, onChangeValue }) {
+  const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(active && flowIn);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
+      <TiaLine active={flowIn} size={8} />
+      <div style={{
+        border: `3px solid ${color}`,
+        backgroundColor: "#FFF",
+        width: 78,
+        height: 50,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "2px 4px",
+        position: "relative",
+        boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+      }}>
+        {sparking && <span className="dw-spark" />}
+        <select
+          value={addr}
+          onChange={(e) => onChangeAddr(e.target.value)}
+          title="Entrada analógica a comparar"
+          style={{ fontSize: 10, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", padding: 0 }}
+        >
+          {addrOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <div
+          onClick={onCycleOp}
+          title="Clic para cambiar el operador de comparación"
+          style={{
+            cursor: "pointer", textAlign: "center", fontSize: 13, fontWeight: "bold", color: T.tiaText,
+            borderTop: `1px solid ${T.tiaLine}`, borderBottom: `1px solid ${T.tiaLine}`, lineHeight: 1.6,
+          }}
+        >
+          {op}
+        </div>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => onChangeValue(Number(e.target.value) || 0)}
+          title="Valor constante de la comparación"
+          style={{ fontSize: 11, fontFamily: T.mono, color: T.tiaText, border: "none", background: "transparent", textAlign: "center", width: "100%", padding: 0 }}
+        />
+      </div>
+      <TiaLine active={active} size={8} />
+    </div>
+  );
+}
+
 export function TiaCoil({ active, flowIn }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
   const sparking = useSpark(active && flowIn);

@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "projectName": "Ejercicio 6 - Tanque con sensor analógico y comparadores",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "SISTEMA_ACTIVO",
+          "comment": "Marcha/Paro con enclavamiento (igual que el Ejercicio 1), pero sobre una marca en vez de una Q.",
+          "logic": [
+            {
+              "kind": "parallel",
+              "id": "n1",
+              "branches": [
+                { "id": "n2", "nodes": [{ "kind": "contact", "id": "n3", "addr": "I0.0", "neg": false }] },
+                { "id": "n4", "nodes": [{ "kind": "contact", "id": "n5", "addr": "M0.0", "neg": false }] }
+              ]
+            },
+            { "kind": "contact", "id": "n6", "addr": "I0.1", "neg": true }
+          ],
+          "outAddr": "M0.0",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 1,
+          "title": "BOMBA_LLENADO",
+          "comment": "Llena el tanque mientras el sistema esté activo y el nivel esté por debajo del 30%.",
+          "logic": [
+            { "kind": "contact", "id": "n7", "addr": "M0.0", "neg": false },
+            { "kind": "compare", "id": "n8", "addr": "IW0", "op": "<", "value": 30 }
+          ],
+          "outAddr": "Q0.0",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 2,
+          "title": "ALARMA_NIVEL_ALTO",
+          "comment": "Alarma de seguridad: vigila el nivel SIEMPRE, esté el sistema en marcha o no.",
+          "logic": [
+            { "kind": "compare", "id": "n9", "addr": "IW0", "op": ">=", "value": 90 }
+          ],
+          "outAddr": "Q0.1",
+          "outType": "coil",
+          "preset": 2
+        }
+      ],
+      "interface": { "in": [], "out": [] }
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "pulsador",
+    "I0.1": "paro",
+    "Q0.0": "motor",
+    "Q0.1": "alarma"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Marcha",
+    "I0.1": "Paro",
+    "IW0": "Nivel_Tanque",
+    "Q0.0": "Bomba_Llenado",
+    "Q0.1": "Alarma_Nivel_Alto",
+    "M0.0": "Sistema_Activo"
+  }
+}
