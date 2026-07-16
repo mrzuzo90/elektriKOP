@@ -92,6 +92,26 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         if (combined) write(rung.outAddr, true);
       } else if (rung.outType === "reset") {
         if (combined) write(rung.outAddr, false);
+      } else if (rung.outType === "sr" || rung.outType === "rs") {
+        // Bloque SR/RS combinado (bistable de TIA Portal): `combined` (rail
+        // principal) hace de entrada S, `rung.logicR` es la red de la
+        // entrada R1 — se evalúa igual que cualquier red de contactos, con
+        // su propio prevMem para que los flancos P/N de R1 también
+        // funcionen. No hace falta estado propio en nextTimers: el bit
+        // persiste solo porque nextMem parte de una copia de mem y aquí
+        // solo se escribe cuando S o R1 están realmente a 1 — igual que
+        // una bobina, pero condicional en dos señales con prioridad.
+        // "sr" = Reset domina (se evalúa Set y LUEGO Reset, que gana si
+        // ambas entradas están a 1 a la vez — el orden real del bloque SR
+        // de TIA). "rs" = Set domina (mismo bloque, orden invertido).
+        const resetVal = evalSeries(rung.logicR || [], readMem, readPrevMem);
+        if (rung.outType === "sr") {
+          if (combined) write(rung.outAddr, true);
+          if (resetVal) write(rung.outAddr, false);
+        } else {
+          if (resetVal) write(rung.outAddr, false);
+          if (combined) write(rung.outAddr, true);
+        }
       } else if (rung.outType === "tof") {
         // Off-delay: la salida sigue a la entrada al activarse, pero al
         // desactivarse se queda encendida "preset" segundos más. elapsed

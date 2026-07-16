@@ -54,11 +54,12 @@ export function collectOutputConflicts(rungs) {
   });
   return Object.entries(byAddr).filter(([, idxs]) => {
     if (idxs.length < 2) return false;
-    // Solo avisamos si hay una bobina directa o un temporizador (TON/TOF/TP)
-    // compartiendo la dirección con algo más — estos tipos sobrescriben sin
-    // condiciones, así que compartir dirección con ellos casi siempre es un
-    // despiste.
-    return idxs.some((i) => ["coil", "ton", "tof", "tp"].includes(rungs[i].outType));
+    // Solo avisamos si hay una bobina directa, un temporizador (TON/TOF/TP)
+    // o un bloque SR/RS compartiendo la dirección con algo más — estos
+    // tipos ya resuelven su propio enclavamiento (o sobrescriben sin
+    // condiciones), así que compartir dirección con ellos casi siempre es
+    // un despiste.
+    return idxs.some((i) => ["coil", "ton", "tof", "tp", "sr", "rs"].includes(rungs[i].outType));
   });
 }
 

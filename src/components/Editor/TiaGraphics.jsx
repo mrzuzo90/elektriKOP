@@ -94,13 +94,23 @@ export function TiaCoil({ active, flowIn }) {
   );
 }
 
-export function TiaSetReset({ active, flowIn, type }) {
+export function TiaSetReset({ active, flowIn, type, onToggle }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
   const letter = type === "set" ? "S" : "R";
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <TiaLine active={flowIn} size={12} />
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: onToggle ? 'pointer' : 'default',
+        }}
+        onClick={onToggle}
+        title={onToggle ? `Clic para invertir a ${type === "set" ? "Reset" : "Set"}` : undefined}
+      >
         <svg width="28" height="30" viewBox="0 0 28 30" style={{ display: "block" }}>
           <line x1="0" y1="15" x2="6" y2="15" stroke={flowIn ? T.tiaLineActive : T.tiaLine} strokeWidth="3" strokeLinecap="square" />
           <line x1="22" y1="15" x2="28" y2="15" stroke={color} strokeWidth="3" strokeLinecap="square" />
@@ -108,6 +118,48 @@ export function TiaSetReset({ active, flowIn, type }) {
           <path d="M 18 5 A 10 10 0 0 1 18 25" fill="none" stroke={color} strokeWidth="3" />
         </svg>
         <span style={{ position: 'absolute', fontSize: 13, fontWeight: 'bold', color: color, fontFamily: 'sans-serif', marginTop: 1 }}>{letter}</span>
+      </div>
+    </div>
+  );
+}
+
+// Bloque SR/RS combinado (bistable de TIA Portal): una sola caja con dos
+// pines de entrada, S arriba y R1 abajo — cada uno con su propia línea
+// entrante (dibujada por la fila correspondiente en TiaSegment, ver
+// comentario ahí). priority = "sr" (Reset domina, por defecto en TIA) |
+// "rs" (Set domina) — clic en la caja invierte, mismo patrón que el
+// toggle de TiaSetReset.
+export function TiaSrBox({ sFlow, rFlow, active, priority, onToggle }) {
+  const color = active ? T.tiaLineActive : T.tiaLine;
+  const label = priority === "rs" ? "RS" : "SR";
+  const sparking = useSpark(active);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+      <div
+        onClick={onToggle}
+        title={onToggle ? `Prioridad: ${priority === "rs" ? "Set domina (RS)" : "Reset domina (SR)"} — clic para invertir` : undefined}
+        style={{
+          position: "relative",
+          border: `3px solid ${color}`,
+          backgroundColor: "#FFF",
+          width: 64,
+          height: 66,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "3px 5px",
+          cursor: onToggle ? "pointer" : "default",
+          boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+        }}
+      >
+        {sparking && <span className="dw-spark" />}
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, lineHeight: 1.1, color: sFlow ? T.tiaLineActive : T.tiaText }}>
+          <span>S</span>
+        </div>
+        <div style={{ textAlign: "center", fontSize: 13, fontWeight: "bold", lineHeight: 1, color: T.tiaText, borderTop: `1px solid ${T.tiaLine}`, borderBottom: `1px solid ${T.tiaLine}`, padding: "2px 0" }}>{label}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, lineHeight: 1.1, color: rFlow ? T.tiaLineActive : T.tiaText }}>
+          <span>R1</span>
+        </div>
       </div>
     </div>
   );

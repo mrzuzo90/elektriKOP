@@ -299,6 +299,13 @@ export default function PlcEmulator() {
               const frame = sim.lastCallFrames[activeBlock.id] || {};
               const mem = { ...effectiveInputs, ...sim.outputs, ...sim.marks, ...frame };
               const states = computeStates(rung.logic, mem, sim.prevMem);
+              // Bloque SR/RS: red R1 aparte de la red S — se fusiona en el
+              // mismo mapa `states` (los ids de nodo son únicos vía
+              // genId(), así que no hay colisión) para que TiaSegment no
+              // tenga que distinguir de dónde viene cada estado.
+              if (rung.outType === "sr" || rung.outType === "rs") {
+                computeStates(rung.logicR || [], mem, sim.prevMem, states);
+              }
               const rawTimer = timerValueFor(sim.timerDisplay, activeBlock.id, rung.id);
               return (
                 <TiaSegment

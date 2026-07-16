@@ -94,6 +94,54 @@ describe("computeScanTick — SET / RESET", () => {
   });
 });
 
+function srRung(id, sAddr, rAddr, outAddr, outType = "sr") {
+  return {
+    id,
+    title: id,
+    comment: "",
+    logic: [{ kind: "contact", id: `${id}-s`, addr: sAddr, neg: false }],
+    logicR: [{ kind: "contact", id: `${id}-r`, addr: rAddr, neg: false }],
+    outAddr,
+    outType,
+    preset: 2,
+  };
+}
+
+describe("computeScanTick — bloque SR/RS combinado", () => {
+  it("S activa la salida y se mantiene enclavada aunque S deje de cumplirse", () => {
+    const blocks = mainBlocks([srRung("r1", "I0.0", "I0.1", "M0.0")]);
+    const tick1 = computeScanTick(blocks, { "I0.0": true, "I0.1": false, "M0.0": false }, {});
+    expect(tick1.marks["M0.0"]).toBe(true);
+
+    const tick2 = computeScanTick(blocks, { "I0.0": false, "I0.1": false, "M0.0": true }, {});
+    expect(tick2.marks["M0.0"]).toBe(true);
+  });
+
+  it("R1 desactiva la salida", () => {
+    const blocks = mainBlocks([srRung("r1", "I0.0", "I0.1", "M0.0")]);
+    const tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true, "M0.0": true }, {});
+    expect(tick.marks["M0.0"]).toBe(false);
+  });
+
+  it("outType 'sr' (Reset domina): con S y R1 activos a la vez, gana R1", () => {
+    const blocks = mainBlocks([srRung("r1", "I0.0", "I0.1", "M0.0", "sr")]);
+    const tick = computeScanTick(blocks, { "I0.0": true, "I0.1": true, "M0.0": false }, {});
+    expect(tick.marks["M0.0"]).toBe(false);
+  });
+
+  it("outType 'rs' (Set domina): con S y R1 activos a la vez, gana S", () => {
+    const blocks = mainBlocks([srRung("r1", "I0.0", "I0.1", "M0.0", "rs")]);
+    const tick = computeScanTick(blocks, { "I0.0": true, "I0.1": true, "M0.0": false }, {});
+    expect(tick.marks["M0.0"]).toBe(true);
+  });
+
+  it("sin S ni R1 activos, la salida conserva su valor previo", () => {
+    const blocks = mainBlocks([srRung("r1", "I0.0", "I0.1", "M0.0")]);
+    const tick = computeScanTick(blocks, { "I0.0": false, "I0.1": false, "M0.0": true }, {});
+    expect(tick.marks["M0.0"]).toBe(true);
+  });
+});
+
 describe("computeScanTick — temporizador TON", () => {
   it("acumula tiempo mientras la condición se cumple y activa la salida al llegar al preset", () => {
     const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "ton", { preset: 0.2 })]);
