@@ -38,6 +38,17 @@ describe("collectUsedAddresses con marcas (M)", () => {
     const rungs = [contactRung(0, "I0.0", "Q0.0", "ctu", { resetAddr: "M0.2" })];
     expect(collectUsedAddresses(rungs)).toContain("M0.2");
   });
+
+  it("incluye los contactos de la rama R1 de un bloque SR/RS, no solo los de la rama S", () => {
+    const rungs = [
+      contactRung(0, "I0.0", "Q0.0", "sr", {
+        logicR: [{ kind: "contact", id: "0-r", addr: "I0.1", neg: false }],
+      }),
+    ];
+    const used = collectUsedAddresses(rungs);
+    expect(used).toContain("I0.0");
+    expect(used).toContain("I0.1");
+  });
 });
 
 describe("collectOutputConflicts con rungs 'call'", () => {
