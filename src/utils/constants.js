@@ -44,7 +44,7 @@ export const MARK_ADDR = ["M0.0", "M0.1", "M0.2", "M0.3", "M0.4", "M0.5", "M0.6"
 export const ANALOG_ADDR = ["IW0"];
 export const ANALOG_MAX = 100;
 export const CMP_OPS = [">=", "<=", "==", "<>", "<", ">"];
-export const MAX_RUNGS = 10;
+export const MAX_RUNGS = 32;
 export const SCAN_MS = 100;
 // Defensa en profundidad: la UI ya impide crear un ciclo de llamadas entre
 // bloques (wouldCreateCycle), pero un JSON importado a mano podría traer uno
