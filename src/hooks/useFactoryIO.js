@@ -30,8 +30,21 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
   const reconnectTimeoutRef = useRef(null);
   const manualDisconnectRef = useRef(false);
 
+  // Mantener referencias actualizadas para evitar recrear callbacks y bucles de render
+  const outputsRef = useRef(outputs);
+  outputsRef.current = outputs;
+  const analogOutputsRef = useRef(analogOutputs);
+  analogOutputsRef.current = analogOutputs;
+  const onInputsReceivedRef = useRef(onInputsReceived);
+  onInputsReceivedRef.current = onInputsReceived;
+  const urlRef = useRef(url);
+  urlRef.current = url;
+  const autoConnectRef = useRef(autoConnect);
+  autoConnectRef.current = autoConnect;
+
   const setUrl = (newUrl) => {
     setUrlState(newUrl);
+    urlRef.current = newUrl;
     try {
       localStorage.setItem(STORAGE_KEY_URL, newUrl);
     } catch {
@@ -41,6 +54,7 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
 
   const setAutoConnect = (val) => {
     setAutoConnectState(val);
+    autoConnectRef.current = val;
     try {
       localStorage.setItem(STORAGE_KEY_AUTOCONNECT, String(val));
     } catch {
@@ -55,21 +69,42 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
       reconnectTimeoutRef.current = null;
     }
     if (wsRef.current) {
-      wsRef.current.close();
+      try {
+        wsRef.current.close();
+      } catch {
+        // ignore
+      }
       wsRef.current = null;
     }
     setStatus("disconnected");
     setBridgeInfo(null);
+    setErrorMessage(null);
   }, []);
 
   const connect = useCallback((targetUrl) => {
     manualDisconnectRef.current = false;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Evitar abrir múltiples WebSockets si ya está conectando o conectado
     if (wsRef.current) {
-      wsRef.current.close();
+      if (
+        wsRef.current.readyState === WebSocket.CONNECTING ||
+        wsRef.current.readyState === WebSocket.OPEN
+      ) {
+        return;
+      }
+      try {
+        wsRef.current.close();
+      } catch {
+        // ignore
+      }
       wsRef.current = null;
     }
 
-    const connectUrl = targetUrl || url;
+    const connectUrl = targetUrl || urlRef.current || DEFAULT_WS_URL;
     setStatus("connecting");
     setErrorMessage(null);
 
@@ -80,9 +115,12 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
       ws.onopen = () => {
         setStatus("connected");
         setErrorMessage(null);
-        // Enviar estado de salidas inmediatamente al conectar
-        if (outputs) {
-          ws.send(createSyncOutputsMessage(outputs, analogOutputs));
+        if (outputsRef.current) {
+          try {
+            ws.send(createSyncOutputsMessage(outputsRef.current, analogOutputsRef.current));
+          } catch {
+            // ignore
+          }
         }
       };
 
@@ -92,8 +130,8 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
 
         if (msg.type === "sync_inputs") {
           setLastSyncTime(Date.now());
-          if (onInputsReceived) {
-            onInputsReceived(msg.inputs, msg.analogInputs);
+          if (onInputsReceivedRef.current) {
+            onInputsReceivedRef.current(msg.inputs, msg.analogInputs);
           }
         } else if (msg.type === "status") {
           setBridgeInfo(msg);
@@ -101,18 +139,18 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
       };
 
       ws.onerror = () => {
-        setErrorMessage("No se pudo conectar al puente WebSocket");
+        setErrorMessage("No se pudo conectar al puente (¿has ejecutado 'npm run mock' o 'npm start' en la carpeta bridge?)");
         setStatus("error");
       };
 
       ws.onclose = () => {
         wsRef.current = null;
         if (!manualDisconnectRef.current) {
-          setStatus("disconnected");
-          if (autoConnect) {
+          setStatus((prev) => (prev === "error" ? "error" : "disconnected"));
+          if (autoConnectRef.current) {
             reconnectTimeoutRef.current = setTimeout(() => {
               connect(connectUrl);
-            }, 3000);
+            }, 5000);
           }
         } else {
           setStatus("disconnected");
@@ -120,9 +158,9 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
       };
     } catch (err) {
       setStatus("error");
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || "Error al iniciar WebSocket");
     }
-  }, [url, outputs, analogOutputs, onInputsReceived, autoConnect]);
+  }, []);
 
   const toggleConnect = useCallback(() => {
     if (status === "connected" || status === "connecting") {
@@ -132,10 +170,12 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
     }
   }, [status, connect, disconnect]);
 
-  // Sincronizar salidas cada vez que cambian y la conexión está activa
+  // Sincronizar salidas solo cuando cambian y la conexión está activa
   const prevOutputsRef = useRef();
   useEffect(() => {
-    if (status !== "connected" || !wsRef.current) return;
+    if (status !== "connected" || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
     const serialized = JSON.stringify(outputs);
     if (prevOutputsRef.current !== serialized) {
       prevOutputsRef.current = serialized;
@@ -147,17 +187,23 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
     }
   }, [outputs, analogOutputs, status]);
 
-  // Autoconexión inicial al montar si está habilitada
+  // Autoconexión inicial SOLO al montar el componente
   useEffect(() => {
-    if (autoConnect) {
+    if (autoConnectRef.current) {
       connect();
     }
     return () => {
       manualDisconnectRef.current = true;
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (wsRef.current) wsRef.current.close();
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch {
+          // ignore
+        }
+      }
     };
-  }, [autoConnect, connect]);
+  }, [connect]);
 
   return {
     status,

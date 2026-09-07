@@ -20,6 +20,7 @@ function zeroInputs() {
 function zeroAnalog() {
   return Object.fromEntries(ANALOG_ADDR.map((a) => [a, 0]));
 }
+const EMPTY_OBJECT = Object.freeze({});
 
 // timerDisplay ahora indexa por ruta de llamada completa ("main:7" o
 // "main:2>fc1:3", ver scanCycle.js), no por rung.id a secas — para pintar el
@@ -88,7 +89,7 @@ export default function PlcEmulator() {
   const factoryIO = useFactoryIO({
     onInputsReceived: handleFactoryIOInputs,
     outputs: sim.outputs,
-    analogOutputs: {},
+    analogOutputs: EMPTY_OBJECT,
   });
 
   const toggleInput = (addr) => {
