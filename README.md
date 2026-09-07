@@ -29,7 +29,7 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 **Editor KOP**
 - Segmentos con contactos en serie y en paralelo (ramas anidadas, sin límite artificial de profundidad).
 - Contactos NA / NC / flanco positivo (P) / flanco negativo (N), conmutables con un clic.
-- Bobina directa, SET, RESET, **bloque SR/RS combinado** (bistable con prioridad invertible: Reset domina o Set domina, con su propia rama de entrada R1), temporizadores TON/TOF/TP y contadores CTU/CTD — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
+- Bobina directa, SET, RESET, **bloque SR/RS combinado** (bistable con prioridad invertible: Reset domina o Set domina, con su propia rama de entrada R1), temporizadores TON/TOF/TP y contadores CTU/CTD/CTUD — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
 - **Arrastrar y soltar** dentro del esquema: inserta contactos/bloques paralelos en cualquier posición, o mueve uno ya colocado a otra rama, con zonas de aterrizaje visuales mientras arrastras.
 - Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
 - Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
@@ -45,7 +45,7 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - **Entrada analógica (`IW0`)**: a diferencia de una `I` normal, su valor no es un bit sino un número (0-100) — se controla con un slider en Proceso simulado, y solo un comparador puede leerla.
 
 **Contadores y marcas (M)**
-- **CTU** (cuenta arriba) y **CTD** (cuenta abajo): rail principal = pulso de cuenta (detecta flanco de subida), pin adicional de Reset/Carga cableable a cualquier dirección, valor preestablecido (PV) configurable y valor actual (CV) visible en la propia caja.
+- **CTU** (cuenta arriba), **CTD** (cuenta abajo) y **CTUD** (bidireccional arriba/abajo): rail principal = pulso de cuenta (detecta flanco de subida), pines adicionales cableables a cualquier dirección (Reset, Carga, CD, QD), valor preestablecido (PV) configurable y valor actual (CV) visible en la propia caja.
 - **16 marcas internas** (`M0.0`–`M1.7`): memoria auxiliar sin dispositivo físico asociado, para banderas de secuencia o interbloqueos — sustituye el apaño de usar una `Q` libre como marca. Se nombran igual que cualquier dirección en la Tabla de variables, con un punto de estado en vivo mientras corre la simulación.
 - Un contador dentro de un bloque FC llamado desde varios sitios mantiene su cuenta totalmente independiente en cada sitio de llamada (mismo mecanismo que ya usan los temporizadores).
 
@@ -106,7 +106,7 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 1. **Añade un segmento** con el botón correspondiente en el editor.
 2. **Añade contactos** en serie (`+C`), en paralelo (`+P`) o un **comparador** (`+CMP`, sobre la entrada analógica `IW0`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I, Q o IW) en el desplegable.
 3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
-4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, SR/RS, TON, TOF, TP, CTU o CTD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD) también necesita cablear su pin de Reset/Carga a una dirección, y un bloque SR/RS necesita su propia rama de entrada R1.
+4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, SR/RS, TON, TOF, TP, CTU, CTD o CTUD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD/CTUD) también permite cablear sus pines de Reset/Carga/CD/QD a una dirección, y un bloque SR/RS necesita su propia rama de entrada R1.
 5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
 6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha) — o el teclado (`0`-`9`) si no quieres soltar el ratón del editor.
 7. Pulsa el logo **ElektriKOP** (arriba a la izquierda) para abrir el **menú de pausa**: ahí puedes renombrar el proyecto, exportar/importar en JSON, nombrar variables y comprobar tu solución en Modo Desafío. Nada de esto es imprescindible en el día a día — tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.
@@ -135,7 +135,7 @@ En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad 
 - [x] Arrastrar y soltar en el editor KOP (insertar y mover contactos/bloques paralelos, elegir el tipo de salida).
 - [x] Menú de pausa: agrupa proyecto, tabla de variables y Modo Desafío fuera del flujo principal del editor.
 - [x] Bloques FC: funciones reutilizables con interfaz IN/OUT, llamables desde Main o desde otro FC.
-- [x] Contadores (CTU/CTD) + área de marcas (M) separada de las salidas (Q).
+- [x] Contadores (CTU/CTD/CTUD) + área de marcas (M) separada de las salidas (Q).
 - [x] Bloque SR/RS combinado (bistable con prioridad invertible entre Set y Reset).
 - [x] Comparadores numéricos (`>=`, `<=`, `==`, `<>`, `<`, `>`) sobre una entrada analógica simulada.
 - [x] Compartir proyectos mediante un enlace, sin necesidad de archivo.

@@ -552,6 +552,161 @@ describe("computeScanTick — contadores CTU/CTD", () => {
     expect(tick.timers["main:r1"].count).toBe(0);
   });
 
+  it("CTUD cuenta hacia arriba con CU y hacia abajo con CD, activando QU (CV>=PV) y QD (CV<=0)", () => {
+    const blocks = mainBlocks([
+      contactRung("r1", "I0.0", "Q0.0", "ctud", {
+        preset: 3,
+        cdAddr: "I0.1",
+        resetAddr: "I0.2",
+        loadAddr: "I0.3",
+        qdAddr: "Q0.1",
+      }),
+    ]);
+    let timers = {};
+    let tick;
+
+    // Estado inicial: count = 0 -> QU=false (0 < 3), QD=true (0 <= 0)
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(0);
+    expect(tick.outputs["Q0.0"]).toBe(false); // QU
+    expect(tick.outputs["Q0.1"]).toBe(true);  // QD
+
+    // 1er pulso CU (I0.0): count sube a 1 -> QD se apaga (1 > 0), QU sigue apagado (1 < 3)
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(1);
+    expect(tick.outputs["Q0.0"]).toBe(false);
+    expect(tick.outputs["Q0.1"]).toBe(false);
+
+    // CU se mantiene en true: NO sigue contando (solo en flancos)
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(1);
+
+    // 2º pulso CU: count = 2
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(2);
+    expect(tick.outputs["Q0.0"]).toBe(false);
+
+    // 3er pulso CU: count = 3 (alcanza PV) -> QU se activa
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(3);
+    expect(tick.outputs["Q0.0"]).toBe(true);
+    expect(tick.outputs["Q0.1"]).toBe(false);
+
+    // 4º pulso CU: count = 4 (sigue subiendo por encima de PV)
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(4);
+    expect(tick.outputs["Q0.0"]).toBe(true);
+
+    // 1er pulso CD (I0.1): count baja a 3 -> QU sigue activo (3 >= 3)
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(3);
+    expect(tick.outputs["Q0.0"]).toBe(true);
+
+    // 2º pulso CD: count baja a 2 -> QU se apaga (2 < 3)
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(2);
+    expect(tick.outputs["Q0.0"]).toBe(false);
+
+    // 3er pulso CD: count baja a 1
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(1);
+    expect(tick.outputs["Q0.1"]).toBe(false);
+
+    // 4º pulso CD: count baja a 0 -> QD se activa
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(0);
+    expect(tick.outputs["Q0.1"]).toBe(true);
+    expect(tick.outputs["Q0.0"]).toBe(false);
+
+    // 5º pulso CD: se satura en 0 (no se vuelve negativo)
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+    tick = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, timers);
+    expect(tick.timers["main:r1"].count).toBe(0);
+    expect(tick.outputs["Q0.1"]).toBe(true);
+  });
+
+  it("CTUD: R (reset) pone CV a 0 y tiene máxima prioridad sobre LD y sobre pulsos", () => {
+    const blocks = mainBlocks([
+      contactRung("r1", "I0.0", "Q0.0", "ctud", {
+        preset: 3,
+        cdAddr: "I0.1",
+        resetAddr: "I0.2",
+        loadAddr: "I0.3",
+        qdAddr: "Q0.1",
+      }),
+    ]);
+    let timers = {};
+    // Primero cargamos a PV=3 con LD (I0.3)
+    let tick = computeScanTick(blocks, { "I0.3": true }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(3);
+    expect(tick.outputs["Q0.0"]).toBe(true); // QU=true
+
+    // Reset (I0.2=true) activo a la vez que pulso CU (I0.0=true) y LD (I0.3=true): Reset gana
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.2": true, "I0.3": true }, timers);
+    expect(tick.timers["main:r1"].count).toBe(0);
+    expect(tick.outputs["Q0.0"]).toBe(false);
+    expect(tick.outputs["Q0.1"]).toBe(true);
+  });
+
+  it("CTUD: LD (carga) pone CV=PV con prioridad sobre pulsos de cuenta", () => {
+    const blocks = mainBlocks([
+      contactRung("r1", "I0.0", "Q0.0", "ctud", {
+        preset: 5,
+        cdAddr: "I0.1",
+        resetAddr: "I0.2",
+        loadAddr: "I0.3",
+        qdAddr: "Q0.1",
+      }),
+    ]);
+    let timers = {};
+    // LD activo simultáneamente con pulso descendente CD: LD gana y carga 5
+    const tick = computeScanTick(blocks, { "I0.1": true, "I0.3": true }, timers);
+    expect(tick.timers["main:r1"].count).toBe(5);
+    expect(tick.outputs["Q0.0"]).toBe(true);
+  });
+
+  it("CTUD: pulsos simultáneos en CU y CD en el mismo ciclo se cancelan mutuamente", () => {
+    const blocks = mainBlocks([
+      contactRung("r1", "I0.0", "Q0.0", "ctud", {
+        preset: 5,
+        cdAddr: "I0.1",
+        resetAddr: "I0.2",
+        loadAddr: "I0.3",
+        qdAddr: "Q0.1",
+      }),
+    ]);
+    let timers = {};
+    // Arrancamos con un pulso CU para llegar a count=1
+    let tick = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, timers);
+    timers = tick.timers;
+    expect(timers["main:r1"].count).toBe(1);
+
+    // Soltamos ambos
+    ({ timers } = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, timers));
+
+    // Ahora ambos suben a la vez en el mismo ciclo:
+    tick = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, timers);
+    expect(tick.timers["main:r1"].count).toBe(1); // sin cambios (+1 -1 = 0)
+  });
+
   it("un contador dentro de un FC llamado desde 2 sitios distintos mantiene cuentas independientes", () => {
     const inParam = { id: "pIn", name: "Pulso" };
     const fc1 = fcBlock("fc1", "FC1", { in: [inParam], out: [] }, [

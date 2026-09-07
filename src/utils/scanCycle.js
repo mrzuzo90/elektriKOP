@@ -172,32 +172,71 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         if (pulseActive) elapsed = Math.min(elapsed + SCAN_MS / 1000, rung.preset);
         nextTimers[timerKey] = { elapsed, prevCombined: combined };
         write(rung.outAddr, pulseActive);
-      } else if (rung.outType === "ctu" || rung.outType === "ctd") {
-        // Contador (CTU cuenta hacia arriba, CTD hacia abajo). El rail
-        // principal (`combined`) es el pulso de cuenta (CU/CD) — se detecta
-        // el flanco de subida igual que en TP, para que mantener la entrada
-        // a 1 no siga incrementando/decrementando cada scan. `resetAddr` es
-        // un pin adicional (mismo mecanismo que los pines de una llamada a
-        // bloque): en CTU pone CV a 0 (Reset), en CTD lo recarga a PV
-        // (Carga) — y tiene prioridad sobre un pulso de cuenta simultáneo,
-        // convención habitual de un contador real. CV es un número interno
-        // (mismo tratamiento que `elapsed` en los temporizadores): se
-        // muestra en la caja pero no es una dirección direccionable, no
-        // hace falta inventar memoria numérica para esto.
-        const prevState = prevTimers[timerKey] || { count: 0, prevPulse: false };
+      } else if (rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud") {
+        // Contadores: CTU (cuenta arriba), CTD (cuenta abajo) y CTUD (bidireccional).
+        // El rail principal (`combined`) es el pulso de cuenta CU (o CD en CTD) — se
+        // detecta el flanco de subida igual que en TP para no seguir contando mientras
+        // la señal se mantenga en 1.
+        // En CTUD:
+        // - CU: rail principal (`combined`), flanco de subida incrementa CV.
+        // - CD: pin cableado (`rung.cdAddr`), flanco de subida decrementa CV.
+        // - R: pin de reset (`rung.resetAddr`), pone CV a 0 (máxima prioridad).
+        // - LD: pin de carga (`rung.loadAddr`), carga PV en CV (prioridad sobre pulsos).
+        // - QU: salida CV >= PV, escrita en rung.outAddr.
+        // - QD: salida CV <= 0, escrita en rung.qdAddr (si está cableada).
+        const prevState = prevTimers[timerKey] || { count: 0, prevPulse: false, prevCd: false };
         const resetVal = rung.resetAddr ? !!readMem[rung.resetAddr] : false;
-        const rising = combined && !prevState.prevPulse;
         let count = prevState.count;
+
         if (rung.outType === "ctu") {
+          const rising = combined && !prevState.prevPulse;
           if (resetVal) count = 0;
           else if (rising) count = Math.min(count + 1, rung.preset);
-        } else {
+          nextTimers[timerKey] = { count, prevPulse: combined };
+          const reached = count >= rung.preset;
+          write(rung.outAddr, reached);
+        } else if (rung.outType === "ctd") {
+          const rising = combined && !prevState.prevPulse;
           if (resetVal) count = rung.preset;
           else if (rising) count = Math.max(count - 1, 0);
+          nextTimers[timerKey] = { count, prevPulse: combined };
+          const reached = count <= 0;
+          write(rung.outAddr, reached);
+        } else {
+          // ctud
+          const cdVal = rung.cdAddr ? !!readMem[rung.cdAddr] : false;
+          const loadVal = rung.loadAddr ? !!readMem[rung.loadAddr] : false;
+          const risingCu = combined && !prevState.prevPulse;
+          const risingCd = cdVal && !prevState.prevCd;
+
+          if (resetVal) {
+            count = 0;
+          } else if (loadVal) {
+            count = rung.preset;
+          } else {
+            if (risingCu && !risingCd) {
+              count = Math.min(count + 1, 999);
+            } else if (risingCd && !risingCu) {
+              count = Math.max(count - 1, 0);
+            }
+          }
+
+          const qu = count >= rung.preset;
+          const qd = count <= 0;
+
+          nextTimers[timerKey] = {
+            count,
+            prevPulse: combined,
+            prevCd: cdVal,
+            qu,
+            qd,
+          };
+
+          write(rung.outAddr, qu);
+          if (rung.qdAddr) {
+            write(rung.qdAddr, qd);
+          }
         }
-        nextTimers[timerKey] = { count, prevPulse: combined };
-        const reached = rung.outType === "ctu" ? count >= rung.preset : count <= 0;
-        write(rung.outAddr, reached);
       } else {
         // ton
         const prevElapsed = prevTimers[timerKey] || 0;

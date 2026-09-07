@@ -30,6 +30,7 @@ const OUT_TYPES = [
   { value: "tp", label: "Temp", sub: "TP" },
   { value: "ctu", label: "Cont.", sub: "CTU" },
   { value: "ctd", label: "Cont.", sub: "CTD" },
+  { value: "ctud", label: "Cont.", sub: "CTUD" },
   { value: "call", label: "Llamar", sub: "CALL" },
 ];
 
@@ -120,6 +121,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
     if (newType === "sr" && isSrFamily(rung.outType)) return;
     const patch = { ...rung, outType: newType };
     if (newType === "sr" && !rung.logicR) patch.logicR = [newContactNode()];
+    if ((newType === "ctu" || newType === "ctd" || newType === "ctud") && !rung.preset) patch.preset = 5;
     onChange(patch);
   };
 
@@ -316,15 +318,22 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
               />
             ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
-            ) : rung.outType === "ctu" || rung.outType === "ctd" ? (
+            ) : rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud" ? (
                <TiaCounterBox
                  rung={rung}
                  onChangeResetAddr={(v) => onChange({ ...rung, resetAddr: v })}
+                 onChangeCdAddr={(v) => onChange({ ...rung, cdAddr: v })}
+                 onChangeLoadAddr={(v) => onChange({ ...rung, loadAddr: v })}
+                 onChangeQdAddr={(v) => onChange({ ...rung, qdAddr: v })}
                  addrOptions={addrOptions}
+                 outputAddrOptions={outputAddrOptions}
                  symbols={symbols}
                  active={evalResult?.outputState}
                  flowIn={flowToOut}
                  count={evalResult?.counterValue}
+                 qu={evalResult?.quState}
+                 qd={evalResult?.qdState}
+                 mem={evalResult?.mem}
                />
             ) : rung.outType === "set" || rung.outType === "reset" ? (
                <TiaSetReset
@@ -374,7 +383,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
                />
             </div>
          )}
-         {(rung.outType === "ctu" || rung.outType === "ctd") && (
+         {(rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud") && (
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                <span style={{color: T.tiaText}}>PV (cuenta):</span>
                <input

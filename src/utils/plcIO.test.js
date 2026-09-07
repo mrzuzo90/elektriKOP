@@ -39,6 +39,24 @@ describe("collectUsedAddresses con marcas (M)", () => {
     expect(collectUsedAddresses(rungs)).toContain("M0.2");
   });
 
+  it("incluye todos los pines cableados de un CTUD (cdAddr, resetAddr, loadAddr, qdAddr)", () => {
+    const rungs = [
+      contactRung(0, "I0.0", "Q0.0", "ctud", {
+        cdAddr: "I0.1",
+        resetAddr: "I0.2",
+        loadAddr: "M0.1",
+        qdAddr: "Q0.1",
+      }),
+    ];
+    const used = collectUsedAddresses(rungs);
+    expect(used).toContain("I0.0");
+    expect(used).toContain("Q0.0");
+    expect(used).toContain("I0.1");
+    expect(used).toContain("I0.2");
+    expect(used).toContain("M0.1");
+    expect(used).toContain("Q0.1");
+  });
+
   it("incluye los contactos de la rama R1 de un bloque SR/RS, no solo los de la rama S", () => {
     const rungs = [
       contactRung(0, "I0.0", "Q0.0", "sr", {
@@ -81,5 +99,15 @@ describe("collectOutputConflicts con rungs 'call'", () => {
       contactRung(1, "I0.1", "Q0.0", "call", { callTarget: "b2", paramWiring: {} }),
     ];
     expect(collectOutputConflicts(rungs)).toEqual([]);
+  });
+
+  it("detecta conflicto de salida si qdAddr de un CTUD comparte dirección con otra salida", () => {
+    const rungs = [
+      contactRung(0, "I0.0", "Q0.0", "ctud", { qdAddr: "Q0.1" }),
+      contactRung(1, "I0.1", "Q0.1", "coil"),
+    ];
+    const conflicts = collectOutputConflicts(rungs);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0][0]).toBe("Q0.1");
   });
 });

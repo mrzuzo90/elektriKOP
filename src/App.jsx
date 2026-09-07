@@ -348,7 +348,10 @@ export default function PlcEmulator() {
                         : rung.outType === "tp"
                           ? rawTimer?.elapsed ?? 0
                           : undefined,
-                    counterValue: rung.outType === "ctu" || rung.outType === "ctd" ? rawTimer?.count ?? 0 : undefined,
+                    counterValue: rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud" ? rawTimer?.count ?? 0 : undefined,
+                    quState: rung.outType === "ctud" ? (rawTimer?.qu ?? (rawTimer?.count ?? 0) >= rung.preset) : undefined,
+                    qdState: rung.outType === "ctud" ? (rawTimer?.qd ?? (rawTimer?.count ?? 0) <= 0) : undefined,
+                    mem,
                   }}
                 />
               );

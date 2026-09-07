@@ -20,9 +20,12 @@ export function collectUsedAddresses(rungs) {
     // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
     // — no es una dirección realmente escrita, no debe marcarse "en uso".
     if (rung.outType !== "call") set.add(rung.outAddr);
-    // El pin de Reset/Carga de un CTU/CTD también es una dirección real
-    // (se lee cada scan), aunque no forme parte de rung.logic.
+    // Pines cableables de contadores (CTU, CTD, CTUD): también son direcciones
+    // reales (se leen/escriben cada scan), aunque no formen parte de rung.logic.
     if (rung.resetAddr) set.add(rung.resetAddr);
+    if (rung.cdAddr) set.add(rung.cdAddr);
+    if (rung.loadAddr) set.add(rung.loadAddr);
+    if (rung.qdAddr) set.add(rung.qdAddr);
   });
   return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...ANALOG_ADDR].filter((a) => set.has(a));
 }
@@ -55,15 +58,16 @@ export function collectOutputConflicts(rungs) {
     if (r.outType === "call") return;
     if (!byAddr[r.outAddr]) byAddr[r.outAddr] = [];
     byAddr[r.outAddr].push(idx);
+    if (r.outType === "ctud" && r.qdAddr) {
+      if (!byAddr[r.qdAddr]) byAddr[r.qdAddr] = [];
+      byAddr[r.qdAddr].push(idx);
+    }
   });
   return Object.entries(byAddr).filter(([, idxs]) => {
     if (idxs.length < 2) return false;
-    // Solo avisamos si hay una bobina directa, un temporizador (TON/TOF/TP)
-    // o un bloque SR/RS compartiendo la dirección con algo más — estos
-    // tipos ya resuelven su propio enclavamiento (o sobrescriben sin
-    // condiciones), así que compartir dirección con ellos casi siempre es
-    // un despiste.
-    return idxs.some((i) => ["coil", "ton", "tof", "tp", "sr", "rs"].includes(rungs[i].outType));
+    // Solo avisamos si hay una bobina directa, un temporizador (TON/TOF/TP),
+    // un contador (CTU/CTD/CTUD) o un bloque SR/RS compartiendo la dirección con algo más.
+    return idxs.some((i) => ["coil", "ton", "tof", "tp", "sr", "rs", "ctu", "ctd", "ctud"].includes(rungs[i].outType));
   });
 }
 
