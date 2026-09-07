@@ -13,6 +13,7 @@ import TiaSegment from "./components/Editor/TiaSegment";
 import { useSimulation } from "./hooks/useSimulation";
 import { useProject } from "./hooks/useProject";
 import { useFactoryIO } from "./hooks/useFactoryIO";
+import { collectCounters } from "./utils/factoryIOProtocol";
 
 function zeroInputs() {
   return Object.fromEntries(INPUT_ADDR.map((a) => [a, false]));
@@ -86,9 +87,22 @@ export default function PlcEmulator() {
     }
   }, []);
 
+  const handlePulseInput = useCallback((addr, durationMs = 150) => {
+    if (!addr) return;
+    setInputs((prev) => ({ ...prev, [addr]: true }));
+    setTimeout(() => {
+      setInputs((prev) => ({ ...prev, [addr]: false }));
+    }, durationMs);
+  }, []);
+
+  const counters = collectCounters(project.blocks, sim.timerDisplay);
+
   const factoryIO = useFactoryIO({
     onInputsReceived: handleFactoryIOInputs,
+    onPulseInput: handlePulseInput,
     outputs: sim.outputs,
+    marks: sim.marks,
+    counters,
     analogOutputs: EMPTY_OBJECT,
   });
 

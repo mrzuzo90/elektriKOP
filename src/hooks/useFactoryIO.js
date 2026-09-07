@@ -4,7 +4,14 @@ import { DEFAULT_WS_URL, createSyncOutputsMessage, parseBridgeMessage } from "..
 const STORAGE_KEY_URL = "elektrikop_factoryio_url";
 const STORAGE_KEY_AUTOCONNECT = "elektrikop_factoryio_autoconnect";
 
-export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
+export function useFactoryIO({
+  onInputsReceived,
+  onPulseInput,
+  outputs,
+  marks,
+  counters,
+  analogOutputs,
+}) {
   const [url, setUrlState] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_WS_URL;
@@ -33,10 +40,16 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
   // Mantener referencias actualizadas para evitar recrear callbacks y bucles de render
   const outputsRef = useRef(outputs);
   outputsRef.current = outputs;
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
+  const countersRef = useRef(counters);
+  countersRef.current = counters;
   const analogOutputsRef = useRef(analogOutputs);
   analogOutputsRef.current = analogOutputs;
   const onInputsReceivedRef = useRef(onInputsReceived);
   onInputsReceivedRef.current = onInputsReceived;
+  const onPulseInputRef = useRef(onPulseInput);
+  onPulseInputRef.current = onPulseInput;
   const urlRef = useRef(url);
   urlRef.current = url;
   const autoConnectRef = useRef(autoConnect);
@@ -117,7 +130,14 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
         setErrorMessage(null);
         if (outputsRef.current) {
           try {
-            ws.send(createSyncOutputsMessage(outputsRef.current, analogOutputsRef.current));
+            ws.send(
+              createSyncOutputsMessage(
+                outputsRef.current,
+                analogOutputsRef.current,
+                marksRef.current,
+                countersRef.current
+              )
+            );
           } catch {
             // ignore
           }
@@ -132,6 +152,11 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
           setLastSyncTime(Date.now());
           if (onInputsReceivedRef.current) {
             onInputsReceivedRef.current(msg.inputs, msg.analogInputs);
+          }
+        } else if (msg.type === "pulse_input") {
+          setLastSyncTime(Date.now());
+          if (onPulseInputRef.current) {
+            onPulseInputRef.current(msg.addr, msg.durationMs);
           }
         } else if (msg.type === "status") {
           setBridgeInfo(msg);
@@ -170,22 +195,24 @@ export function useFactoryIO({ onInputsReceived, outputs, analogOutputs }) {
     }
   }, [status, connect, disconnect]);
 
-  // Sincronizar salidas solo cuando cambian y la conexión está activa
-  const prevOutputsRef = useRef();
+  // Sincronizar salidas, marcas y contadores cuando cambian
+  const prevStateRef = useRef("");
   useEffect(() => {
     if (status !== "connected" || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
-    const serialized = JSON.stringify(outputs);
-    if (prevOutputsRef.current !== serialized) {
-      prevOutputsRef.current = serialized;
+    const stateKey = JSON.stringify({ outputs, marks, counters, analogOutputs });
+    if (prevStateRef.current !== stateKey) {
+      prevStateRef.current = stateKey;
       try {
-        wsRef.current.send(createSyncOutputsMessage(outputs, analogOutputs));
+        wsRef.current.send(
+          createSyncOutputsMessage(outputs, analogOutputs, marks, counters)
+        );
       } catch (err) {
         console.warn("Error enviando salidas al bridge:", err);
       }
     }
-  }, [outputs, analogOutputs, status]);
+  }, [outputs, marks, counters, analogOutputs, status]);
 
   // Autoconexión inicial SOLO al montar el componente
   useEffect(() => {

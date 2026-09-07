@@ -40,12 +40,14 @@ const wss = new WebSocketServer({ port: WS_PORT });
 let currentInputs = Object.fromEntries(INPUT_ADDRS.map((a) => [a, false]));
 let currentAnalogInputs = { IW0: 0 };
 let currentOutputs = Object.fromEntries(OUTPUT_ADDRS.map((a) => [a, false]));
+let currentMarks = {};
+let currentCounters = {};
 let isModbusConnected = false;
 
-function broadcast(payload) {
+function broadcast(payload, excludeWs = null) {
   const msg = JSON.stringify(payload);
   for (const client of wss.clients) {
-    if (client.readyState === 1) { // OPEN
+    if (client !== excludeWs && client.readyState === 1) { // OPEN
       client.send(msg);
     }
   }
@@ -67,11 +69,11 @@ function sendStatusTo(client) {
 
 wss.on("connection", (ws, req) => {
   const remoteIp = req.socket.remoteAddress;
-  console.log(`🟢 [WS] Cliente ElektriKOP conectado desde ${remoteIp} (Total: ${wss.clients.size})`);
+  console.log(`🟢 [WS] Cliente conectado desde ${remoteIp} (Total: ${wss.clients.size})`);
 
   sendStatusTo(ws);
 
-  // Enviar estado actual de entradas inmediatamente
+  // Enviar estado actual de entradas, salidas, marcas y contadores inmediatamente al nuevo cliente
   ws.send(
     JSON.stringify({
       type: "sync_inputs",
@@ -80,29 +82,45 @@ wss.on("connection", (ws, req) => {
     })
   );
 
+  ws.send(
+    JSON.stringify({
+      type: "sync_outputs",
+      outputs: currentOutputs,
+      marks: currentMarks,
+      counters: currentCounters,
+    })
+  );
+
   ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "sync_outputs") {
-        handleOutputsFromElektriKOP(msg.outputs, msg.analogOutputs);
+        handleOutputsFromElektriKOP(msg.outputs, msg.analogOutputs, msg.marks, msg.counters, ws);
+      } else if (msg.type === "sync_inputs") {
+        handleInputsFromClient(msg.inputs, msg.analogInputs, ws);
+      } else if (msg.type === "pulse_input") {
+        handlePulseInputFromClient(msg.addr, msg.durationMs, ws);
       } else if (msg.type === "ping") {
         ws.send(JSON.stringify({ type: "pong", time: Date.now() }));
       }
     } catch (err) {
-      console.error("⚠️ [WS] Error procesando mensaje de ElektriKOP:", err.message);
+      console.error("⚠️ [WS] Error procesando mensaje WebSocket:", err.message);
     }
   });
 
   ws.on("close", () => {
-    console.log(`🔴 [WS] Cliente ElektriKOP desconectado (Restantes: ${wss.clients.size})`);
+    console.log(`🔴 [WS] Cliente desconectado (Restantes: ${wss.clients.size})`);
   });
 });
 
 // ============================================================================
 // Lógica de Salidas recibidas desde ElektriKOP
 // ============================================================================
-function handleOutputsFromElektriKOP(newOutputs, _newAnalog) {
+function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounters, senderWs = null) {
   if (!newOutputs) return;
+
+  if (newMarks) currentMarks = { ...currentMarks, ...newMarks };
+  if (newCounters) currentCounters = { ...currentCounters, ...newCounters };
 
   // Detectar cambios relevantes para logging limpio
   const changed = [];
@@ -118,11 +136,67 @@ function handleOutputsFromElektriKOP(newOutputs, _newAnalog) {
     console.log(`⚡ [ElektriKOP -> Salidas] ${changed.join(" | ")}`);
   }
 
+  // Retransmitir salidas, marcas y contadores a todos los demás clientes (Pixel Twin, etc.)
+  broadcast(
+    {
+      type: "sync_outputs",
+      outputs: currentOutputs,
+      marks: currentMarks,
+      counters: currentCounters,
+      analogOutputs: currentAnalogInputs,
+      timestamp: Date.now(),
+    },
+    senderWs
+  );
+
   if (isMock) {
     onMockOutputsUpdated(currentOutputs);
   } else if (isModbusConnected) {
     writeOutputsToModbus(currentOutputs);
   }
+}
+
+function handleInputsFromClient(newInputs, newAnalog, senderWs = null) {
+  if (!newInputs) return;
+
+  let changed = false;
+  for (const [k, v] of Object.entries(newInputs)) {
+    const bVal = Boolean(v);
+    if (currentInputs[k] !== bVal) {
+      currentInputs[k] = bVal;
+      changed = true;
+    }
+  }
+
+  if (newAnalog && typeof newAnalog === "object") {
+    currentAnalogInputs = { ...currentAnalogInputs, ...newAnalog };
+    changed = true;
+  }
+
+  if (changed) {
+    console.log(`📥 [Cliente -> Entradas] Retransmitiendo a ElektriKOP: ${JSON.stringify(newInputs)}`);
+    broadcast(
+      {
+        type: "sync_inputs",
+        inputs: currentInputs,
+        analogInputs: currentAnalogInputs,
+      },
+      senderWs
+    );
+  }
+}
+
+function handlePulseInputFromClient(addr, durationMs = 150, senderWs = null) {
+  if (!addr) return;
+  console.log(`🔘 [Cliente -> Pulso] ${addr} (${durationMs}ms) enviado a ElektriKOP`);
+  broadcast(
+    {
+      type: "pulse_input",
+      addr,
+      durationMs,
+    },
+    senderWs
+  );
 }
 
 // ============================================================================

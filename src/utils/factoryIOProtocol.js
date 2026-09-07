@@ -1,16 +1,67 @@
-import { INPUT_ADDR, OUTPUT_ADDR } from "./constants";
+import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR } from "./constants";
 
 export const DEFAULT_WS_URL = "ws://localhost:8080";
 
-export function createSyncOutputsMessage(outputs, analogOutputs = {}) {
+export function collectCounters(blocks = [], timerDisplay = {}) {
+  const counters = {};
+  if (!Array.isArray(blocks)) return counters;
+
+  blocks.forEach((block) => {
+    (block.rungs || []).forEach((rung) => {
+      if (rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud") {
+        const suffix = `${block.id}:${rung.id}`;
+        let timer = timerDisplay[suffix];
+        if (!timer) {
+          Object.keys(timerDisplay).forEach((k) => {
+            if (k === suffix || k.endsWith(`>${suffix}`)) timer = timerDisplay[k];
+          });
+        }
+        const cv = timer?.count ?? 0;
+        const pv = rung.preset ?? 0;
+        const qu = timer?.qu ?? (cv >= pv);
+        const qd = timer?.qd ?? (cv <= 0);
+
+        const data = {
+          cv,
+          pv,
+          qu: rung.outType === "ctd" ? false : qu,
+          qd: rung.outType === "ctu" ? false : qd,
+          type: rung.outType,
+          outAddr: rung.outAddr,
+          cdAddr: rung.cdAddr || null,
+          resetAddr: rung.resetAddr || null,
+          loadAddr: rung.loadAddr || null,
+        };
+
+        if (rung.outAddr) {
+          counters[rung.outAddr] = data;
+        }
+        counters[`${block.id}:${rung.id}`] = data;
+      }
+    });
+  });
+
+  return counters;
+}
+
+export function createSyncOutputsMessage(outputs, analogOutputs = {}, marks = {}, counters = {}) {
   const filteredOutputs = {};
   OUTPUT_ADDR.forEach((addr) => {
     filteredOutputs[addr] = Boolean(outputs?.[addr]);
   });
 
+  const filteredMarks = {};
+  MARK_ADDR.forEach((addr) => {
+    if (marks?.[addr] !== undefined) {
+      filteredMarks[addr] = Boolean(marks[addr]);
+    }
+  });
+
   return JSON.stringify({
     type: "sync_outputs",
     outputs: filteredOutputs,
+    marks: filteredMarks,
+    counters: counters || {},
     analogOutputs: analogOutputs || {},
     timestamp: Date.now(),
   });
@@ -34,6 +85,25 @@ export function parseBridgeMessage(rawData) {
         type: "sync_inputs",
         inputs: sanitizedInputs,
         analogInputs: parsed.analogInputs || {},
+      };
+    }
+
+    if (parsed.type === "pulse_input") {
+      return {
+        type: "pulse_input",
+        addr: parsed.addr,
+        durationMs: Math.max(20, Math.min(5000, Number(parsed.durationMs) || 150)),
+      };
+    }
+
+    if (parsed.type === "sync_outputs") {
+      return {
+        type: "sync_outputs",
+        outputs: parsed.outputs || {},
+        marks: parsed.marks || {},
+        counters: parsed.counters || {},
+        analogOutputs: parsed.analogOutputs || {},
+        timestamp: parsed.timestamp || Date.now(),
       };
     }
 
