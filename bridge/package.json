@@ -1,0 +1,15 @@
+{
+  "name": "elektrikop-factoryio-bridge",
+  "version": "1.0.0",
+  "description": "Puente WebSocket a Modbus TCP para conectar ElektriKOP con Factory I/O",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "mock": "node index.js --mock"
+  },
+  "dependencies": {
+    "modbus-serial": "^8.0.18",
+    "ws": "^8.18.0"
+  }
+}

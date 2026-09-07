@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
@@ -12,6 +12,7 @@ import HmiPanel from "./components/HMI/HmiPanel";
 import TiaSegment from "./components/Editor/TiaSegment";
 import { useSimulation } from "./hooks/useSimulation";
 import { useProject } from "./hooks/useProject";
+import { useFactoryIO } from "./hooks/useFactoryIO";
 
 function zeroInputs() {
   return Object.fromEntries(INPUT_ADDR.map((a) => [a, false]));
@@ -73,6 +74,21 @@ export default function PlcEmulator() {
     deviceMap: project.deviceMap,
     wiringMap: project.wiringMap,
     soundOn,
+  });
+
+  const handleFactoryIOInputs = useCallback((newInputs, newAnalog) => {
+    if (newInputs) {
+      setInputs((prev) => ({ ...prev, ...newInputs }));
+    }
+    if (newAnalog) {
+      setAnalogInputs((prev) => ({ ...prev, ...newAnalog }));
+    }
+  }, []);
+
+  const factoryIO = useFactoryIO({
+    onInputsReceived: handleFactoryIOInputs,
+    outputs: sim.outputs,
+    analogOutputs: {},
   });
 
   const toggleInput = (addr) => {
@@ -254,6 +270,64 @@ export default function PlcEmulator() {
                {soundOn ? "🔊 SONIDO" : "🔇 MUDO"}
              </PixelBtn>
           </div>
+
+          <div style={{ marginTop: 18, width: "100%", display: "flex", justifyContent: "center" }}>
+            <button
+              onClick={() => setMenuOpen(true)}
+              title="Abrir configuración y estado de Factory I/O"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 12px",
+                backgroundColor:
+                  factoryIO.status === "connected"
+                    ? "rgba(0,176,0,0.15)"
+                    : factoryIO.status === "connecting"
+                      ? "rgba(255,200,0,0.15)"
+                      : "rgba(0,0,0,0.25)",
+                border: `1px solid ${
+                  factoryIO.status === "connected"
+                    ? T.sLedGreen
+                    : factoryIO.status === "error"
+                      ? T.red
+                      : "#555"
+                }`,
+                color: "#EEE",
+                fontFamily: T.mono,
+                fontSize: 11,
+                cursor: "pointer",
+                letterSpacing: 0.5,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor:
+                    factoryIO.status === "connected"
+                      ? T.sLedGreen
+                      : factoryIO.status === "connecting"
+                        ? T.dwYellow
+                        : factoryIO.status === "error"
+                          ? T.red
+                          : "#666",
+                  boxShadow: factoryIO.status === "connected" ? `0 0 6px ${T.sLedGreen}` : "none",
+                }}
+              />
+              <span>
+                🔌 FACTORY I/O:{" "}
+                {factoryIO.status === "connected"
+                  ? factoryIO.bridgeInfo?.isMock
+                    ? "MOCK"
+                    : "CONECTADO"
+                  : factoryIO.status === "connecting"
+                    ? "CONECTANDO..."
+                    : "OFF"}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Centro: TIA Portal Editor — solo los segmentos */}
@@ -415,6 +489,7 @@ export default function PlcEmulator() {
         onAddParam={project.addParam}
         onRenameParam={project.renameParam}
         onRemoveParam={project.removeParam}
+        factoryIO={factoryIO}
       />
     </>
   );

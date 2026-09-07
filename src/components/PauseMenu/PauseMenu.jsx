@@ -5,6 +5,7 @@ import PixelBtn from "../shared/PixelBtn";
 import ChallengePanel from "../Challenge/ChallengePanel";
 import SymbolsPanel from "../SymbolsPanel";
 import BlocksPanel from "./BlocksPanel";
+import FactoryIOPanel from "./FactoryIOPanel";
 
 // Una sección con el mismo lenguaje visual de card que ya usan
 // SymbolsPanel/ChallengePanel (header gris + cuerpo blanco tipo TIA
@@ -56,6 +57,7 @@ export default function PauseMenu({
   onAddParam,
   onRenameParam,
   onRemoveParam,
+  factoryIO,
 }) {
   const [shareFeedback, setShareFeedback] = useState("");
 
@@ -171,6 +173,12 @@ export default function PauseMenu({
               onRemoveParam={onRemoveParam}
             />
           </Section>
+
+          {factoryIO && (
+            <Section icon="🔌" title="Conexión Factory I/O">
+              <FactoryIOPanel factoryIO={factoryIO} />
+            </Section>
+          )}
 
           <Section icon="🎯" title="Modo Desafío">
             <ChallengePanel blocks={blocks} wiringMap={wiringMap} onResultChange={onChallengeResultChange} />
