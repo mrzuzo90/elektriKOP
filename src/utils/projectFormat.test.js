@@ -38,7 +38,7 @@ describe("migrateProjectData", () => {
     expect(migrated.blocks[0].rungs).toEqual(withoutVersion.rungs);
   });
 
-  it("un objeto ya v2 (con 'blocks') pasa intacto", () => {
+  it("un objeto con blocks conserva el programa y recibe HMI vacío", () => {
     const v2 = {
       version: CURRENT_VERSION,
       projectName: "Proyecto v2",
@@ -47,7 +47,7 @@ describe("migrateProjectData", () => {
       wiringMap: {},
       symbols: {},
     };
-    expect(migrateProjectData(v2)).toBe(v2);
+    expect(migrateProjectData(v2)).toEqual({ ...v2, hmi: { version: 1, initialScreenId: null, screens: [] } });
   });
 
   it("devuelve null para un objeto sin 'rungs' ni 'blocks'", () => {

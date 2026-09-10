@@ -1,0 +1,445 @@
+.hmi-workspace { --hmi-yellow: #ffcc00; color: #eee; background: #292929; font-family: 'Silkscreen', monospace; flex: 1; overflow: auto; container-type: inline-size; }
+.hmi-workspace button, .hmi-workspace input, .hmi-workspace select { font: inherit; font-size: 11px; box-sizing: border-box; }
+.hmi-workspace button { color: #eee; background: #414141; border: 2px solid #111; padding: 8px 10px; box-shadow: inset 2px 2px #ffffff22, 2px 2px #111; cursor: pointer; }
+.hmi-workspace button:hover:not(:disabled) { border-color: #ffcc00; }
+.hmi-workspace button[aria-pressed="true"] { background: #ffcc00; color: #111; }
+.hmi-workspace button:disabled { opacity: .5; cursor: default; }
+.hmi-workspace :focus-visible { outline: 2px solid #ffcc00; outline-offset: 2px; }
+.hmi-workspace input, .hmi-workspace select { width: 100%; min-width: 0; background: #171d19; color: #fff; border: 2px solid #101010; padding: 7px; }
+.hmi-workspace input[type="color"] { width: 40px; height: 30px; padding: 2px; }
+.hmi-workspace label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+.hmi-workspace h2 { font-size: 17px; margin: 0 0 5px; }
+.hmi-workspace h3 { font-size: 13px; margin: 0 0 16px; color: #ffcc00; }
+.hmi-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px; border-bottom: 2px solid #111; font-size: 10px; }
+.hmi-header { justify-content: space-between; background: #373737; border-bottom: 4px solid #111; }
+.hmi-header span, .hmi-hint { color: #bbb; font-size: 10px; line-height: 1.6; }
+.hmi-mode { display: flex; gap: 8px; }
+.hmi-screen-properties { align-items: end; }
+.hmi-screen-properties label:first-child { flex: 1; min-width: 130px; max-width: 240px; }
+.hmi-palette { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; background: #202020; }
+.hmi-editor-body { display: flex; align-items: stretch; min-width: 0; }
+.hmi-design-area { min-width: 0; flex: 1; }
+.hmi-canvas-scroll { overflow: auto; padding: 18px; }
+.hmi-canvas { position: relative; width: 640px; height: 360px; flex-shrink: 0; outline: 4px solid #111; box-shadow: 7px 7px #0006; isolation: isolate; }
+.hmi-grid { background-image: radial-gradient(#ffffff25 1px, transparent 1px); background-size: 8px 8px; }
+.hmi-position { position: absolute; }
+.hmi-component { width: 100%; height: 100%; position: relative; border: 2px solid #111; overflow: hidden; font-size: 12px; }
+.hmi-text { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.hmi-component.hmi-indicator { border: 0; }
+.hmi-lamp { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 100%; padding: 4px; }
+.hmi-led { display: block; position: relative; flex-shrink: 0; border: 4px solid; border-radius: 50%; background: #999; outline: 1px solid #111; box-shadow: 2px 3px 0 #0008, inset 1px 1px 0 #fff9, inset -1px -1px 0 #111; }
+.hmi-lens { position: absolute; inset: 3px; border: 1px solid #111; border-radius: 50%; }
+.hmi-lens::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(ellipse at 32% 22%, #ffffff88, transparent 45%), linear-gradient(transparent 55%, #0004); }
+.hmi-lamp-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; line-height: 14px; }
+.hmi-alarm-active { animation: hmi-alarm-flash 1s step-end infinite; }
+@keyframes hmi-alarm-flash {
+  0%, 100% { background-color: var(--lamp-on); box-shadow: 0 0 14px var(--lamp-on); }
+  50% { background-color: var(--lamp-off); box-shadow: inset 2px 3px 5px #0008; }
+}
+.hmi-workspace .hmi-control { width: 100%; height: 100%; border: 0; font-size: 12px; box-shadow: inset -3px -3px #0006, inset 3px 3px #ffffff33; touch-action: none; user-select: none; overflow-wrap: anywhere; }
+.hmi-control:active { transform: translateY(1px); }
+.hmi-number { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 100%; }
+.hmi-number output { font-size: 20px; color: #ffcc00; }
+.hmi-setpoint { height: 100%; padding: 4px 6px; }
+.hmi-setpoint input { padding: 3px 5px; font-size: 14px; }
+.hmi-setpoint small { font-size: 8px; color: #ffb2b2; }
+.hmi-binding-error { position: absolute; right: 0; top: 0; padding: 2px 3px; background: #861919; color: #fff; font-size: 8px; pointer-events: none; }
+.hmi-editable { cursor: move; touch-action: none; user-select: none; }
+.hmi-editable > .hmi-component { pointer-events: none; }
+.hmi-editable button:disabled, .hmi-editable input:disabled { opacity: 1; }
+.hmi-selected { outline: 2px solid #ffcc00; outline-offset: 2px; z-index: 1; }
+.hmi-resize { position: absolute; right: -5px; bottom: -5px; width: 13px; height: 13px; background: #ffcc00; border: 2px solid #111; cursor: nwse-resize; touch-action: none; }
+.hmi-inspector { width: 215px; flex-shrink: 0; padding: 14px; background: #363636; border-left: 3px solid #111; }
+.hmi-inspector label { margin-bottom: 12px; }
+.hmi-inspector p { font-size: 10px; line-height: 1.6; color: #ccc; }
+.hmi-geometry { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.hmi-workspace .hmi-color { flex-direction: row; align-items: center; justify-content: space-between; }
+.hmi-workspace .hmi-danger { color: #ffb2b2; }
+.hmi-empty { padding: 35px 20px; text-align: center; font-size: 12px; line-height: 1.8; }
+.hmi-hint { margin: 6px 18px 12px; }
+.hmi-object-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px 18px; }
+@container (max-width: 900px) { .hmi-editor-body { flex-direction: column; } .hmi-inspector { width: 100%; border-left: 0; border-top: 3px solid #111; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; } .hmi-inspector h3 { grid-column: 1 / -1; } }
+/* Keep the legacy root typography from stretching compact operator controls. */
+.hmi-workspace { line-height: 1.3; }
+.hmi-workspace h2 { font-family: inherit; font-weight: bold; color: #ffcc00; letter-spacing: 1px; }
+.hmi-workspace .hmi-setpoint { gap: 3px; }
+.hmi-setpoint input { line-height: 1.2; }
+
+/* --------------------------------------------------------------------------
+   Siemens SIMATIC HMI Industrial Chassis (Pixel-Art)
+   -------------------------------------------------------------------------- */
+.siemens-hmi-chassis {
+  position: relative;
+  background: #384245;
+  border: 4px solid #111111;
+  box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.6), inset 2px 2px 0px rgba(255, 255, 255, 0.2);
+  padding: 16px 20px 14px;
+  width: fit-content;
+  margin: 0 auto;
+  user-select: none;
+}
+
+.siemens-screw {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #505d60;
+  border: 2px solid #111;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #222;
+  box-shadow: inset 1px 1px 0px #ffffff44, 1px 1px 0px #0008;
+}
+.screw-tl { top: 6px; left: 6px; }
+.screw-tr { top: 6px; right: 6px; }
+.screw-bl { bottom: 6px; left: 6px; }
+.screw-br { bottom: 6px; right: 6px; }
+
+.siemens-chassis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #202628;
+}
+
+.siemens-brand-block {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.siemens-logo-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0px #111;
+}
+.siemens-model-badge {
+  font-size: 11px;
+  font-weight: bold;
+  color: #00d2ff;
+  letter-spacing: 1px;
+  background: #1e2527;
+  padding: 2px 6px;
+  border: 1px solid #111;
+}
+.siemens-model-sub {
+  font-size: 9px;
+  color: #9aa8ab;
+  letter-spacing: 0.5px;
+}
+
+.siemens-header-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+}
+.siemens-accent-line {
+  width: 100%;
+  height: 4px;
+  background: #00646e;
+  border-top: 1px solid #00a0b0;
+  border-bottom: 1px solid #003338;
+}
+.siemens-screen-tag {
+  font-size: 10px;
+  color: #ddd;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.siemens-led-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #252c2e;
+  padding: 4px 10px;
+  border: 2px solid #111;
+  box-shadow: inset 1px 1px 2px #000;
+}
+.siemens-led-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.siemens-panel-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  border: 1px solid #000;
+}
+.led-pwr { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+.led-run { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+.led-off { background: #16201b; }
+.led-alarm-active {
+  background: #ff2200;
+  box-shadow: 0 0 8px #ff2200;
+  animation: hmi-alarm-flash 1s step-end infinite;
+}
+.siemens-led-label {
+  font-size: 8px;
+  color: #aaa;
+}
+.siemens-mini-toggle {
+  background: #384245;
+  border: 1px solid #111;
+  color: #ccc;
+  font-size: 10px;
+  padding: 2px 5px;
+  margin-left: 6px;
+  cursor: pointer;
+}
+.siemens-mini-toggle:hover {
+  background: #ffcc00;
+  color: #111;
+}
+
+.siemens-bezel-recess {
+  background: #1f2527;
+  padding: 8px;
+  border: 3px solid #14191a;
+  box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.8), inset -2px -2px 0px rgba(255, 255, 255, 0.1);
+}
+.siemens-bezel-inner {
+  position: relative;
+}
+
+.siemens-membrane-keypad {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.siemens-membrane-strip {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.siemens-key-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #2b3335;
+  border: 2px solid #111;
+  padding: 5px 14px;
+  min-width: 72px;
+  color: #eee;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.2), 2px 2px 0px #000;
+  cursor: pointer;
+}
+.siemens-key-btn:hover {
+  background: #3d4a4d;
+  border-color: #00d2ff;
+}
+.siemens-key-btn:active, .siemens-key-btn.key-run-active {
+  background: #00646e;
+  color: #fff;
+  border-color: #00e5ff;
+  box-shadow: inset 2px 2px 4px #000;
+}
+.siemens-key-num {
+  font-size: 11px;
+  font-weight: bold;
+  color: #00d2ff;
+}
+.siemens-key-desc {
+  font-size: 8px;
+  letter-spacing: 0.5px;
+}
+
+.siemens-tactile-ribs {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  height: 4px;
+}
+.siemens-tactile-ribs .rib {
+  width: 48px;
+  height: 2px;
+  background: #202729;
+  border-bottom: 1px solid #4a5659;
+}
+
+.hmi-frame-plain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hmi-frame-toggle-bar {
+  width: 640px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+.hmi-chassis-toggle-btn {
+  font-size: 10px;
+  padding: 4px 8px;
+  background: #384245;
+  color: #fff;
+  border: 2px solid #111;
+  cursor: pointer;
+}
+.hmi-chassis-toggle-btn:hover {
+  background: #00646e;
+}
+
+/* --------------------------------------------------------------------------
+   Gauge Cards: Displays para Temporizadores y Contadores
+   -------------------------------------------------------------------------- */
+.hmi-gauge-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  background: #171d19;
+  border: 2px solid #111;
+  box-shadow: inset 2px 2px 4px #000a;
+}
+.hmi-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 9px;
+  color: #aaa;
+  margin-bottom: 2px;
+}
+.hmi-gauge-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 65%;
+  color: #fff;
+}
+.hmi-gauge-preset {
+  font-size: 8px;
+  color: #00d2ff;
+}
+.hmi-counter-badge {
+  font-size: 8px;
+  background: #333;
+  color: #ffcc00;
+  padding: 1px 4px;
+  border: 1px solid #111;
+}
+.hmi-counter-reached {
+  background: #861919;
+  color: #fff;
+  border-color: #ff3333;
+  animation: hmi-alarm-flash 1s step-end infinite;
+}
+.hmi-gauge-body {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 1px 0 4px;
+}
+.hmi-gauge-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 1px 1px 0px #000;
+}
+.hmi-counter-max {
+  font-size: 11px;
+  color: #888;
+}
+
+.hmi-gauge-track {
+  width: 100%;
+  height: 8px;
+  background: #0d120f;
+  border: 1px solid #111;
+  box-shadow: inset 1px 1px 2px #000;
+  overflow: hidden;
+}
+.hmi-gauge-fill {
+  height: 100%;
+  transition: width 0.08s linear;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   Bargraph Analógico (Horizontal / Vertical)
+   -------------------------------------------------------------------------- */
+.hmi-bargraph {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  background: #171d19;
+  border: 2px solid #111;
+  box-shadow: inset 2px 2px 4px #000a;
+}
+.hmi-bar-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 9px;
+  margin-bottom: 3px;
+}
+.hmi-bar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+.hmi-bar-val {
+  font-weight: bold;
+  color: #ffcc00;
+}
+.hmi-bar-frame {
+  position: relative;
+  flex: 1;
+  min-height: 10px;
+  background: #0d120f;
+  border: 1px solid #111;
+  box-shadow: inset 1px 1px 3px #000;
+  overflow: hidden;
+}
+.hmi-bar-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  transition: width 0.08s linear, height 0.08s linear;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.3);
+}
+.hmi-bar-ticks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hmi-bar-ticks span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hmi-bar-v {
+  flex-direction: column-reverse;
+}
+.hmi-bar-v .hmi-bar-info {
+  margin-top: 3px;
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: center;
+}
+

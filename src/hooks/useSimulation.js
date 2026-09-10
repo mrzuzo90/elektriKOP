@@ -142,6 +142,19 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
     checkAlarms(nextOutputs);
   };
 
+  // HMI writes are ordinary PLC writes, not a persistent force. The next scan
+  // may overwrite them. Update refs synchronously as well as React's snapshot.
+  const writeMemory = (addr, value) => {
+    if (typeof value !== "boolean") return;
+    if (OUTPUT_ADDR.includes(addr)) {
+      outputsRef.current = { ...outputsRef.current, [addr]: value };
+      setOutputs(outputsRef.current);
+    } else if (MARK_ADDR.includes(addr)) {
+      marksRef.current = { ...marksRef.current, [addr]: value };
+      setMarks(marksRef.current);
+    }
+  };
+
   const stepOnce = () => {
     setRunning(false);
     ensureAudio();
@@ -186,5 +199,5 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
     });
   };
 
-  return { running, setRunning, outputs, marks, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
+  return { running, setRunning, writeMemory, outputs, marks, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
 }

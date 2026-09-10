@@ -13,6 +13,8 @@ import {
 import { CURRENT_VERSION, migrateProjectData } from "../utils/projectFormat";
 import { buildShareUrl, readProjectFromLocation, clearShareParam } from "../utils/shareLink";
 
+import { emptyHmi } from "../hmi/model";
+
 const STORAGE_KEY = "elektrikop.autosave.v1";
 const HISTORY_LIMIT = 50;
 const COALESCE_MS = 600;
@@ -25,6 +27,7 @@ function initialProject() {
     deviceMap: {},
     wiringMap: {},
     symbols: {},
+    hmi: emptyHmi(),
   };
 }
 
@@ -40,6 +43,7 @@ function loadFromStorage() {
       deviceMap: migrated.deviceMap || {},
       wiringMap: migrated.wiringMap || {},
       symbols: migrated.symbols || {},
+      hmi: migrated.hmi,
     };
   } catch {
     return null;
@@ -60,6 +64,7 @@ function loadFromShareLink() {
       deviceMap: migrated.deviceMap || {},
       wiringMap: migrated.wiringMap || {},
       symbols: migrated.symbols || {},
+      hmi: migrated.hmi,
     };
   } catch {
     return null;
@@ -116,21 +121,34 @@ export function useProject() {
   // de cambios (p.ej. teclear en el comentario de un segmento) se
   // "coalescen" en un solo paso de historial mientras no pase más de
   // COALESCE_MS entre una y la siguiente.
-  const applyChange = (patch) => {
-    if (pendingBeforeRef.current === null) pendingBeforeRef.current = projectRef.current;
+  const applyChange = (patch, { discrete = false } = {}) => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(commitPending, COALESCE_MS);
+    if (discrete) {
+      commitPending();
+      const before = projectRef.current;
+      setPast(p => [...p.slice(-(HISTORY_LIMIT - 1)), before]);
+    } else {
+      if (pendingBeforeRef.current === null) pendingBeforeRef.current = projectRef.current;
+      debounceRef.current = setTimeout(commitPending, COALESCE_MS);
+    }
     if (future.length) setFuture([]);
-    setProjectState((prev) => ({ ...prev, ...patch }));
+    const next = { ...projectRef.current, ...patch };
+    projectRef.current = next;
+    setProjectState(next);
   };
 
   const undo = () => {
-    commitPending();
     clearTimeout(debounceRef.current);
-    if (past.length === 0) return;
-    const prevSnapshot = past[past.length - 1];
-    setFuture([project, ...future]);
-    setPast(past.slice(0, -1));
+    // A pending edit is the newest history entry, even before the debounce
+    // publishes it to React state. Consume it directly rather than reading
+    // the stale `past` array immediately after commitPending().
+    const pending = pendingBeforeRef.current;
+    pendingBeforeRef.current = null;
+    if (pending === null && past.length === 0) return;
+    const prevSnapshot = pending ?? past[past.length - 1];
+    setFuture([projectRef.current, ...future]);
+    if (pending === null) setPast(past.slice(0, -1));
+    projectRef.current = prevSnapshot;
     setProjectState(prevSnapshot);
   };
 
@@ -172,13 +190,15 @@ export function useProject() {
   useEffect(() => {
     const id = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: CURRENT_VERSION, ...project }));
       } catch {
         /* localStorage no disponible */
       }
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [project]);
+
+  const setHmi = (hmi, options) => applyChange({ hmi }, options);
 
   const setProjectName = (name) => applyChange({ projectName: name });
   const setDeviceType = (addr, type) => applyChange({ deviceMap: { ...projectRef.current.deviceMap, [addr]: type } });
@@ -231,6 +251,7 @@ export function useProject() {
       deviceMap: {},
       wiringMap: {},
       symbols: {},
+      hmi: emptyHmi(),
     }));
     setImportError("");
     setRestoredFromAutosave(false);
@@ -257,6 +278,7 @@ export function useProject() {
           deviceMap: migrated.deviceMap || {},
           wiringMap: migrated.wiringMap || {},
           symbols: migrated.symbols || {},
+          hmi: migrated.hmi,
         });
         setImportError("");
         setRestoredFromAutosave(false);
@@ -271,6 +293,7 @@ export function useProject() {
 
   return {
     projectName: project.projectName, setProjectName,
+    hmi: project.hmi, setHmi,
     blocks: project.blocks,
     addBlock, renameBlock, removeBlock, setBlockRungs,
     addParam, renameParam, removeParam,
@@ -282,7 +305,7 @@ export function useProject() {
     copyShareLink,
     fileInputRef,
     undo, redo,
-    canUndo: past.length > 0,
+    canUndo: past.length > 0 || pendingBeforeRef.current !== null,
     canRedo: future.length > 0,
     restoredFromAutosave,
     dismissRestoredNotice: () => setRestoredFromAutosave(false),

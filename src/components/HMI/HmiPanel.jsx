@@ -15,7 +15,7 @@ export default function HmiPanel({ inputs, onToggle, onPulse, running, timers, d
       ...pixelBorderStyle
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: `2px solid ${T.dwBlack}`, paddingBottom: 4, marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 20, color: T.dwBlack, textTransform: "uppercase", letterSpacing: 1 }}>Panel HMI</h2>
+        <h2 style={{ margin: 0, fontSize: 20, color: T.dwBlack, textTransform: "uppercase", letterSpacing: 1 }}>Depuración E/S</h2>
         <span style={{ fontSize: 14, color: T.dwBlack }}>FORCE IO</span>
       </div>
 

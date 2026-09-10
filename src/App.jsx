@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { T, INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR, MAX_RUNGS } from "./utils/constants";
 import { computeStates } from "./utils/evalNode";
 import { applyWiring, collectUsedAddressesAcrossBlocks, collectOutputConflictsAcrossBlocks } from "./utils/plcIO";
@@ -8,6 +8,10 @@ import PixelBtn from "./components/shared/PixelBtn";
 import ProcessPanel from "./components/ProcessPanel/ProcessPanel";
 import PauseMenu from "./components/PauseMenu/PauseMenu";
 import SiemensPLC from "./components/Cabinet/SiemensPLC";
+import HmiWorkspace from "./hmi/HmiWorkspace";
+import { collectHmiMetrics } from "./hmi/metrics";
+import { createTagAccess } from "./hmi/bindings";
+import { useIOKeyboard } from "./hmi/useIOKeyboard";
 import HmiPanel from "./components/HMI/HmiPanel";
 import TiaSegment from "./components/Editor/TiaSegment";
 import { useSimulation } from "./hooks/useSimulation";
@@ -41,6 +45,8 @@ function timerValueFor(timerDisplay, blockId, rungId) {
 // App Principal
 // ---------------------------------------------------------------------------
 export default function PlcEmulator() {
+  const [workspaceView, setWorkspaceView] = useState("program");
+  const [hmiSession, setHmiSession] = useState(0);
   const [inputs, setInputs] = useState(zeroInputs);
   const [analogInputs, setAnalogInputs] = useState(zeroAnalog);
   const [showProcess, setShowProcess] = useState(true);
@@ -95,11 +101,18 @@ export default function PlcEmulator() {
     }, durationMs);
   }, []);
 
+  const handleSetInput = useCallback((addr, val) => {
+    if (!addr) return;
+    setInputs((prev) => ({ ...prev, [addr]: Boolean(val) }));
+  }, []);
+
   const counters = collectCounters(project.blocks, sim.timerDisplay);
 
   const factoryIO = useFactoryIO({
     onInputsReceived: handleFactoryIOInputs,
     onPulseInput: handlePulseInput,
+    onSetInput: handleSetInput,
+    inputs,
     outputs: sim.outputs,
     marks: sim.marks,
     counters,
@@ -116,46 +129,12 @@ export default function PlcEmulator() {
   };
   const setAnalogInput = (addr, value) => setAnalogInputs((prev) => ({ ...prev, [addr]: value }));
 
-  // Atajos de teclado del Panel HMI (idea del usuario, 2026-07-15): las
-  // teclas 0-9 mapean 1:1 al orden de INPUT_ADDR (0→I0.0 ... 7→I0.7,
-  // 8→I1.0, 9→I1.1), para poder operar entradas sin ratón en clase. Un
-  // pulsador se mantiene activo mientras se mantiene la tecla (igual que el
-  // ratón); cualquier otro tipo (interruptor, seta de PARO...) alterna con
-  // cada pulsación, igual que un clic — misma distinción que ya hace
-  // HmiPanel.jsx entre onToggle/onPulse. Refs para no reenganchar el
-  // listener en cada render (mismo patrón que undo/redo en useProject.js).
-  const deviceMapRef = useRef(project.deviceMap);
-  deviceMapRef.current = project.deviceMap;
-  const toggleInputRef = useRef(toggleInput);
-  toggleInputRef.current = toggleInput;
-  const setInputMomentaryRef = useRef(setInputMomentary);
-  setInputMomentaryRef.current = setInputMomentary;
-
-  useEffect(() => {
-    const isTextTarget = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
-    const addrForKey = (key) => (/^[0-9]$/.test(key) ? INPUT_ADDR[Number(key)] : undefined);
-    const onKeyDown = (e) => {
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTextTarget(e.target)) return;
-      const addr = addrForKey(e.key);
-      if (!addr) return;
-      if (deviceMapRef.current?.[addr] === "pulsador") setInputMomentaryRef.current(addr, true);
-      else toggleInputRef.current(addr);
-    };
-    const onKeyUp = (e) => {
-      if (isTextTarget(e.target)) return;
-      const addr = addrForKey(e.key);
-      if (!addr) return;
-      if (deviceMapRef.current?.[addr] === "pulsador") setInputMomentaryRef.current(addr, false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("keyup", onKeyUp);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("keyup", onKeyUp);
-    };
-  }, []);
+  useIOKeyboard(project.deviceMap, toggleInput, setInputMomentary);
+  const hmiTags = createTagAccess({ inputs, analogInputs, outputs: sim.outputs, marks: sim.marks,
+    wiringMap: project.wiringMap, symbols: project.symbols, metrics: collectHmiMetrics(project.blocks, sim.timerDisplay), setInput: handleSetInput, setAnalog: setAnalogInput, writeMemory: sim.writeMemory });
 
   const resetAll = () => {
+    setHmiSession(n => n + 1);
     setInputs(zeroInputs());
     setAnalogInputs(zeroAnalog());
     sim.resetSimulation();
@@ -163,6 +142,7 @@ export default function PlcEmulator() {
 
   const clearAll = () => {
     if (!window.confirm("¿Limpiar todo? Se borrarán los segmentos, las variables y el estado de la simulación.")) return;
+    setHmiSession(n => n + 1);
     project.clearProject();
     setInputs(zeroInputs());
     setAnalogInputs(zeroAnalog());
@@ -174,6 +154,7 @@ export default function PlcEmulator() {
   const handleFileSelected = (file) => {
     project.importProject(file, {
       onSuccess: () => {
+        setHmiSession(n => n + 1);
         setInputs(zeroInputs());
         setAnalogInputs(zeroAnalog());
         sim.resetSimulation();
@@ -288,8 +269,14 @@ export default function PlcEmulator() {
 
           <div style={{ marginTop: 18, width: "100%", display: "flex", justifyContent: "center" }}>
             <button
-              onClick={() => setMenuOpen(true)}
-              title="Abrir configuración y estado de Factory I/O"
+              onClick={() => {
+                if (factoryIO.status !== "connected" && factoryIO.status !== "connecting") {
+                  factoryIO.connect();
+                } else {
+                  setMenuOpen(true);
+                }
+              }}
+              title={factoryIO.status === "connected" ? "Abrir configuración y estado de Factory I/O" : "Conectar al puente WebSocket"}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -348,6 +335,13 @@ export default function PlcEmulator() {
         {/* Centro: TIA Portal Editor — solo los segmentos */}
         <div style={{ flex: 1, minWidth: 0, backgroundColor: "#EBEBEB", display: "flex", flexDirection: "column" }}>
 
+          <div style={{ display: "flex", gap: 8, padding: 10, background: T.dwGrey, borderBottom: `3px solid ${T.dwBlack}` }}>
+            <PixelBtn small active={workspaceView === "program"} onClick={() => setWorkspaceView("program")}>Programa</PixelBtn>
+            <PixelBtn small active={workspaceView === "hmi"} onClick={() => setWorkspaceView("hmi")}>HMI</PixelBtn>
+          </div>
+          {workspaceView === "hmi" ? <HmiWorkspace key={hmiSession} hmi={project.hmi} onChange={project.setHmi}
+            tags={hmiTags} symbols={project.symbols} undo={project.undo} redo={project.redo} canUndo={project.canUndo} canRedo={project.canRedo}
+            running={sim.running} onToggleRun={() => sim.setRunning(r => !r)} /> : <>
           <div style={{ backgroundColor: "#F0F0F0", borderBottom: "1px solid #CCC" }}>
             {/* Pestañas de bloque: Main + cada FC. El bloque activo es solo
                 un foco de UI (activeBlockId), no cambia qué se simula. */}
@@ -448,6 +442,7 @@ export default function PlcEmulator() {
             {activeBlock.rungs.length >= MAX_RUNGS && <div style={{ color: "red", textAlign: "center", marginTop: 10 }}>Límite de segmentos alcanzado ({MAX_RUNGS})</div>}
           </div>
 
+          </>}
         </div>
 
         {/* Derecha: Proceso simulado — mismo fondo que la barra izquierda

@@ -1,0 +1,377 @@
+{
+  "version": 3,
+  "projectName": "Demo Diseñador HMI",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "Network 1 - Marcha",
+          "comment": "Pulsador de marcha activa la salida de motor",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n0",
+              "addr": "I0.0",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.0",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 1,
+          "title": "Network 2 - Temporizador",
+          "comment": "Temporizador TON de 5 segundos que arranca con Q0.0",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n1",
+              "addr": "Q0.0",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.1",
+          "outType": "ton",
+          "preset": 5
+        },
+        {
+          "id": 2,
+          "title": "Network 3 - Contador",
+          "comment": "Contador CTU de piezas con sensor en I0.1",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n2",
+              "addr": "I0.1",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "M0.1",
+          "outType": "ctu",
+          "preset": 8
+        },
+        {
+          "id": 3,
+          "title": "Network 4 - Alarma Lote Completo",
+          "comment": "Activa salida Q0.2 cuando el contador alcanza 8 piezas",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n3",
+              "addr": "M0.1",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.2",
+          "outType": "coil",
+          "preset": 0
+        }
+      ],
+      "interface": {
+        "in": [],
+        "out": []
+      }
+    }
+  ],
+  "deviceMap": {
+    "I0.0": "pulsador",
+    "I0.1": "pulsador"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.0": "Marcha_Motor",
+    "I0.1": "Sensor_Pieza",
+    "Q0.0": "Motor_Principal",
+    "Q0.1": "Motor_Auxiliar",
+    "Q0.2": "Alarma_Lote",
+    "M0.1": "Lote_Alcanzado",
+    "IW0": "Nivel_Tanque"
+  },
+  "hmi": {
+    "version": 1,
+    "initialScreenId": "dfd6baa2-40ad-4d02-96e1-0dbbd87c55e9",
+    "screens": [
+      {
+        "id": "dfd6baa2-40ad-4d02-96e1-0dbbd87c55e9",
+        "name": "Principal",
+        "width": 640,
+        "height": 360,
+        "background": "#1e2b22",
+        "components": [
+          {
+            "id": "1f59a224-9e5b-4c70-a512-d5a8ef864460",
+            "type": "lamp",
+            "label": "Entrada marcha",
+            "x": 24,
+            "y": 20,
+            "width": 160,
+            "height": 64,
+            "tag": "I0.0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "b6e6907c-0890-4934-9958-62412e743408",
+            "type": "momentary",
+            "label": "Marcha (I0.0)",
+            "x": 24,
+            "y": 95,
+            "width": 160,
+            "height": 55,
+            "tag": "I0.0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "790b4bf5-e810-424c-ac9d-3756dc438723",
+            "type": "toggle",
+            "label": "Alternar entrada",
+            "x": 200,
+            "y": 95,
+            "width": 160,
+            "height": 55,
+            "tag": "I0.0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "16a6f6b6-b476-4057-97f1-0032e43b771c",
+            "type": "text",
+            "label": "CONTROL DE PROCESO",
+            "x": 200,
+            "y": 20,
+            "width": 210,
+            "height": 64,
+            "tag": "",
+            "targetScreenId": "",
+            "foreground": "#00d2ff",
+            "background": "#1b2420",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "2ee64d8b-a485-4f84-b7ed-f2c2640efcff",
+            "type": "lamp",
+            "label": "Motor (Q0.0)",
+            "x": 430,
+            "y": 20,
+            "width": 180,
+            "height": 64,
+            "tag": "Q0.0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#555555",
+            "onColor": "#00ff88"
+          },
+          {
+            "id": "4a7d5824-d779-4318-8e27-7cff51f3f529",
+            "type": "number",
+            "label": "Nivel actual",
+            "x": 24,
+            "y": 170,
+            "width": 160,
+            "height": 60,
+            "tag": "IW0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00",
+            "unit": "%"
+          },
+          {
+            "id": "c460a3c1-31b0-458e-af34-9121ae95f2ff",
+            "type": "setpoint",
+            "label": "Consigna Nivel",
+            "x": 200,
+            "y": 170,
+            "width": 160,
+            "height": 60,
+            "tag": "IW0",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "b1a2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+            "type": "bar",
+            "label": "Bargraph Nivel IW0",
+            "x": 24,
+            "y": 245,
+            "width": 336,
+            "height": 45,
+            "tag": "IW0",
+            "min": 0,
+            "max": 100,
+            "orientation": "horizontal",
+            "barColor": "#0099cc",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+            "type": "timer",
+            "label": "T. Arranque TON",
+            "x": 430,
+            "y": 95,
+            "width": 180,
+            "height": 75,
+            "tag": "metric:main:1:ET",
+            "mode": "elapsed",
+            "barColor": "#00b000",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "838ce636-6c0e-446e-bddf-27764983a245",
+            "type": "navigation",
+            "label": "Contador y Detalle",
+            "x": 430,
+            "y": 245,
+            "width": 180,
+            "height": 45,
+            "tag": "",
+            "targetScreenId": "4e9ea159-dd8f-4c25-9e39-a52c1677c205",
+            "foreground": "#ffffff",
+            "background": "#2b3335",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          }
+        ]
+      },
+      {
+        "id": "4e9ea159-dd8f-4c25-9e39-a52c1677c205",
+        "name": "Detalle y Contadores",
+        "width": 640,
+        "height": 360,
+        "background": "#1e2b22",
+        "components": [
+          {
+            "id": "6f95ae79-cdca-4b2a-bbcc-68a47ee67422",
+            "type": "navigation",
+            "label": "◄ Volver a Principal",
+            "x": 24,
+            "y": 20,
+            "width": 180,
+            "height": 50,
+            "tag": "",
+            "targetScreenId": "dfd6baa2-40ad-4d02-96e1-0dbbd87c55e9",
+            "foreground": "#ffffff",
+            "background": "#2b3335",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "c1c2c3c4-c5c6-4c7c-8c9c-0c1c2c3c4c5c",
+            "type": "counter",
+            "label": "Piezas Fabricadas (CTU)",
+            "x": 24,
+            "y": 90,
+            "width": 240,
+            "height": 85,
+            "tag": "metric:main:2:CV",
+            "barColor": "#ffcc00",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "p1p2p3p4-p5p6-4p7p-8p9p-0p1p2p3p4p5p",
+            "type": "momentary",
+            "label": "+1 Pieza (Sensor I0.1)",
+            "x": 280,
+            "y": 90,
+            "width": 180,
+            "height": 85,
+            "tag": "I0.1",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "a1a2a3a4-a5a6-4a7a-8a9a-0a1a2a3a4a5a",
+            "type": "alarm",
+            "label": "LOTE COMPLETO (Q0.2)",
+            "x": 480,
+            "y": 90,
+            "width": 130,
+            "height": 85,
+            "tag": "Q0.2",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#333333",
+            "offColor": "#331100",
+            "onColor": "#ff2200"
+          },
+          {
+            "id": "t1t2t3t4-t5t6-4t7t-8t9t-0t1t2t3t4t5t",
+            "type": "timer",
+            "label": "Tiempo Arranque TON",
+            "x": 24,
+            "y": 195,
+            "width": 240,
+            "height": 80,
+            "tag": "metric:main:1:ET",
+            "mode": "elapsed",
+            "barColor": "#00b000",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          },
+          {
+            "id": "b2b3b4b5-b6b7-4b8b-9b0b-1b2b3b4b5b6b",
+            "type": "bar",
+            "label": "Nivel Analógico Tanque (IW0)",
+            "x": 280,
+            "y": 195,
+            "width": 330,
+            "height": 80,
+            "tag": "IW0",
+            "min": 0,
+            "max": 100,
+            "orientation": "horizontal",
+            "barColor": "#00d2ff",
+            "targetScreenId": "",
+            "foreground": "#ffffff",
+            "background": "#262626",
+            "offColor": "#555555",
+            "onColor": "#ffcc00"
+          }
+        ]
+      }
+    ]
+  }
+}
