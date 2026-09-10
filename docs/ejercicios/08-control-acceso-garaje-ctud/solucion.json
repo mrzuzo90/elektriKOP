@@ -1,0 +1,103 @@
+{
+  "version": 2,
+  "projectName": "Ejercicio 8 - Control de acceso a garaje con CTUD",
+  "blocks": [
+    {
+      "id": "main",
+      "kind": "main",
+      "name": "Main",
+      "rungs": [
+        {
+          "id": 0,
+          "title": "Network 1 - Contador de Plazas (CTUD)",
+          "comment": "CU incrementa con Sensor/Pulsador Entrada (I0.1). CD decrementa con Sensor/Pulsador Salida (I0.2). Al llegar a 10 plazas, QU activa la marca M0.0 (Completo).",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n101",
+              "addr": "I0.1",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "M0.0",
+          "outType": "ctud",
+          "preset": 10,
+          "cdAddr": "I0.2"
+        },
+        {
+          "id": 1,
+          "title": "Network 2 - Barrera de Acceso",
+          "comment": "Mientras haya plazas libres (NOT M0.0), la barrera permanece abierta (Q0.7 = true). Cuando el parking se llena (M0.0 = true), la barrera se cierra.",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n102",
+              "addr": "M0.0",
+              "neg": true,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.7",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 2,
+          "title": "Network 3 - Semáforo Verde (Libre)",
+          "comment": "Semáforo verde encendido mientras no esté lleno (NOT M0.0).",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n103",
+              "addr": "M0.0",
+              "neg": true,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.1",
+          "outType": "coil",
+          "preset": 2
+        },
+        {
+          "id": 3,
+          "title": "Network 4 - Semáforo Rojo (Completo)",
+          "comment": "Semáforo rojo encendido cuando el garaje está lleno (M0.0 = true).",
+          "logic": [
+            {
+              "kind": "contact",
+              "id": "n104",
+              "addr": "M0.0",
+              "neg": false,
+              "edge": null
+            }
+          ],
+          "outAddr": "Q0.2",
+          "outType": "coil",
+          "preset": 2
+        }
+      ],
+      "interface": {
+        "in": [],
+        "out": []
+      }
+    }
+  ],
+  "deviceMap": {
+    "I0.1": "pulsador",
+    "I0.2": "pulsador",
+    "Q0.0": "puerta",
+    "Q0.1": "lampara",
+    "Q0.2": "alarma",
+    "Q0.7": "puerta"
+  },
+  "wiringMap": {},
+  "symbols": {
+    "I0.1": "Sensor_Entrada_Coche",
+    "I0.2": "Sensor_Salida_Coche",
+    "M0.0": "Parking_Completo",
+    "Q0.1": "Semaforo_Verde",
+    "Q0.2": "Semaforo_Rojo",
+    "Q0.7": "Barrera_Acceso"
+  }
+}

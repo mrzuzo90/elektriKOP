@@ -18,6 +18,7 @@ con ElektriKOP. Cada carpeta tiene:
 | 5 | [Contador de piezas con marca interna](05-contador-piezas-marca/enunciado.md) | ⭐⭐ | Contador CTU, pin de Reset, marcas (M), interbloqueo por marca |
 | 6 | [Tanque con sensor analógico y comparadores](06-tanque-nivel-comparador/enunciado.md) | ⭐⭐⭐ | Entrada analógica (IW), comparador (CMP), combinación con marcha/paro y marcas |
 | 7 | [Alternador con bloque FB (memoria STATIC)](07-alternador-fb-static/enunciado.md) | ⭐⭐⭐ | Bloque FB, parámetro STATIC, memoria de instancia por sitio de llamada, contraste con FC |
+| 8 | [Control de acceso a garaje con CTUD](08-control-acceso-garaje-ctud/enunciado.md) | ⭐⭐ | Contador bidireccional CTUD, CU, CD, QU, QD, telemetría WebSocket |
 
 ## Cómo usarlos
 

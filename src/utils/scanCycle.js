@@ -192,15 +192,33 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
           const rising = combined && !prevState.prevPulse;
           if (resetVal) count = 0;
           else if (rising) count = Math.min(count + 1, rung.preset);
-          nextTimers[timerKey] = { count, prevPulse: combined };
           const reached = count >= rung.preset;
+          nextTimers[timerKey] = {
+            count,
+            cu: combined,
+            cd: false,
+            r: resetVal,
+            ld: false,
+            qu: reached,
+            qd: count <= 0,
+            prevPulse: combined,
+          };
           write(rung.outAddr, reached);
         } else if (rung.outType === "ctd") {
           const rising = combined && !prevState.prevPulse;
           if (resetVal) count = rung.preset;
           else if (rising) count = Math.max(count - 1, 0);
-          nextTimers[timerKey] = { count, prevPulse: combined };
           const reached = count <= 0;
+          nextTimers[timerKey] = {
+            count,
+            cu: false,
+            cd: combined,
+            r: false,
+            ld: resetVal,
+            qu: count >= rung.preset,
+            qd: reached,
+            prevPulse: combined,
+          };
           write(rung.outAddr, reached);
         } else {
           // ctud
@@ -226,10 +244,14 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
 
           nextTimers[timerKey] = {
             count,
-            prevPulse: combined,
-            prevCd: cdVal,
+            cu: combined,
+            cd: cdVal,
+            r: resetVal,
+            ld: loadVal,
             qu,
             qd,
+            prevPulse: combined,
+            prevCd: cdVal,
           };
 
           write(rung.outAddr, qu);

@@ -37,6 +37,17 @@ console.log("==========================================================\n");
 // ============================================================================
 const wss = new WebSocketServer({ port: WS_PORT });
 
+wss.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`\n❌ Error: El puerto ${WS_PORT} ya está en uso.`);
+    console.error(`   Hay otra instancia del bridge o proceso corriendo en ese puerto.`);
+    console.error(`   Para liberarlo ejecuta:`);
+    console.error(`     kill -9 $(lsof -t -i :${WS_PORT})\n`);
+    process.exit(1);
+  }
+  console.error("⚠️ [WS Server Error]:", err.message);
+});
+
 let currentInputs = Object.fromEntries(INPUT_ADDRS.map((a) => [a, false]));
 let currentAnalogInputs = { IW0: 0 };
 let currentOutputs = Object.fromEntries(OUTPUT_ADDRS.map((a) => [a, false]));
@@ -85,9 +96,12 @@ wss.on("connection", (ws, req) => {
   ws.send(
     JSON.stringify({
       type: "sync_outputs",
+      inputs: currentInputs,
       outputs: currentOutputs,
       marks: currentMarks,
       counters: currentCounters,
+      analogOutputs: currentAnalogInputs,
+      timestamp: Date.now(),
     })
   );
 
@@ -95,9 +109,11 @@ wss.on("connection", (ws, req) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "sync_outputs") {
-        handleOutputsFromElektriKOP(msg.outputs, msg.analogOutputs, msg.marks, msg.counters, ws);
+        handleOutputsFromElektriKOP(msg.outputs, msg.analogOutputs, msg.marks, msg.counters, msg.inputs, ws);
       } else if (msg.type === "sync_inputs") {
         handleInputsFromClient(msg.inputs, msg.analogInputs, ws);
+      } else if (msg.type === "set_input") {
+        handleSetInputFromClient(msg.addr, msg.value, ws);
       } else if (msg.type === "pulse_input") {
         handlePulseInputFromClient(msg.addr, msg.durationMs, ws);
       } else if (msg.type === "ping") {
@@ -116,11 +132,37 @@ wss.on("connection", (ws, req) => {
 // ============================================================================
 // Lógica de Salidas recibidas desde ElektriKOP
 // ============================================================================
-function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounters, senderWs = null) {
+function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounters, newInputs = null, senderWs = null) {
   if (!newOutputs) return;
 
+  if (newInputs && typeof newInputs === "object") {
+    const changedInputs = [];
+    INPUT_ADDRS.forEach((addr) => {
+      if (newInputs[addr] !== undefined && Boolean(newInputs[addr]) !== Boolean(currentInputs[addr])) {
+        changedInputs.push(`${addr}: ${newInputs[addr] ? "ON" : "OFF"}`);
+      }
+    });
+    if (changedInputs.length > 0) {
+      console.log(`📥 [ElektriKOP -> Entradas] ${changedInputs.join(" | ")}`);
+    }
+    currentInputs = { ...currentInputs, ...newInputs };
+  }
   if (newMarks) currentMarks = { ...currentMarks, ...newMarks };
-  if (newCounters) currentCounters = { ...currentCounters, ...newCounters };
+
+  if (newCounters && typeof newCounters === "object") {
+    Object.entries(newCounters).forEach(([addr, c]) => {
+      // Filtrar claves repetidas o mostrar solo las de outAddr
+      if (addr.startsWith("M") || addr.startsWith("Q")) {
+        const prev = currentCounters[addr];
+        if (!prev || prev.cv !== c.cv || prev.qu !== c.qu || prev.cu !== c.cu || prev.cd !== c.cd) {
+          console.log(
+            `🚗 [Contador ${addr}] CV: ${c.cv}/${c.pv} | CU: ${c.cu ? "ON" : "off"} | CD: ${c.cd ? "ON" : "off"} | QU: ${c.qu ? "LLENO" : "libre"}`
+          );
+        }
+      }
+    });
+    currentCounters = { ...currentCounters, ...newCounters };
+  }
 
   // Detectar cambios relevantes para logging limpio
   const changed = [];
@@ -136,10 +178,11 @@ function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounte
     console.log(`⚡ [ElektriKOP -> Salidas] ${changed.join(" | ")}`);
   }
 
-  // Retransmitir salidas, marcas y contadores a todos los demás clientes (Pixel Twin, etc.)
+  // Retransmitir entradas, salidas, marcas y contadores a todos los demás clientes (Pixel Twin, etc.)
   broadcast(
     {
       type: "sync_outputs",
+      inputs: currentInputs,
       outputs: currentOutputs,
       marks: currentMarks,
       counters: currentCounters,
@@ -186,9 +229,32 @@ function handleInputsFromClient(newInputs, newAnalog, senderWs = null) {
   }
 }
 
+function handleSetInputFromClient(addr, value, senderWs = null) {
+  if (!addr) return;
+  const bVal = Boolean(value);
+  const changed = currentInputs[addr] !== bVal;
+  currentInputs[addr] = bVal;
+  if (changed) {
+    console.log(`📥 [Cliente -> Entrada fija] ${addr} = ${bVal ? "ON" : "OFF"}`);
+    broadcast(
+      {
+        type: "sync_inputs",
+        inputs: currentInputs,
+        analogInputs: currentAnalogInputs,
+      },
+      senderWs
+    );
+  }
+}
+
 function handlePulseInputFromClient(addr, durationMs = 150, senderWs = null) {
   if (!addr) return;
   console.log(`🔘 [Cliente -> Pulso] ${addr} (${durationMs}ms) enviado a ElektriKOP`);
+  currentInputs[addr] = true;
+  setTimeout(() => {
+    currentInputs[addr] = false;
+  }, durationMs);
+
   broadcast(
     {
       type: "pulse_input",
@@ -219,11 +285,28 @@ function onMockOutputsUpdated(outputs) {
 }
 
 if (isMock) {
-  console.log("🧪 Simulador Mock iniciado:");
-  console.log("   - Q0.0 controla la cinta transportadora virtual.");
-  console.log("   - Cuando Q0.0 está activa, una caja avanza por la cinta.");
-  console.log("   - I0.1 detectará la caja cuando pase por delante del sensor óptico.");
-  console.log("   - I0.0 puede usarse como pulsador de Marcha en el HMI.");
+  console.log("   - [Escena Cinta]: Q0.0 avanza caja hacia sensor I0.1.");
+  console.log("   - [Escena Garaje]: Pulsa 'e' para coche entrando (I0.1), 's' para coche saliendo (I0.2).");
+
+  if (process.stdin.isTTY) {
+    try {
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (key) => {
+        if (key === "\u0003" || key === "\u001b") {
+          process.exit();
+        }
+        if (key === "e" || key === "E") {
+          handlePulseInputFromClient("I0.1", 150);
+        } else if (key === "s" || key === "S") {
+          handlePulseInputFromClient("I0.2", 150);
+        }
+      });
+    } catch {
+      // Ignorar si no es TTY interactivo
+    }
+  }
 
   mockInterval = setInterval(() => {
     if (mockConveyorRunning) {

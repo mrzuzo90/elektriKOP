@@ -18,16 +18,29 @@ export function collectCounters(blocks = [], timerDisplay = {}) {
         }
         const cv = timer?.count ?? 0;
         const pv = rung.preset ?? 0;
-        const qu = timer?.qu ?? (cv >= pv);
-        const qd = timer?.qd ?? (cv <= 0);
+        const qu = rung.outType === "ctd" ? false : (timer?.qu ?? (cv >= pv));
+        const qd = rung.outType === "ctu" ? false : (timer?.qd ?? (cv <= 0));
+        const cu = rung.outType === "ctd" ? false : Boolean(timer?.cu);
+        const cd = rung.outType === "ctu" ? false : Boolean(timer?.cd);
+        const r = Boolean(timer?.r);
+        const ld = Boolean(timer?.ld);
+
+        const cuAddr =
+          rung.cuAddr ||
+          (rung.logic && rung.logic.length === 1 && rung.logic[0].kind === "contact" ? rung.logic[0].addr : null);
 
         const data = {
           cv,
           pv,
-          qu: rung.outType === "ctd" ? false : qu,
-          qd: rung.outType === "ctu" ? false : qd,
+          cu,
+          cd,
+          qu,
+          qd,
+          r,
+          ld,
           type: rung.outType,
           outAddr: rung.outAddr,
+          cuAddr,
           cdAddr: rung.cdAddr || null,
           resetAddr: rung.resetAddr || null,
           loadAddr: rung.loadAddr || null,
@@ -44,7 +57,7 @@ export function collectCounters(blocks = [], timerDisplay = {}) {
   return counters;
 }
 
-export function createSyncOutputsMessage(outputs, analogOutputs = {}, marks = {}, counters = {}) {
+export function createSyncOutputsMessage(outputs, analogOutputs = {}, marks = {}, counters = {}, inputs = {}) {
   const filteredOutputs = {};
   OUTPUT_ADDR.forEach((addr) => {
     filteredOutputs[addr] = Boolean(outputs?.[addr]);
@@ -57,8 +70,16 @@ export function createSyncOutputsMessage(outputs, analogOutputs = {}, marks = {}
     }
   });
 
+  const filteredInputs = {};
+  INPUT_ADDR.forEach((addr) => {
+    if (inputs?.[addr] !== undefined) {
+      filteredInputs[addr] = Boolean(inputs[addr]);
+    }
+  });
+
   return JSON.stringify({
     type: "sync_outputs",
+    inputs: filteredInputs,
     outputs: filteredOutputs,
     marks: filteredMarks,
     counters: counters || {},
@@ -96,9 +117,18 @@ export function parseBridgeMessage(rawData) {
       };
     }
 
+    if (parsed.type === "set_input") {
+      return {
+        type: "set_input",
+        addr: parsed.addr,
+        value: Boolean(parsed.value),
+      };
+    }
+
     if (parsed.type === "sync_outputs") {
       return {
         type: "sync_outputs",
+        inputs: parsed.inputs || {},
         outputs: parsed.outputs || {},
         marks: parsed.marks || {},
         counters: parsed.counters || {},

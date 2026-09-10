@@ -861,4 +861,116 @@ describe("computeScanTick — bloques FB (memoria STATIC)", () => {
     ({ outputs, timers, mem: scanMem, localParams } = computeScanTick(blocks, { "I0.0": true }, timers, scanMem, "main", localParams));
     expect(outputs["Q0.5"]).toBe(false);
   });
+
+  it("CTUD simula el control de acceso a garaje con CU, CD, QU y salidas asociadas", () => {
+    // Replica exacta del proyecto garaje del usuario:
+    // N1: I0.1 (CU), cdAddr: I0.2 -> CTUD M0.0 preset: 10
+    // N2: NOT M0.0 -> Q0.7 (barrera)
+    // N3: NOT M0.0 -> Q0.1 (semáforo verde)
+    // N4: M0.0 -> Q0.2 (semáforo rojo)
+    const garageBlocks = [
+      {
+        id: "main",
+        kind: "main",
+        name: "Main",
+        rungs: [
+          {
+            id: 0,
+            title: "Network 1",
+            logic: [{ kind: "contact", id: "n101", addr: "I0.1", neg: false }],
+            outAddr: "M0.0",
+            outType: "ctud",
+            preset: 10,
+            cdAddr: "I0.2",
+          },
+          {
+            id: 1,
+            title: "Network 2",
+            logic: [{ kind: "contact", id: "n102", addr: "M0.0", neg: true }],
+            outAddr: "Q0.7",
+            outType: "coil",
+          },
+          {
+            id: 2,
+            title: "Network 3",
+            logic: [{ kind: "contact", id: "n103", addr: "M0.0", neg: true }],
+            outAddr: "Q0.1",
+            outType: "coil",
+          },
+          {
+            id: 3,
+            title: "Network 4",
+            logic: [{ kind: "contact", id: "n104", addr: "M0.0", neg: false }],
+            outAddr: "Q0.2",
+            outType: "coil",
+          },
+        ],
+      },
+    ];
+
+    let timers = {}, mem = {}, tick;
+
+    // Estado inicial: 0 coches. M0.0 es false -> barrera abierta (Q0.7=true), semáforo verde (Q0.1=true), rojo apagado (Q0.2=false)
+    tick = computeScanTick(garageBlocks, { "I0.1": false, "I0.2": false }, timers, mem);
+    expect(tick.marks["M0.0"]).toBe(false);
+    expect(tick.outputs["Q0.7"]).toBe(true);
+    expect(tick.outputs["Q0.1"]).toBe(true);
+    expect(tick.outputs["Q0.2"]).toBe(false);
+    expect(tick.timers["main:0"].count).toBe(0);
+    expect(tick.timers["main:0"].cu).toBe(false);
+    expect(tick.timers["main:0"].cd).toBe(false);
+    expect(tick.timers["main:0"].qu).toBe(false);
+    expect(tick.timers["main:0"].qd).toBe(true);
+
+    timers = tick.timers;
+    mem = tick.mem;
+
+    // Entra un coche: pulso en I0.1 (CU)
+    tick = computeScanTick(garageBlocks, { "I0.1": true, "I0.2": false, ...tick.marks, ...tick.outputs }, timers, mem);
+    expect(tick.timers["main:0"].count).toBe(1);
+    expect(tick.timers["main:0"].cu).toBe(true);
+    expect(tick.timers["main:0"].qu).toBe(false);
+    expect(tick.outputs["Q0.7"]).toBe(true);
+
+    timers = tick.timers;
+    mem = tick.mem;
+
+    // I0.1 baja a false
+    tick = computeScanTick(garageBlocks, { "I0.1": false, "I0.2": false, ...tick.marks, ...tick.outputs }, timers, mem);
+    expect(tick.timers["main:0"].count).toBe(1);
+    expect(tick.timers["main:0"].cu).toBe(false);
+
+    timers = tick.timers;
+    mem = tick.mem;
+
+    // Simulamos 9 coches más entrando hasta llenar el garaje (total 10 coches)
+    for (let i = 2; i <= 10; i++) {
+      tick = computeScanTick(garageBlocks, { "I0.1": true, "I0.2": false, ...tick.marks, ...tick.outputs }, timers, mem);
+      timers = tick.timers;
+      mem = tick.mem;
+      tick = computeScanTick(garageBlocks, { "I0.1": false, "I0.2": false, ...tick.marks, ...tick.outputs }, timers, mem);
+      timers = tick.timers;
+      mem = tick.mem;
+    }
+
+    // Al llegar a 10 coches: M0.0 se activa (QU=true) -> Barrera cerrada (Q0.7=false), verde apagado (Q0.1=false), rojo encendido (Q0.2=true)
+    expect(tick.timers["main:0"].count).toBe(10);
+    expect(tick.timers["main:0"].qu).toBe(true);
+    expect(tick.marks["M0.0"]).toBe(true);
+    expect(tick.outputs["Q0.7"]).toBe(false);
+    expect(tick.outputs["Q0.1"]).toBe(false);
+    expect(tick.outputs["Q0.2"]).toBe(true);
+
+    // Sale un coche: pulso en I0.2 (CD)
+    tick = computeScanTick(garageBlocks, { "I0.1": false, "I0.2": true, ...tick.marks, ...tick.outputs }, timers, mem);
+    timers = tick.timers;
+    mem = tick.mem;
+    expect(tick.timers["main:0"].count).toBe(9);
+    expect(tick.timers["main:0"].cd).toBe(true);
+    expect(tick.timers["main:0"].qu).toBe(false);
+    expect(tick.marks["M0.0"]).toBe(false);
+    expect(tick.outputs["Q0.7"]).toBe(true);
+    expect(tick.outputs["Q0.1"]).toBe(true);
+    expect(tick.outputs["Q0.2"]).toBe(false);
+  });
 });
