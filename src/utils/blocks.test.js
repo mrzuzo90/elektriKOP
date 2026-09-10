@@ -227,4 +227,73 @@ describe("pruneOrphanWiring", () => {
     blocks = pruneOrphanWiring(blocks);
     expect(findBlock(blocks, "main").rungs[0].paramWiring).toEqual({ [pB.id]: "I0.1" });
   });
+
+  it("borra el wiring huérfano dentro de un array de llamadas múltiples rung.calls", () => {
+    let blocks = addBlock([newBlock("main")]);
+    const fcId = blocks.at(-1).id;
+    blocks = addParam(blocks, fcId, "in", "Param1");
+    blocks = addParam(blocks, fcId, "in", "Param2");
+    const [p1, p2] = findBlock(blocks, fcId).interface.in;
+
+    blocks = blocks.map((b) =>
+      b.id === "main"
+        ? {
+            ...b,
+            rungs: [
+              {
+                id: "r0",
+                title: "Call",
+                comment: "",
+                logic: [],
+                outAddr: "Q0.0",
+                outType: "call",
+                calls: [
+                  { id: "c1", callTarget: fcId, paramWiring: { [p1.id]: "I0.0", [p2.id]: "I0.1" } },
+                ],
+              },
+            ],
+          }
+        : b
+    );
+
+    // Borramos p1 dejando solo p2
+    blocks = blocks.map((b) => (b.id === fcId ? { ...b, interface: { ...b.interface, in: [p2] } } : b));
+    blocks = pruneOrphanWiring(blocks);
+
+    expect(findBlock(blocks, "main").rungs[0].calls[0].paramWiring).toEqual({ [p2.id]: "I0.1" });
+  });
+
+  it("isBlockCalled y wouldCreateCycle reconocen llamadas en rung.calls", () => {
+    let blocks = [newBlock("main")];
+    blocks = addBlock(blocks);
+    blocks = addBlock(blocks);
+    const [fc1, fc2] = blocks.filter((b) => b.kind === "fc");
+
+    // Main llama a fc1 y fc2 en un mismo segmento mediante calls
+    blocks = blocks.map((b) =>
+      b.id === "main"
+        ? {
+            ...b,
+            rungs: [
+              {
+                id: "r0",
+                title: "Multi",
+                comment: "",
+                logic: [],
+                outAddr: "Q0.0",
+                outType: "call",
+                calls: [
+                  { id: "c1", callTarget: fc1.id, paramWiring: {} },
+                  { id: "c2", callTarget: fc2.id, paramWiring: {} },
+                ],
+              },
+            ],
+          }
+        : b
+    );
+
+    expect(isBlockCalled(blocks, fc1.id)).toBe(true);
+    expect(isBlockCalled(blocks, fc2.id)).toBe(true);
+    expect(wouldCreateCycle(blocks, fc1.id, "main")).toBe(true);
+  });
 });

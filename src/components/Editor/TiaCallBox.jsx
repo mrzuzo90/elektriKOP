@@ -25,14 +25,26 @@ export function PinWiringSelect({ value, onChange, options, symbols }) {
 // con filas" de TiaTonBox, pero con una lista dinámica de pines IN/OUT (uno
 // por parámetro de la interfaz del bloque destino) en vez de las 3 filas
 // fijas de un temporizador.
-export default function TiaCallBox({ rung, targetBlock, availableTargets, onChangeTarget, onChangeWiring, addrOptions, symbols, flowIn }) {
+export default function TiaCallBox({
+  rung,
+  call,
+  onRemove,
+  targetBlock,
+  availableTargets,
+  onChangeTarget,
+  onChangeWiring,
+  addrOptions,
+  symbols,
+  flowIn,
+}) {
+  const activeCall = call || rung || {};
   const color = flowIn ? T.tiaLineActive : T.tiaLine;
-  const ins = targetBlock?.interface.in || [];
-  const outs = targetBlock?.interface.out || [];
+  const ins = targetBlock?.interface?.in || [];
+  const outs = targetBlock?.interface?.out || [];
   const rowCount = Math.max(ins.length, outs.length);
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", position: "relative" }}>
       <TiaLine active={flowIn} size={8} />
       <div
         style={{
@@ -44,18 +56,41 @@ export default function TiaCallBox({ rung, targetBlock, availableTargets, onChan
           boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
         }}
       >
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Eliminar este bloque del segmento"
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 4,
+              fontSize: 12,
+              lineHeight: 1,
+              color: "red",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              padding: 0,
+              fontWeight: "bold",
+              zIndex: 2,
+            }}
+          >
+            ✕
+          </button>
+        )}
         <div style={{ fontSize: 12, lineHeight: 1.2, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText, padding: "2px 0" }}>
-          CALL
+          CALL {targetBlock ? targetBlock.kind.toUpperCase() : ""}
         </div>
 
         <select
-          value={rung.callTarget || ""}
+          value={activeCall.callTarget || ""}
           onChange={(e) => onChangeTarget(e.target.value || null)}
           style={pixelSelectStyle({ width: "100%", fontFamily: T.mono, fontSize: 12, color: T.tiaText, margin: "4px 0" })}
         >
           <option value="">— elegir FC/FB —</option>
           {availableTargets.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
+            <option key={b.id} value={b.id}>{b.name} ({b.kind.toUpperCase()})</option>
           ))}
         </select>
 
@@ -71,7 +106,7 @@ export default function TiaCallBox({ rung, targetBlock, availableTargets, onChan
                   {ins[i] && (
                     <>
                       <PinWiringSelect
-                        value={rung.paramWiring?.[ins[i].id]}
+                        value={activeCall.paramWiring?.[ins[i].id]}
                         onChange={(v) => onChangeWiring(ins[i].id, v)}
                         options={addrOptions}
                         symbols={symbols}
@@ -85,7 +120,7 @@ export default function TiaCallBox({ rung, targetBlock, availableTargets, onChan
                     <>
                       <span title={outs[i].name} style={{ fontSize: 11, color: T.tiaText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{outs[i].name}</span>
                       <PinWiringSelect
-                        value={rung.paramWiring?.[outs[i].id]}
+                        value={activeCall.paramWiring?.[outs[i].id]}
                         onChange={(v) => onChangeWiring(outs[i].id, v)}
                         options={addrOptions}
                         symbols={symbols}

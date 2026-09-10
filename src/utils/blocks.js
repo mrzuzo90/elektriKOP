@@ -104,7 +104,14 @@ export function wouldCreateCycle(blocks, callerId, calleeId) {
   blocks.forEach((b) => {
     const set = new Set();
     b.rungs.forEach((r) => {
-      if (r.outType === "call" && r.callTarget) set.add(r.callTarget);
+      if (r.outType === "call") {
+        if (r.callTarget) set.add(r.callTarget);
+        if (Array.isArray(r.calls)) {
+          r.calls.forEach((c) => {
+            if (c.callTarget) set.add(c.callTarget);
+          });
+        }
+      }
     });
     edges.set(b.id, set);
   });
@@ -128,7 +135,16 @@ export function validCallTargets(blocks, callerId) {
 }
 
 export function isBlockCalled(blocks, blockId) {
-  return blocks.some((b) => b.id !== blockId && b.rungs.some((r) => r.outType === "call" && r.callTarget === blockId));
+  return blocks.some(
+    (b) =>
+      b.id !== blockId &&
+      b.rungs.some((r) => {
+        if (r.outType !== "call") return false;
+        if (r.callTarget === blockId) return true;
+        if (Array.isArray(r.calls) && r.calls.some((c) => c.callTarget === blockId)) return true;
+        return false;
+      })
+  );
 }
 
 // Limpia entradas de paramWiring cuyo paramId ya no existe en la interfaz
@@ -140,11 +156,29 @@ export function pruneOrphanWiring(blocks) {
   return blocks.map((b) => ({
     ...b,
     rungs: b.rungs.map((r) => {
-      if (r.outType !== "call" || !r.paramWiring) return r;
-      const target = byId.get(r.callTarget);
-      const validIds = new Set(target ? [...target.interface.in, ...target.interface.out].map((p) => p.id) : []);
-      const nextWiring = Object.fromEntries(Object.entries(r.paramWiring).filter(([paramId]) => validIds.has(paramId)));
-      return { ...r, paramWiring: nextWiring };
+      if (r.outType !== "call") return r;
+      let nextRung = { ...r };
+      if (r.paramWiring) {
+        const target = byId.get(r.callTarget);
+        const validIds = new Set(target ? [...target.interface.in, ...target.interface.out].map((p) => p.id) : []);
+        nextRung.paramWiring = Object.fromEntries(
+          Object.entries(r.paramWiring).filter(([paramId]) => validIds.has(paramId))
+        );
+      }
+      if (Array.isArray(r.calls)) {
+        nextRung.calls = r.calls.map((c) => {
+          if (!c.paramWiring) return c;
+          const target = byId.get(c.callTarget);
+          const validIds = new Set(target ? [...target.interface.in, ...target.interface.out].map((p) => p.id) : []);
+          return {
+            ...c,
+            paramWiring: Object.fromEntries(
+              Object.entries(c.paramWiring).filter(([paramId]) => validIds.has(paramId))
+            ),
+          };
+        });
+      }
+      return nextRung;
     }),
   }));
 }

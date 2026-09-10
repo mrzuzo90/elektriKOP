@@ -21,6 +21,25 @@ describe("collectUsedAddresses con rungs 'call'", () => {
     expect(used).toContain("I0.0");
     expect(used).not.toContain("Q0.0");
   });
+
+  it("incluye direcciones cableadas a parámetros dentro de calls múltiples", () => {
+    const rungs = [
+      {
+        id: "callRung",
+        title: "",
+        comment: "",
+        logic: [],
+        outAddr: "Q0.0",
+        outType: "call",
+        calls: [
+          { id: "c1", callTarget: "b1", paramWiring: { in1: "I0.3", out1: "Q0.4" } },
+        ],
+      },
+    ];
+    const used = collectUsedAddresses(rungs);
+    expect(used).toContain("I0.3");
+    expect(used).toContain("Q0.4");
+  });
 });
 
 describe("collectUsedAddresses con marcas (M)", () => {

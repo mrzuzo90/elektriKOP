@@ -20,7 +20,18 @@ export function collectHmiMetrics(blocks = [], timerDisplay = {}) {
       const rungLabel = `${block.name || block.id} / ${rung.title || `Segmento ${rung.id}`} [${rung.id}]`;
       const location = [...labels, rungLabel].join(' → ');
       if (rung.outType === 'call') {
-        visit(rung.callTarget, `${path}>${rung.callTarget}`, [...labels, rungLabel], nextAncestors, depth + 1);
+        const calls = Array.isArray(rung.calls) && rung.calls.length > 0
+          ? rung.calls
+          : rung.callTarget
+            ? [{ id: 'c0', callTarget: rung.callTarget }]
+            : [];
+        calls.forEach((c, callIdx) => {
+          if (!c.callTarget) return;
+          const subPath = calls.length > 1
+            ? `${path}>${c.callTarget}:${c.id || callIdx}`
+            : `${path}>${c.callTarget}`;
+          visit(c.callTarget, subPath, [...labels, rungLabel], nextAncestors, depth + 1);
+        });
         continue;
       }
       const timer = TIMER_TYPES.includes(rung.outType);

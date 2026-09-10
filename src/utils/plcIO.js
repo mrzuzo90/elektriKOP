@@ -19,7 +19,24 @@ export function collectUsedAddresses(rungs) {
     collectContactAddrs(rung.logicR || [], set);
     // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
     // — no es una dirección realmente escrita, no debe marcarse "en uso".
-    if (rung.outType !== "call") set.add(rung.outAddr);
+    if (rung.outType !== "call") {
+      set.add(rung.outAddr);
+    } else {
+      if (rung.paramWiring) {
+        Object.values(rung.paramWiring).forEach((addr) => {
+          if (addr) set.add(addr);
+        });
+      }
+      if (Array.isArray(rung.calls)) {
+        rung.calls.forEach((c) => {
+          if (c.paramWiring) {
+            Object.values(c.paramWiring).forEach((addr) => {
+              if (addr) set.add(addr);
+            });
+          }
+        });
+      }
+    }
     // Pines cableables de contadores (CTU, CTD, CTUD): también son direcciones
     // reales (se leen/escriben cada scan), aunque no formen parte de rung.logic.
     if (rung.resetAddr) set.add(rung.resetAddr);

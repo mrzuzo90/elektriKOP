@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { DEFAULT_WS_URL, createSyncOutputsMessage, parseBridgeMessage } from "../utils/factoryIOProtocol";
+import { DEFAULT_WS_URL, createSyncOutputsMessage, parseBridgeMessage, createPingMessage } from "../utils/factoryIOProtocol";
 
 const STORAGE_KEY_URL = "elektrikop_factoryio_url";
 const STORAGE_KEY_AUTOCONNECT = "elektrikop_factoryio_autoconnect";
@@ -35,6 +35,9 @@ export function useFactoryIO({
   const [bridgeInfo, setBridgeInfo] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [rttMs, setRttMs] = useState(null);
+  const [packetsSent, setPacketsSent] = useState(0);
+  const [packetsReceived, setPacketsReceived] = useState(0);
 
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -156,6 +159,7 @@ export function useFactoryIO({
         const msg = parseBridgeMessage(event.data);
         if (!msg) return;
 
+        setPacketsReceived((p) => p + 1);
         if (msg.type === "sync_inputs") {
           setLastSyncTime(Date.now());
           if (onInputsReceivedRef.current) {
@@ -173,6 +177,10 @@ export function useFactoryIO({
           }
         } else if (msg.type === "status") {
           setBridgeInfo(msg);
+        } else if (msg.type === "pong") {
+          if (msg.clientTime) {
+            setRttMs(Math.max(1, Date.now() - msg.clientTime));
+          }
         }
       };
 
@@ -183,6 +191,7 @@ export function useFactoryIO({
 
       ws.onclose = () => {
         wsRef.current = null;
+        setRttMs(null);
         if (!manualDisconnectRef.current) {
           setStatus((prev) => (prev === "error" ? "error" : "disconnected"));
           if (autoConnectRef.current) {
@@ -208,6 +217,22 @@ export function useFactoryIO({
     }
   }, [status, connect, disconnect]);
 
+  // Heartbeat ping periódico para telemetría de latencia RTT (ms)
+  useEffect(() => {
+    if (status !== "connected" || !wsRef.current) return;
+    const interval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(createPingMessage());
+          setPacketsSent((p) => p + 1);
+        } catch {
+          // ignore
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [status]);
+
   // Sincronizar salidas, marcas y contadores cuando cambian
   const prevStateRef = useRef("");
   useEffect(() => {
@@ -221,6 +246,7 @@ export function useFactoryIO({
         wsRef.current.send(
           createSyncOutputsMessage(outputs, analogOutputs, marks, counters, inputs)
         );
+        setPacketsSent((p) => p + 1);
       } catch (err) {
         console.warn("Error enviando salidas al bridge:", err);
       }
@@ -254,6 +280,9 @@ export function useFactoryIO({
     bridgeInfo,
     errorMessage,
     lastSyncTime,
+    rttMs,
+    packetsSent,
+    packetsReceived,
     connect,
     disconnect,
     toggleConnect,

@@ -973,4 +973,87 @@ describe("computeScanTick — bloques FB (memoria STATIC)", () => {
     expect(tick.outputs["Q0.1"]).toBe(true);
     expect(tick.outputs["Q0.2"]).toBe(false);
   });
+
+  describe("Llamadas múltiples en un solo segmento y ejecución incondicional (directo a carril)", () => {
+    it("ejecuta múltiples bloques FC en el mismo segmento incondicionalmente (sin contactos, logic:[])", () => {
+      const pIn1 = { id: "p1", name: "In1" };
+      const pOut1 = { id: "o1", name: "Out1" };
+      const fc1 = fcBlock("fc1", "FC1", { in: [pIn1], out: [pOut1] }, [
+        paramContactRung("r0", "#p1", "#o1"),
+      ]);
+
+      const pIn2 = { id: "p2", name: "In2" };
+      const pOut2 = { id: "o2", name: "Out2" };
+      const fc2 = fcBlock("fc2", "FC2", { in: [pIn2], out: [pOut2] }, [
+        paramContactRung("r1", "#p2", "#o2"),
+      ]);
+
+      // Segmento único en Main con llamadas a fc1 y fc2, sin contactos de entrada (logic: [])
+      const multiCallRung = {
+        id: "multi0",
+        title: "MultiCall Segment",
+        comment: "Llamada a FC1 y FC2 sin contactos",
+        logic: [], // Directo a carril de alimentación
+        outAddr: "Q0.0",
+        outType: "call",
+        calls: [
+          { id: "callA", callTarget: "fc1", paramWiring: { [pIn1.id]: "I0.1", [pOut1.id]: "Q0.1" } },
+          { id: "callB", callTarget: "fc2", paramWiring: { [pIn2.id]: "I0.2", [pOut2.id]: "Q0.2" } },
+        ],
+      };
+
+      const blocks = mainBlocks([multiCallRung], [fc1, fc2]);
+      const { outputs } = computeScanTick(blocks, { "I0.1": true, "I0.2": true }, {});
+
+      expect(outputs["Q0.1"]).toBe(true);
+      expect(outputs["Q0.2"]).toBe(true);
+    });
+
+    it("mantiene estado estático independiente para dos llamadas al mismo FB en el mismo segmento", () => {
+      const pIn = { id: "inP", name: "P" };
+      const pOut = { id: "outQ", name: "Q" };
+      const sCount = { id: "cnt", name: "Count" };
+      const fb = {
+        id: "fb1",
+        kind: "fb",
+        name: "FB1",
+        interface: { in: [pIn], out: [pOut], static: [sCount] },
+        rungs: [
+          {
+            id: "fr0",
+            title: "FB Rung",
+            comment: "",
+            logic: [{ kind: "contact", id: "c1", addr: "#inP", neg: false }],
+            outAddr: "#outQ",
+            outType: "coil",
+          },
+        ],
+      };
+
+      const multiCallRung = {
+        id: "rFB",
+        title: "Multi FB Segment",
+        comment: "",
+        logic: [],
+        outAddr: "Q0.0",
+        outType: "call",
+        calls: [
+          { id: "inst1", callTarget: "fb1", paramWiring: { [pIn.id]: "I0.0", [pOut.id]: "Q0.0" } },
+          { id: "inst2", callTarget: "fb1", paramWiring: { [pIn.id]: "I0.1", [pOut.id]: "Q0.1" } },
+        ],
+      };
+
+      const blocks = mainBlocks([multiCallRung], [fb]);
+
+      // Ciclo 1: I0.0=true, I0.1=false
+      const tick1 = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, {});
+      expect(tick1.outputs["Q0.0"]).toBe(true);
+      expect(tick1.outputs["Q0.1"]).toBe(false);
+
+      // Ciclo 2: I0.0=false, I0.1=true
+      const tick2 = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, tick1.timers, tick1.mem, "main", tick1.localParams);
+      expect(tick2.outputs["Q0.0"]).toBe(false);
+      expect(tick2.outputs["Q0.1"]).toBe(true);
+    });
+  });
 });

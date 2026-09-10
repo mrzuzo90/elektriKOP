@@ -149,7 +149,7 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                 >
                   <TiaContact neg={n.neg} edge={n.edge} stateObj={{ ...nodeState, flowIn: prevFlow }} />
                 </div>
-                {nodes.length > 1 && (
+                {(nodes.length > 1 || containerId === "root") && (
                   // top/right en vez de bottom: dentro de un bloque paralelo las
                   // ramas van pegadas (BRANCH_GAP=2px) — un botón "bottom:-15"
                   // se cuela en la rama de abajo y queda tapado por sus
@@ -181,12 +181,12 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                   onCycleOp={() => actions.updateContact(n.id, { op: cycleCmpOp(n.op) })}
                   onChangeValue={(v) => actions.updateContact(n.id, { value: v })}
                 />
-                {nodes.length > 1 && (
+                {(nodes.length > 1 || containerId === "root") && (
                   <button onClick={() => actions.removeNode(n.id)} title="Eliminar comparador" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
                 )}
               </div>
             ) : (
-              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1} depth={depth} flowIn={prevFlow} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dnd} />
+              <ParallelBlock node={n} states={states} actions={actions} removable={nodes.length > 1 || containerId === "root"} depth={depth} flowIn={prevFlow} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dnd} />
             )}
           </React.Fragment>
         );

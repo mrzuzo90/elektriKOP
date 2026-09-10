@@ -11,6 +11,9 @@ export default function FactoryIOPanel({ factoryIO }) {
     bridgeInfo,
     errorMessage,
     lastSyncTime,
+    rttMs,
+    packetsSent,
+    packetsReceived,
     connect,
     disconnect,
   } = factoryIO;
@@ -60,27 +63,36 @@ export default function FactoryIOPanel({ factoryIO }) {
         {getStatusBadge()}
       </div>
 
-      {/* Info detallada si está conectado */}
-      {isConnected && bridgeInfo && (
-        <div style={{ backgroundColor: "#1A1A1A", padding: 10, border: `1px solid ${T.dwBlack}`, fontSize: 12, color: "#CCC", display: "flex", flexDirection: "column", gap: 4 }}>
-          <div>
-            <strong style={{ color: "#FFF" }}>Modo:</strong>{" "}
-            {bridgeInfo.isMock ? (
-              <span style={{ color: T.dwYellow }}>🧪 Mock 3D (Simulador sin Windows)</span>
-            ) : (
-              <span style={{ color: "#4CAF50" }}>🏭 Modbus TCP Real</span>
-            )}
-          </div>
-          {!bridgeInfo.isMock && (
+      {/* Info detallada y telemetría si está conectado */}
+      {isConnected && (
+        <div style={{ backgroundColor: "#1A1A1A", padding: 10, border: `1px solid ${T.dwBlack}`, fontSize: 12, color: "#CCC", display: "flex", flexDirection: "column", gap: 6 }}>
+          {bridgeInfo && (
             <div>
-              <strong style={{ color: "#FFF" }}>Factory I/O ({bridgeInfo.modbusTarget}):</strong>{" "}
-              {bridgeInfo.modbusConnected ? (
-                <span style={{ color: T.sLedGreen }}>🟢 Conectado</span>
+              <strong style={{ color: "#FFF" }}>Modo:</strong>{" "}
+              {bridgeInfo.isMock ? (
+                <span style={{ color: T.dwYellow }}>🧪 Mock 3D (Simulador sin Windows)</span>
               ) : (
-                <span style={{ color: T.red }}>🔴 Esperando conexión</span>
+                <span style={{ color: "#4CAF50" }}>🏭 Modbus TCP Real ({bridgeInfo.modbusTarget})</span>
               )}
             </div>
           )}
+
+          {/* Telemetría de enlace en tiempo real */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4, backgroundColor: "#111", padding: 8, border: "1px solid #333" }}>
+            <div>
+              <div style={{ color: "#888", fontSize: 10 }}>LATENCIA RTT</div>
+              <div style={{ fontWeight: "bold", color: rttMs ? (rttMs < 60 ? T.sLedGreen : T.dwYellow) : "#FFF" }}>
+                {rttMs ? `${rttMs} ms (${rttMs < 50 ? "Excelente" : "Aceptable"})` : "Calculando..."}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: "#888", fontSize: 10 }}>THROUGHPUT PAQUETES</div>
+              <div style={{ fontWeight: "bold", color: "#EEE", fontSize: 11 }}>
+                ⬆️ {packetsSent || 0} | ⬇️ {packetsReceived || 0}
+              </div>
+            </div>
+          </div>
+
           {lastSyncTime && (
             <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
               Última sincronización: hace {Math.max(0, Math.round((Date.now() - lastSyncTime) / 1000))}s
@@ -139,6 +151,8 @@ export default function FactoryIOPanel({ factoryIO }) {
         />
         Conectar automáticamente al abrir ElektriKOP
       </label>
+
+
 
       {/* Ayuda y comandos rápidos */}
       <div style={{ borderTop: "1px solid #CCC", paddingTop: 10, fontSize: 11, color: "#666", lineHeight: 1.4 }}>

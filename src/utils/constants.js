@@ -21,10 +21,21 @@ export const T = {
   tiaLineActive: "#00B000",
   tiaBlue: "#0000FF",
 
+  // Paleta Corporativa Siemens TIA Portal V19 (Modo Pro)
+  siemensPetrol: "#00646E",
+  siemensPetrolLight: "#00A3A6",
+  siemensPetrolDark: "#004B52",
+  tiaSlate: "#27343F",
+  tiaLightBg: "#F0F2F5",
+  tiaPanelBg: "#E3E7EB",
+  tiaBorder: "#BAC3CA",
+  siemensOrange: "#EB780A",
+
   // Utilidades
   red: "#FF3333",
   text: "#FFFFFF",
   mono: "'Silkscreen', 'Courier New', 'Consolas', monospace",
+  proFont: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 };
 
 // Direccionamiento real Siemens (Octal por byte: 0.0 a 0.7, 1.0 a 1.1 para 10 entradas/salidas)
@@ -43,6 +54,10 @@ export const MARK_ADDR = ["M0.0", "M0.1", "M0.2", "M0.3", "M0.4", "M0.5", "M0.6"
 // leerla, nunca un contacto normal.
 export const ANALOG_ADDR = ["IW0"];
 export const ANALOG_MAX = 100;
+// Salida analógica (QW, "output word"): usada en Factory I/O para consignas
+// de velocidad (variadores VFD), paneles digitales e instrumentos analógicos.
+export const ANALOG_OUT_ADDR = ["QW0"];
+export const ANALOG_OUT_MAX = 100;
 export const CMP_OPS = [">=", "<=", "==", "<>", "<", ">"];
 export const MAX_RUNGS = 32;
 export const SCAN_MS = 100;
@@ -50,3 +65,4 @@ export const SCAN_MS = 100;
 // bloques (wouldCreateCycle), pero un JSON importado a mano podría traer uno
 // — este límite corta la recursión del motor de scan sin colgar la pestaña.
 export const MAX_CALL_DEPTH = 16;
+

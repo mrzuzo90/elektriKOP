@@ -15,11 +15,22 @@ function zeroMarks() {
 // escribe las salidas resultantes. Se dispara tanto desde el intervalo de
 // RUN como desde el botón de PASO (stepOnce) — misma lógica, distinto
 // disparador.
-export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringMap, soundOn }) {
-  const [running, setRunning] = useState(false);
+export function useSimulation({
+  inputs,
+  analogInputs,
+  blocks,
+  deviceMap,
+  wiringMap,
+  soundOn,
+  forces = {},
+  onLogEvent = null,
+}) {
+  const [running, setRunningState] = useState(false);
   const [outputs, setOutputs] = useState(zeroOutputs);
+  const [analogOutputs, setAnalogOutputs] = useState({ QW0: 0 });
   const [timerDisplay, setTimerDisplay] = useState({});
   const [scanCount, setScanCount] = useState(0);
+  const [scanCycleTimeMs, setScanCycleTimeMs] = useState("1.1");
   // Memoria tal cual estaba al empezar el último scan ejecutado — la usa
   // App.jsx para pintar los contactos de flanco (P/N), que necesitan
   // comparar el ciclo actual contra el anterior.
@@ -34,6 +45,8 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
   inputsRef.current = inputs;
   const analogInputsRef = useRef(analogInputs);
   analogInputsRef.current = analogInputs;
+  const analogOutputsRef = useRef(analogOutputs);
+  analogOutputsRef.current = analogOutputs;
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
   const deviceMapRef = useRef(deviceMap);
@@ -42,6 +55,10 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
   wiringMapRef.current = wiringMap;
   const soundOnRef = useRef(soundOn);
   soundOnRef.current = soundOn;
+  const forcesRef = useRef(forces);
+  forcesRef.current = forces;
+  const onLogEventRef = useRef(onLogEvent);
+  onLogEventRef.current = onLogEvent;
 
   const outputsRef = useRef(outputs);
   // Igual que outputsRef pero para marcas (M) — necesitan el mismo
@@ -117,8 +134,55 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
     });
   };
 
+  const setAnalogOutput = (addr, value) => {
+    setAnalogOutputs((prev) => {
+      const next = { ...prev, [addr]: Number(value) || 0 };
+      analogOutputsRef.current = next;
+      return next;
+    });
+  };
+
+  const setRunning = (next) => {
+    setRunningState((prev) => {
+      const val = typeof next === "function" ? next(prev) : next;
+      if (val !== prev && onLogEventRef.current) {
+        if (val) {
+          onLogEventRef.current(
+            "16# 02:3952",
+            "CPU SIMATIC S7-1200: Modo operativo cambiado de STOP a RUN.",
+            "info",
+            "Ciclo de scan activado. Ejecutando bloques de programa."
+          );
+        } else {
+          onLogEventRef.current(
+            "16# 02:3953",
+            "CPU SIMATIC S7-1200: Modo operativo cambiado de RUN a STOP.",
+            "warning",
+            "Ciclo de scan pausado por el usuario."
+          );
+        }
+      }
+      return val;
+    });
+  };
+
   const runScanTick = () => {
-    const mem = { ...applyWiring(inputsRef.current, wiringMapRef.current), ...analogInputsRef.current, ...outputsRef.current, ...marksRef.current };
+    const baseWired = applyWiring(inputsRef.current, wiringMapRef.current);
+    const mem = {
+      ...baseWired,
+      ...analogInputsRef.current,
+      ...outputsRef.current,
+      ...marksRef.current,
+      ...analogOutputsRef.current,
+    };
+
+    // Aplicar variables forzadas (Watch and Force Table) si están activas
+    if (forcesRef.current && typeof forcesRef.current === "object") {
+      Object.entries(forcesRef.current).forEach(([addr, forcedVal]) => {
+        if (forcedVal !== undefined) mem[addr] = forcedVal;
+      });
+    }
+
     const {
       outputs: nextOutputs,
       marks: nextMarks,
@@ -128,17 +192,27 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
       lastFrameByBlock,
     } = computeScanTick(blocksRef.current, mem, timersRef.current, scanMemRef.current, "main", localParamsRef.current);
 
+    // Si una salida física o marca está forzada, mantener el forzado activo
+    if (forcesRef.current && typeof forcesRef.current === "object") {
+      Object.entries(forcesRef.current).forEach(([addr, forcedVal]) => {
+        if (OUTPUT_ADDR.includes(addr)) nextOutputs[addr] = Boolean(forcedVal);
+        if (MARK_ADDR.includes(addr)) nextMarks[addr] = Boolean(forcedVal);
+      });
+    }
+
     timersRef.current = nextTimerDisplay;
     outputsRef.current = nextOutputs;
     marksRef.current = nextMarks;
     scanMemRef.current = nextMem;
     localParamsRef.current = nextLocalParams;
+
     setOutputs(nextOutputs);
     setMarks(nextMarks);
     setTimerDisplay(nextTimerDisplay);
     setPrevMem(nextMem);
     setLastCallFrames(lastFrameByBlock);
     setScanCount((n) => n + 1);
+    setScanCycleTimeMs((0.9 + Math.random() * 0.5).toFixed(1));
     checkAlarms(nextOutputs);
   };
 
@@ -159,6 +233,14 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
     setRunning(false);
     ensureAudio();
     runScanTick();
+    if (onLogEventRef.current) {
+      onLogEventRef.current(
+        "16# 02:3955",
+        "CPU SIMATIC S7-1200: Ejecutado 1 ciclo de scan manual.",
+        "info",
+        `Scan #${scanCount + 1}`
+      );
+    }
   };
 
   // Scan Cycle
@@ -184,6 +266,14 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
     setLastCallFrames({});
     setScanCount(0);
     prevAlarmRef.current = {};
+    if (onLogEventRef.current) {
+      onLogEventRef.current(
+        "16# 02:4002",
+        "CPU SIMATIC S7-1200: Reinicio general de memoria (MRES).",
+        "info",
+        "Todas las salidas, marcas y temporizadores restaurados a reposo."
+      );
+    }
   };
 
   // Al borrar un segmento hay que limpiar también su temporizador TON
@@ -195,9 +285,35 @@ export function useSimulation({ inputs, analogInputs, blocks, deviceMap, wiringM
   const clearTimer = (blockId, rungId) => {
     const suffix = `${blockId}:${rungId}`;
     Object.keys(timersRef.current).forEach((key) => {
-      if (key === suffix || key.endsWith(`>${suffix}`)) delete timersRef.current[key];
+      if (
+        key === suffix ||
+        key.startsWith(`${suffix}:`) ||
+        key.endsWith(`>${suffix}`) ||
+        key.includes(`>${suffix}:`)
+      ) {
+        delete timersRef.current[key];
+      }
     });
   };
 
-  return { running, setRunning, writeMemory, outputs, marks, timerDisplay, prevMem, lastCallFrames, scanCount, stepOnce, resetSimulation, clearTimer, playRunSound, playStopSound, playClickSound };
+  return {
+    running,
+    setRunning,
+    writeMemory,
+    outputs,
+    marks,
+    analogOutputs,
+    setAnalogOutput,
+    timerDisplay,
+    prevMem,
+    lastCallFrames,
+    scanCount,
+    scanCycleTimeMs,
+    stepOnce,
+    resetSimulation,
+    clearTimer,
+    playRunSound,
+    playStopSound,
+    playClickSound,
+  };
 }

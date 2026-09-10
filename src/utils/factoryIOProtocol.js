@@ -2,6 +2,10 @@ import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR } from "./constants";
 
 export const DEFAULT_WS_URL = "ws://localhost:8080";
 
+export function createPingMessage() {
+  return JSON.stringify({ type: "ping", time: Date.now() });
+}
+
 export function collectCounters(blocks = [], timerDisplay = {}) {
   const counters = {};
   if (!Array.isArray(blocks)) return counters;
@@ -77,13 +81,22 @@ export function createSyncOutputsMessage(outputs, analogOutputs = {}, marks = {}
     }
   });
 
+  const filteredAnalogOutputs = {};
+  if (analogOutputs && typeof analogOutputs === "object") {
+    Object.entries(analogOutputs).forEach(([addr, val]) => {
+      if (typeof val === "number" && Number.isFinite(val)) {
+        filteredAnalogOutputs[addr] = val;
+      }
+    });
+  }
+
   return JSON.stringify({
     type: "sync_outputs",
     inputs: filteredInputs,
     outputs: filteredOutputs,
     marks: filteredMarks,
     counters: counters || {},
-    analogOutputs: analogOutputs || {},
+    analogOutputs: filteredAnalogOutputs,
     timestamp: Date.now(),
   });
 }
@@ -151,6 +164,7 @@ export function parseBridgeMessage(rawData) {
       return {
         type: "pong",
         time: parsed.time,
+        clientTime: parsed.clientTime,
       };
     }
 

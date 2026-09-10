@@ -51,6 +51,7 @@ wss.on("error", (err) => {
 let currentInputs = Object.fromEntries(INPUT_ADDRS.map((a) => [a, false]));
 let currentAnalogInputs = { IW0: 0 };
 let currentOutputs = Object.fromEntries(OUTPUT_ADDRS.map((a) => [a, false]));
+let currentAnalogOutputs = { QW0: 0 };
 let currentMarks = {};
 let currentCounters = {};
 let isModbusConnected = false;
@@ -100,7 +101,7 @@ wss.on("connection", (ws, req) => {
       outputs: currentOutputs,
       marks: currentMarks,
       counters: currentCounters,
-      analogOutputs: currentAnalogInputs,
+      analogOutputs: currentAnalogOutputs,
       timestamp: Date.now(),
     })
   );
@@ -117,7 +118,7 @@ wss.on("connection", (ws, req) => {
       } else if (msg.type === "pulse_input") {
         handlePulseInputFromClient(msg.addr, msg.durationMs, ws);
       } else if (msg.type === "ping") {
-        ws.send(JSON.stringify({ type: "pong", time: Date.now() }));
+        ws.send(JSON.stringify({ type: "pong", time: Date.now(), clientTime: msg.time }));
       }
     } catch (err) {
       console.error("⚠️ [WS] Error procesando mensaje WebSocket:", err.message);
@@ -132,7 +133,7 @@ wss.on("connection", (ws, req) => {
 // ============================================================================
 // Lógica de Salidas recibidas desde ElektriKOP
 // ============================================================================
-function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounters, newInputs = null, senderWs = null) {
+function handleOutputsFromElektriKOP(newOutputs, newAnalogOutputs, newMarks, newCounters, newInputs = null, senderWs = null) {
   if (!newOutputs) return;
 
   if (newInputs && typeof newInputs === "object") {
@@ -148,6 +149,10 @@ function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounte
     currentInputs = { ...currentInputs, ...newInputs };
   }
   if (newMarks) currentMarks = { ...currentMarks, ...newMarks };
+
+  if (newAnalogOutputs && typeof newAnalogOutputs === "object") {
+    currentAnalogOutputs = { ...currentAnalogOutputs, ...newAnalogOutputs };
+  }
 
   if (newCounters && typeof newCounters === "object") {
     Object.entries(newCounters).forEach(([addr, c]) => {
@@ -186,16 +191,16 @@ function handleOutputsFromElektriKOP(newOutputs, _newAnalog, newMarks, newCounte
       outputs: currentOutputs,
       marks: currentMarks,
       counters: currentCounters,
-      analogOutputs: currentAnalogInputs,
+      analogOutputs: currentAnalogOutputs,
       timestamp: Date.now(),
     },
     senderWs
   );
 
   if (isMock) {
-    onMockOutputsUpdated(currentOutputs);
+    onMockOutputsUpdated(currentOutputs, currentAnalogOutputs);
   } else if (isModbusConnected) {
-    writeOutputsToModbus(currentOutputs);
+    writeOutputsToModbus(currentOutputs, currentAnalogOutputs);
   }
 }
 
@@ -340,12 +345,22 @@ if (isMock) {
 const modbusClient = new ModbusRTU();
 let isPolling = false;
 
-async function writeOutputsToModbus(outputs) {
+async function writeOutputsToModbus(outputs, analogOutputs = {}) {
   if (!isModbusConnected) return;
   try {
     const coilValues = OUTPUT_ADDRS.map((addr) => Boolean(outputs[addr]));
     // Escribe las 10 salidas digitales en los Coils 0..9 de Factory I/O
     await modbusClient.writeCoils(0, coilValues);
+
+    // Escribir salidas analógicas en Holding Registers (0.. para QW0)
+    if (analogOutputs && typeof analogOutputs === "object" && analogOutputs["QW0"] !== undefined) {
+      const qw0 = Math.max(0, Math.min(65535, Number(analogOutputs["QW0"]) || 0));
+      try {
+        await modbusClient.writeRegisters(0, [Math.round(qw0)]);
+      } catch {
+        // Si la escena de Factory I/O no tiene Holding Registers configurados, ignorar
+      }
+    }
   } catch (err) {
     console.error("⚠️ [Modbus] Error escribiendo salidas (Coils):", err.message);
   }

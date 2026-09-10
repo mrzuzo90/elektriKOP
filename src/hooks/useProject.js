@@ -258,37 +258,45 @@ export function useProject() {
     projectRef.current = next;
     setProjectState(next);
     setImportError("");
-    setRestoredFromAutosave(false);
+  };
+
+  const loadProjectData = (data, { onSuccess } = {}) => {
+    try {
+      const migrated = migrateProjectData(data);
+      if (!migrated) {
+        throw new Error("El proyecto no tiene el formato esperado.");
+      }
+      bumpUidPastImportedBlocks(migrated.blocks);
+      clearTimeout(debounceRef.current);
+      pendingBeforeRef.current = null;
+      setPast([]);
+      setFuture([]);
+      const next = {
+        projectName: migrated.projectName || "Proyecto cargado",
+        blocks: migrated.blocks,
+        deviceMap: migrated.deviceMap || {},
+        wiringMap: migrated.wiringMap || {},
+        symbols: migrated.symbols || {},
+        hmi: migrated.hmi,
+      };
+      projectRef.current = next;
+      setProjectState(next);
+      setImportError("");
+      setRestoredFromAutosave(false);
+      onSuccess?.();
+      return true;
+    } catch (e) {
+      setImportError("No se pudo cargar el proyecto: " + e.message);
+      return false;
+    }
   };
 
   const importProject = (file, { onSuccess } = {}) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const migrated = migrateProjectData(JSON.parse(reader.result));
-        if (!migrated) {
-          throw new Error("El archivo no tiene el formato esperado (falta 'rungs' o 'blocks').");
-        }
-        bumpUidPastImportedBlocks(migrated.blocks);
-        // Importar es como abrir un documento nuevo: no debe poder
-        // deshacerse hacia el proyecto que había antes.
-        clearTimeout(debounceRef.current);
-        pendingBeforeRef.current = null;
-        setPast([]);
-        setFuture([]);
-        const next = {
-          projectName: migrated.projectName || "Proyecto importado",
-          blocks: migrated.blocks,
-          deviceMap: migrated.deviceMap || {},
-          wiringMap: migrated.wiringMap || {},
-          symbols: migrated.symbols || {},
-          hmi: migrated.hmi,
-        };
-        projectRef.current = next;
-        setProjectState(next);
-        setImportError("");
-        setRestoredFromAutosave(false);
-        onSuccess?.();
+        const parsed = JSON.parse(reader.result);
+        loadProjectData(parsed, { onSuccess });
       } catch (e) {
         setImportError("No se pudo importar: " + e.message);
       }
@@ -307,7 +315,7 @@ export function useProject() {
     wiringMap: project.wiringMap, setWiringFor,
     symbols: project.symbols, setSymbolFor,
     importError,
-    exportProject, importProject, clearProject,
+    exportProject, importProject, loadProjectData, clearProject,
     copyShareLink,
     fileInputRef,
     undo, redo,

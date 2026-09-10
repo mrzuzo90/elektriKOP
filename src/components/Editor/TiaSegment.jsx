@@ -122,6 +122,9 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
     const patch = { ...rung, outType: newType };
     if (newType === "sr" && !rung.logicR) patch.logicR = [newContactNode()];
     if ((newType === "ctu" || newType === "ctd" || newType === "ctud") && !rung.preset) patch.preset = 5;
+    if (newType === "call" && (!patch.calls || patch.calls.length === 0)) {
+      patch.calls = [{ id: "c0", callTarget: rung.callTarget || null, paramWiring: rung.paramWiring || {} }];
+    }
     onChange(patch);
   };
 
@@ -156,16 +159,70 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
   // Flujo de corriente que llega a la salida (o, en un bloque SR, a cada
   // uno de sus dos pines de entrada).
   let flowToOut = true;
-  rung.logic.forEach(n => {
-     flowToOut = flowToOut && evalResult?.states?.[n.id]?.state;
-  });
+  if (rung.logic && rung.logic.length > 0) {
+    rung.logic.forEach((n) => {
+      flowToOut = flowToOut && evalResult?.states?.[n.id]?.state;
+    });
+  } else {
+    flowToOut = true;
+  }
   let flowR = true;
-  (rung.logicR || []).forEach(n => {
-     flowR = flowR && evalResult?.states?.[n.id]?.state;
+  (rung.logicR || []).forEach((n) => {
+    flowR = flowR && evalResult?.states?.[n.id]?.state;
   });
 
   const availableCallTargets = validCallTargets(blocks, currentBlockId);
-  const callTargetBlock = rung.outType === "call" ? findBlock(blocks, rung.callTarget) : undefined;
+
+  const rawCalls = (Array.isArray(rung.calls) && rung.calls.length > 0)
+    ? rung.calls
+    : (rung.callTarget
+        ? [{ id: "c0", callTarget: rung.callTarget, paramWiring: rung.paramWiring || {} }]
+        : [{ id: "c0", callTarget: null, paramWiring: {} }]
+      );
+
+  const handleUpdateCall = (callId, patch) => {
+    const nextCalls = rawCalls.map((c) => (c.id === callId ? { ...c, ...patch } : c));
+    onChange({
+      ...rung,
+      calls: nextCalls,
+      callTarget: nextCalls[0]?.callTarget || null,
+      paramWiring: nextCalls[0]?.paramWiring || {},
+    });
+  };
+
+  const handleAddCall = () => {
+    const newCallId = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    const nextCalls = [...rawCalls, { id: newCallId, callTarget: null, paramWiring: {} }];
+    onChange({
+      ...rung,
+      calls: nextCalls,
+      callTarget: nextCalls[0]?.callTarget || null,
+      paramWiring: nextCalls[0]?.paramWiring || {},
+    });
+  };
+
+  const handleRemoveCall = (callId) => {
+    if (rawCalls.length <= 1) {
+      onChange({
+        ...rung,
+        calls: [{ id: "c0", callTarget: null, paramWiring: {} }],
+        callTarget: null,
+        paramWiring: {},
+      });
+      return;
+    }
+    const nextCalls = rawCalls.filter((c) => c.id !== callId);
+    onChange({
+      ...rung,
+      calls: nextCalls,
+      callTarget: nextCalls[0]?.callTarget || null,
+      paramWiring: nextCalls[0]?.paramWiring || {},
+    });
+  };
+
+  const handleMakeUnconditional = () => {
+    onChange({ ...rung, logic: [] });
+  };
 
   return (
     <div style={{ backgroundColor: T.tiaBg, border: `2px solid ${T.dwBlack}`, boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.25)", marginBottom: 20 }}>
@@ -195,6 +252,46 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
             style={{ width: 380, fontStyle: "italic", color: "#555", fontFamily: T.mono, fontSize: 16, outline: "none", padding: "2px 0" }}
             title={rung.comment}
           />
+          {rung.outType === "call" && rung.logic && rung.logic.length > 0 && (
+            <button
+              type="button"
+              onClick={handleMakeUnconditional}
+              title="Quitar entradas para conectar las llamadas directamente al carril de alimentación (ejecución incondicional)"
+              style={{
+                fontFamily: T.mono,
+                fontSize: 11,
+                backgroundColor: "#222",
+                color: "#00E5FF",
+                border: "1px solid #00E5FF",
+                borderRadius: 2,
+                padding: "2px 8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              ⚡ Directo a carril (sin entrada)
+            </button>
+          )}
+          {rung.outType === "call" && (!rung.logic || rung.logic.length === 0) && (
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: 10,
+                color: T.tiaLineActive,
+                fontWeight: "bold",
+                backgroundColor: "rgba(0,176,80,0.1)",
+                border: `1px solid ${T.tiaLineActive}`,
+                borderRadius: 2,
+                padding: "2px 6px",
+              }}
+              title="Llamada incondicional conectada directamente al carril de alimentación"
+            >
+              ⚡ Directo a carril (incondicional)
+            </span>
+          )}
         </div>
         <div>
           {canDelete && <button onClick={onDelete} style={{ color: "red", cursor: "pointer", border: "none", background: "none", fontSize: 16 }}>🗑️</button>}
@@ -306,16 +403,80 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
           {/* Output Device */}
           <div style={{ position: "relative", marginRight: 8, display: "flex", alignItems: "center" }}>
             {rung.outType === "call" ? (
-              <TiaCallBox
-                rung={rung}
-                targetBlock={callTargetBlock}
-                availableTargets={availableCallTargets}
-                onChangeTarget={(blockId) => onChange({ ...rung, callTarget: blockId, paramWiring: {} })}
-                onChangeWiring={(paramId, addr) => onChange({ ...rung, paramWiring: { ...(rung.paramWiring || {}), [paramId]: addr } })}
-                addrOptions={addrOptions}
-                symbols={symbols}
-                flowIn={flowToOut}
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
+                {rawCalls.length > 1 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 15,
+                      bottom: 15,
+                      width: 3,
+                      backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine,
+                      transition: "background-color 0.1s",
+                    }}
+                  />
+                )}
+                {rawCalls.map((callItem) => {
+                  const target = findBlock(blocks, callItem.callTarget);
+                  return (
+                    <div key={callItem.id} style={{ display: "flex", alignItems: "flex-start", position: "relative" }}>
+                      {rawCalls.length > 1 && (
+                        <div
+                          style={{
+                            width: 12,
+                            height: 3,
+                            alignSelf: "flex-start",
+                            marginTop: 14,
+                            backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine,
+                            transition: "background-color 0.1s",
+                          }}
+                        />
+                      )}
+                      <TiaCallBox
+                        call={callItem}
+                        onRemove={rawCalls.length > 1 ? () => handleRemoveCall(callItem.id) : undefined}
+                        targetBlock={target}
+                        availableTargets={availableCallTargets}
+                        onChangeTarget={(blockId) =>
+                          handleUpdateCall(callItem.id, { callTarget: blockId, paramWiring: {} })
+                        }
+                        onChangeWiring={(paramId, addr) =>
+                          handleUpdateCall(callItem.id, {
+                            paramWiring: { ...(callItem.paramWiring || {}), [paramId]: addr },
+                          })
+                        }
+                        addrOptions={addrOptions}
+                        symbols={symbols}
+                        flowIn={flowToOut}
+                      />
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={handleAddCall}
+                  title="Añadir otra llamada a bloque FC o FB a este mismo segmento (ejecución paralela en el ciclo de scan)"
+                  style={{
+                    alignSelf: "flex-start",
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    backgroundColor: "#EEE",
+                    color: T.dwBlack,
+                    border: `1px solid ${T.dwGrey}`,
+                    padding: "3px 8px",
+                    cursor: "pointer",
+                    marginTop: 4,
+                    marginLeft: rawCalls.length > 1 ? 12 : 0,
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  + Añadir bloque (FC / FB)
+                </button>
+              </div>
             ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
             ) : rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud" ? (
