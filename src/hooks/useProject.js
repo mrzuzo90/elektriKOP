@@ -155,8 +155,9 @@ export function useProject() {
   const redo = () => {
     if (future.length === 0) return;
     const nextSnapshot = future[0];
-    setPast([...past, project]);
+    setPast([...past, projectRef.current]);
     setFuture(future.slice(1));
+    projectRef.current = nextSnapshot;
     setProjectState(nextSnapshot);
   };
 
@@ -224,12 +225,13 @@ export function useProject() {
   };
 
   const exportProject = () => {
-    const data = { version: CURRENT_VERSION, ...project };
+    const currentProject = projectRef.current;
+    const data = { version: CURRENT_VERSION, ...currentProject };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(project.projectName || "proyecto").replace(/[^a-z0-9_-]+/gi, "_")}.json`;
+    a.download = `${(currentProject.projectName || "proyecto").replace(/[^a-z0-9_-]+/gi, "_")}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -245,14 +247,16 @@ export function useProject() {
     pendingBeforeRef.current = null;
     setPast([]);
     setFuture([]);
-    setProjectState((prev) => ({
-      projectName: prev.projectName,
+    const next = {
+      projectName: projectRef.current.projectName,
       blocks: [newBlock("main")],
       deviceMap: {},
       wiringMap: {},
       symbols: {},
       hmi: emptyHmi(),
-    }));
+    };
+    projectRef.current = next;
+    setProjectState(next);
     setImportError("");
     setRestoredFromAutosave(false);
   };
@@ -272,14 +276,16 @@ export function useProject() {
         pendingBeforeRef.current = null;
         setPast([]);
         setFuture([]);
-        setProjectState({
+        const next = {
           projectName: migrated.projectName || "Proyecto importado",
           blocks: migrated.blocks,
           deviceMap: migrated.deviceMap || {},
           wiringMap: migrated.wiringMap || {},
           symbols: migrated.symbols || {},
           hmi: migrated.hmi,
-        });
+        };
+        projectRef.current = next;
+        setProjectState(next);
         setImportError("");
         setRestoredFromAutosave(false);
         onSuccess?.();
