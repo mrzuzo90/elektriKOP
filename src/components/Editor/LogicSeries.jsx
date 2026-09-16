@@ -99,7 +99,7 @@ function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
         <TiaMiniBtn
           onClick={() => actions.addCompare(containerId)} disabled={atLimit}
           draggable={!atLimit} onDragStart={dnd.startNewDrag("compare")} onDragEnd={dnd.endDrag}
-          title="Añadir comparador numérico sobre una entrada analógica (o arrastrar hasta cualquier posición del esquema)"
+          title="Añadir comparador numérico sobre una entrada analógica o el CV de un contador (o arrastrar hasta cualquier posición del esquema)"
         >+CMP</TiaMiniBtn>
         {depth === 0 && (
           <TiaMiniBtn

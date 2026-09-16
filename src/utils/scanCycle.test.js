@@ -1,3 +1,4 @@
+import { migrateProjectData } from "./projectFormat";
 import { describe, expect, it } from "vitest";
 import { computeScanTick } from "./scanCycle";
 import { OUTPUT_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
@@ -1055,5 +1056,83 @@ describe("computeScanTick — bloques FB (memoria STATIC)", () => {
       expect(tick2.outputs["Q0.0"]).toBe(false);
       expect(tick2.outputs["Q0.1"]).toBe(true);
     });
+  });
+});
+
+describe("comparadores del CV de contadores", () => {
+  const cmpRung = (op = "==", value = 2) => ({
+    id: "cmp", outType: "coil", outAddr: "Q0.1",
+    logic: [{ kind: "compare", id: "cmp-node", addr: "CV:counter", op, value }],
+  });
+  it("activa la bobina solo en el valor exacto y la desactiva al seguir contando o resetear", () => {
+    const blocks = mainBlocks([
+      contactRung("counter", "I0.0", "Q0.0", "ctu", { preset: 10, resetAddr: "I0.1" }),
+      cmpRung(),
+    ]);
+    let state = { mem: {}, timers: {} };
+    for (const [pulse, reset, expected] of [
+      [true, false, false], [false, false, false], [true, false, true],
+      [false, false, true], [true, false, false], [false, true, false],
+    ]) {
+      state = computeScanTick(blocks, { ...state.mem, "I0.0": pulse, "I0.1": reset }, state.timers);
+      expect(state.outputs["Q0.1"]).toBe(expected);
+    }
+  });
+  it.each([
+    ["==", 2, true], ["<>", 2, false], [">", 2, false],
+    [">=", 2, true], ["<", 3, true], ["<=", 1, false],
+  ])("evalúa %s contra %s sobre CV, no Q", (op, value, expected) => {
+    const blocks = mainBlocks([
+      contactRung("counter", "I0.0", "Q0.0", "ctud", { preset: 10 }), cmpRung(op, value),
+    ]);
+    const state = computeScanTick(blocks, {}, { "main:counter": { count: 2, prevPulse: false } });
+    expect(state.outputs["Q0.1"]).toBe(expected);
+  });
+  it("lee el CV previo si el comparador está antes del contador", () => {
+    const blocks = mainBlocks([cmpRung(), contactRung("counter", "I0.0", "Q0.0", "ctu", { preset: 10 })]);
+    const state = computeScanTick(blocks, { "I0.0": true }, { "main:counter": { count: 2, prevPulse: false } });
+    expect(state.outputs["Q0.1"]).toBe(true);
+    expect(state.timers["main:counter"].count).toBe(3);
+  });
+  it("una referencia a un contador eliminado no cumple ni igualdad a cero ni desigualdad", () => {
+    for (const op of ["==", "<>"]) {
+      const state = computeScanTick(mainBlocks([cmpRung(op, op === "==" ? 0 : 2)]), {}, {});
+      expect(state.outputs["Q0.1"]).toBe(false);
+    }
+  });
+  it("CTD carga el CV y expone el valor al monitor del editor", () => {
+    const state = computeScanTick(mainBlocks([
+      contactRung("counter", "I0.0", "Q0.0", "ctd", { preset: 2, resetAddr: "I0.1" }), cmpRung(),
+    ]), { "I0.1": true }, {});
+    expect(state.outputs["Q0.1"]).toBe(true);
+    expect(state.lastFrameByBlock.main["CV:counter"]).toBe(2);
+  });
+  it("mantiene CV independiente para dos llamadas al mismo bloque", () => {
+    const fc = { id: "fc", kind: "fc", interface: { in: [{ id: "pulse" }], out: [{ id: "equal" }] }, rungs: [
+      contactRung("counter", "#pulse", "M0.0", "ctu", { preset: 10 }),
+      { ...cmpRung("==", 1), outAddr: "#equal" },
+    ] };
+    const call = (id, input, output) => ({ id, logic: [], outType: "call", callTarget: "fc", paramWiring: { pulse: input, equal: output } });
+    const state = computeScanTick(mainBlocks([call("a", "I0.0", "Q0.0"), call("b", "I0.1", "Q0.1")], [fc]), { "I0.0": true }, {});
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(false);
+    expect(state.lastFrameByBlock.fc["CV:counter"]).toBe(0);
+  });
+});
+
+
+describe("guardado de comparadores de contador", () => {
+  it("conserva la referencia al CV tras exportar/importar y reordenar o renombrar segmentos", () => {
+    const project = { version: 3, blocks: mainBlocks([
+      contactRung("counter", "I0.0", "M0.0", "ctu", { preset: 10 }),
+      { id: "cmp", title: "Igual a uno", outType: "coil", outAddr: "Q0.0", logic: [
+        { id: "cmp-node", kind: "compare", addr: "CV:counter", op: "==", value: 1 },
+      ] },
+    ]) };
+    const loaded = migrateProjectData(JSON.parse(JSON.stringify(project)));
+    loaded.blocks[0].rungs[0].title = "Piezas";
+    loaded.blocks[0].rungs.unshift(contactRung("extra", "I0.2", "M0.1", "coil"));
+    const result = computeScanTick(loaded.blocks, { "I0.0": true }, {});
+    expect(result.outputs["Q0.0"]).toBe(true);
   });
 });

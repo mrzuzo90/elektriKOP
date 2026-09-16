@@ -41,7 +41,8 @@ ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio d
 - Un FC no tiene memoria propia: sus parámetros IN/OUT se recalculan enteros en cada llamada. Un **FB** añade una tercera categoría de parámetro, **STATIC**, que sí persiste entre ciclos de scan — memoria de instancia propia por sitio de llamada, sin necesidad de gestionar un DB de instancia a mano.
 
 **Comparadores (CMP) y entrada analógica**
-- **Comparador numérico**: instrucción "+CMP" en el esquema (junto a "+C"), con dirección analógica, operador (`>=`, `<=`, `==`, `<>`, `<`, `>` — cicla con un clic, igual que NA/NC en un contacto) y valor constante editable.
+- **Comparador numérico**: instrucción "+CMP" en el esquema (junto a "+C"), con entrada analógica o CV de un contador del bloque actual, operador (`>=`, `<=`, `==`, `<>`, `<`, `>` — cicla con un clic, igual que NA/NC en un contacto) y valor constante editable.
+- **Comparar un contador**: añade `+CMP`, selecciona `CV · número: nombre del segmento`, pulsa el operador hasta `==` y escribe el valor (por ejemplo, `5`). Con una bobina normal, la salida vale 1 solo cuando CV es 5 y vuelve a 0 para los demás valores. Coloca el comparador después del contador para leer su valor actualizado en ese mismo ciclo. Dentro de FC/FB, lee el contador de esa llamada.
 - **Entrada analógica (`IW0`)**: a diferencia de una `I` normal, su valor no es un bit sino un número (0-100) — se controla con un slider en Proceso simulado, y solo un comparador puede leerla.
 
 **Contadores y marcas (M)**
@@ -104,7 +105,7 @@ Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
 ## Cómo usar
 
 1. **Añade un segmento** con el botón correspondiente en el editor.
-2. **Añade contactos** en serie (`+C`), en paralelo (`+P`) o un **comparador** (`+CMP`, sobre la entrada analógica `IW0`) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I, Q o IW) en el desplegable.
+2. **Añade contactos** en serie (`+C`), en paralelo (`+P`) o un **comparador** (`+CMP`, sobre `IW0` o el CV de un contador) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I, Q o IW) en el desplegable.
 3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
 4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, SR/RS, TON, TOF, TP, CTU, CTD o CTUD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Un contador (CTU/CTD/CTUD) también permite cablear sus pines de Reset/Carga/CD/QD a una dirección, y un bloque SR/RS necesita su propia rama de entrada R1.
 5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.

@@ -5,11 +5,13 @@
 // siguiente. Por defecto {} para no romper las llamadas existentes que no
 // usan flancos.
 // Comparador numérico (CMP): a diferencia de un contacto, no lee un bit
-// sino el valor de una entrada analógica (IW) y lo compara contra una
+// sino el valor de una entrada analógica (IW) o de un contador (CV) contra una
 // constante — Number(...) || 0 porque antes del primer scan (o si la
 // dirección aún no está en mem) no hay valor físico todavía, y "sin señal"
 // debe leerse como 0, no como NaN propagándose por toda la comparación.
 function evalCompare(node, mem) {
+  // Un contador borrado o convertido a otra instrucción no equivale a CV=0.
+  if (node.addr?.startsWith("CV:") && !Number.isFinite(mem[node.addr])) return false;
   const raw = Number(mem[node.addr]) || 0;
   switch (node.op) {
     case ">=": return raw >= node.value;

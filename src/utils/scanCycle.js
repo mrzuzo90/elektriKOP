@@ -1,5 +1,6 @@
 import { OUTPUT_ADDR, MARK_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
 import { evalSeries } from "./evalNode";
+import { counterOperands } from "./counterOperands";
 
 // Ejecuta un ciclo de scan completo: evalúa cada segmento en orden sobre la
 // memoria combinada (entradas + salidas previas) y escribe su salida en esa
@@ -50,8 +51,12 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
     const block = blockById.get(blockId);
     if (!block) return;
 
+    // CV pertenece a la instancia de llamada, nunca a la dirección de Q.
+    const counterMem = Object.fromEntries(counterOperands(block.rungs).map(({ addr, id }) =>
+      [addr, prevTimers[`${pathPrefix}:${id}`]?.count ?? 0]
+    ));
     block.rungs.forEach((rung) => {
-      const readMem = { ...nextMem, ...localParams };
+      const readMem = { ...nextMem, ...localParams, ...counterMem };
       // prevMem para flancos P/N: memoria física previa + valores previos de
       // ESTE sitio de llamada (mismo concepto que prevScanMem, pero para los
       // #param efímeros, que de otro modo nunca detectarían una transición).
@@ -111,7 +116,6 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
 
           runBlock(callItem.callTarget, calleeParams, calleePrevParams, subPath, depth + 1);
           nextLocalParams[callKey] = calleeParams;
-          lastFrameByBlock[callItem.callTarget] = calleeParams;
           target.interface.out.forEach((p) => {
             const addr = callItem.paramWiring?.[p.id];
             if (addr) write(addr, calleeParams[`#${p.id}`]);
@@ -265,6 +269,7 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
             write(rung.qdAddr, qd);
           }
         }
+        counterMem[`CV:${rung.id}`] = count;
       } else {
         // ton
         const prevElapsed = prevTimers[timerKey] || 0;
@@ -274,6 +279,7 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         write(rung.outAddr, elapsed >= rung.preset);
       }
     });
+    lastFrameByBlock[blockId] = { ...localParams, ...counterMem };
   }
 
   runBlock(mainBlockId, {}, {}, mainBlockId, 0);
