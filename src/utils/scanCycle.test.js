@@ -1136,3 +1136,35 @@ describe("guardado de comparadores de contador", () => {
     expect(result.outputs["Q0.0"]).toBe(true);
   });
 });
+
+describe("rama de contactos de reset/carga del contador", () => {
+  const resetContact = (neg = false) => ({ kind: "contact", id: "reset-contact", addr: "I0.1", neg });
+  it.each(["ctu", "ctud"])("%s resetea sin pulso y domina un pulso simultáneo", (outType) => {
+    const blocks = mainBlocks([contactRung("counter", "I0.0", "Q0.0", outType, {
+      preset: 5, logicReset: [resetContact()],
+    })]);
+    for (const pulse of [false, true]) {
+      const state = computeScanTick(blocks, { "I0.0": pulse, "I0.1": true }, { "main:counter": { count: 4, prevPulse: false } });
+      expect(state.timers["main:counter"].count).toBe(0);
+      expect(state.outputs["Q0.0"]).toBe(false);
+    }
+  });
+  it("evalúa contactos NC y deja de resetear al abrirse la rama", () => {
+    const blocks = mainBlocks([contactRung("counter", "I0.0", "Q0.0", "ctu", { preset: 5, logicReset: [resetContact(true)] })]);
+    const reset = computeScanTick(blocks, {}, { "main:counter": { count: 4, prevPulse: false } });
+    expect(reset.timers["main:counter"].count).toBe(0);
+    const count = computeScanTick(blocks, { "I0.0": true, "I0.1": true }, reset.timers);
+    expect(count.timers["main:counter"].count).toBe(1);
+  });
+  it("CTD carga PV mediante LD aunque no haya pulso de cuenta", () => {
+    const blocks = mainBlocks([contactRung("counter", "I0.0", "Q0.0", "ctd", { preset: 5, logicReset: [resetContact()] })]);
+    const result = computeScanTick(blocks, { "I0.1": true }, {});
+    expect(result.timers["main:counter"].count).toBe(5);
+    expect(result.outputs["Q0.0"]).toBe(false);
+  });
+  it("una rama vacía desconecta el reset, incluso con resetAddr antiguo", () => {
+    const blocks = mainBlocks([contactRung("counter", "I0.0", "Q0.0", "ctu", { preset: 5, resetAddr: "I0.1", logicReset: [] })]);
+    const result = computeScanTick(blocks, { "I0.1": true }, { "main:counter": { count: 3, prevPulse: false } });
+    expect(result.timers["main:counter"].count).toBe(3);
+  });
+});

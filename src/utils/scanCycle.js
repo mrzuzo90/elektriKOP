@@ -195,7 +195,10 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         // - QU: salida CV >= PV, escrita en rung.outAddr.
         // - QD: salida CV <= 0, escrita en rung.qdAddr (si está cableada).
         const prevState = prevTimers[timerKey] || { count: 0, prevPulse: false, prevCd: false };
-        const resetVal = rung.resetAddr ? !!readMem[rung.resetAddr] : false;
+        const resetVal =
+          rung.logicReset !== undefined
+            ? evalSeries(rung.logicReset || [], readMem, readPrevMem)
+            : (rung.resetAddr ? !!readMem[rung.resetAddr] : false);
         let count = prevState.count;
 
         if (rung.outType === "ctu") {

@@ -58,6 +58,13 @@ describe("collectUsedAddresses con marcas (M)", () => {
     expect(collectUsedAddresses(rungs)).toContain("M0.2");
   });
 
+  it("incluye los contactos de la rama logicReset de un contador", () => {
+    const rungs = [contactRung(0, "I0.0", "Q0.0", "ctu", {
+      logicReset: [{ kind: "contact", id: "rst", addr: "I0.3", neg: false }],
+    })];
+    expect(collectUsedAddresses(rungs)).toContain("I0.3");
+  });
+
   it("incluye todos los pines cableados de un CTUD (cdAddr, resetAddr, loadAddr, qdAddr)", () => {
     const rungs = [
       contactRung(0, "I0.0", "Q0.0", "ctud", {

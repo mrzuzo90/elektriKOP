@@ -877,6 +877,13 @@ export default function PlcEmulator() {
                     if (rung.outType === "sr" || rung.outType === "rs") {
                       computeStates(rung.logicR || [], mem, sim.prevMem, states);
                     }
+                    if (rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud") {
+                      const counterReset =
+                        rung.logicReset !== undefined
+                          ? (rung.logicReset || [])
+                          : (rung.resetAddr ? [{ kind: "contact", id: `rst-${rung.id}`, addr: rung.resetAddr, neg: false }] : []);
+                      computeStates(counterReset, mem, sim.prevMem, states);
+                    }
                     const rawTimer = timerValueFor(
                       sim.timerDisplay,
                       activeBlock.id,

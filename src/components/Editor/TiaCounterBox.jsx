@@ -12,7 +12,6 @@ import { PinWiringSelect } from "./TiaCallBox";
 // CV es un número interno mostrado como texto junto a PV.
 export default function TiaCounterBox({
   rung,
-  onChangeResetAddr,
   onChangeCdAddr,
   onChangeLoadAddr,
   onChangeQdAddr,
@@ -21,27 +20,27 @@ export default function TiaCounterBox({
   symbols,
   active,
   flowIn,
+  flowReset,
   count = 0,
   qu,
   qd,
   mem,
 }) {
   const isCtud = rung.outType === "ctud";
-  const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
+  const quActive = qu ?? (count >= rung.preset);
+  const qdActive = qd ?? (count <= 0);
+  const color = (isCtud ? quActive : active) && flowIn ? T.tiaLineActive : T.tiaLine;
   const label = isCtud ? "CTUD" : rung.outType === "ctu" ? "CTU" : "CTD";
   const resetLabel = rung.outType === "ctu" ? "R" : "LD";
   const pulseLabel = rung.outType === "ctu" ? "CU" : "CD";
 
   const cdActive = rung.cdAddr ? !!mem?.[rung.cdAddr] : false;
-  const rActive = rung.resetAddr ? !!mem?.[rung.resetAddr] : false;
+  const rActive = flowReset !== undefined ? flowReset : (rung.resetAddr ? !!mem?.[rung.resetAddr] : false);
   const ldActive = rung.loadAddr ? !!mem?.[rung.loadAddr] : false;
-  const quActive = qu ?? (count >= rung.preset);
-  const qdActive = qd ?? (count <= 0);
 
   if (isCtud) {
     return (
-      <div style={{ display: "flex", alignItems: "flex-start" }}>
-        <TiaLine active={flowIn} size={8} />
+      <div style={{ display: "flex", alignItems: "center" }}>
         <div
           style={{
             border: `3px solid ${color}`,
@@ -128,7 +127,7 @@ export default function TiaCounterBox({
             </div>
           </div>
 
-          {/* Fila 3: R (Reset) */}
+          {/* Fila 3: R (Reset) conectado al carril secundario de reset */}
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
             <span
               style={{
@@ -140,12 +139,6 @@ export default function TiaCounterBox({
             >
               R
             </span>
-            <PinWiringSelect
-              value={rung.resetAddr}
-              onChange={onChangeResetAddr}
-              options={addrOptions}
-              symbols={symbols}
-            />
           </div>
 
           {/* Fila 4: LD (Carga) */}
@@ -176,38 +169,61 @@ export default function TiaCounterBox({
             CV:{count}
           </div>
         </div>
-        <TiaLine active={active} size={8} />
+        <TiaLine active={quActive} size={8} />
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start" }}>
-      <TiaLine active={flowIn} size={8} />
+    <div style={{ display: "flex", alignItems: "center" }}>
       <div
         style={{
+          position: "relative",
           border: `3px solid ${color}`,
           backgroundColor: "#FFF",
-          width: 96,
-          padding: "2px 6px 6px",
-          position: "relative",
+          width: 84,
+          height: 66,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "3px 6px",
           boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
         }}
       >
-        <div style={{ fontSize: 12, lineHeight: 1.2, textAlign: "center", fontWeight: "bold", borderBottom: `1px solid ${color}`, color: T.tiaText, padding: "2px 0" }}>
+        {/* Fila superior: CU / CD y salida Q */}
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: "bold", lineHeight: 1.1 }}>
+          <span style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>{pulseLabel}</span>
+          <span style={{ color: active ? T.tiaLineActive : T.tiaText }}>Q</span>
+        </div>
+
+        {/* Centro: Nombre del bloque (CTU o CTD) */}
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 13,
+            fontWeight: "bold",
+            lineHeight: 1,
+            color: T.tiaText,
+            borderTop: `1px solid ${T.tiaLine}`,
+            borderBottom: `1px solid ${T.tiaLine}`,
+            padding: "2px 0",
+          }}
+        >
           {label}
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1.6, color: T.tiaText }}>
-          <div style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>{pulseLabel}</div>
-          <div style={{ color: active ? T.tiaLineActive : T.tiaText }}>Q</div>
+
+        {/* Fila inferior: R o LD a la izq */}
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: "bold", lineHeight: 1.1 }}>
+          <span style={{ color: rActive ? T.tiaLineActive : T.tiaText }}>{resetLabel}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-          <span style={{ fontSize: 10, color: rActive ? T.tiaLineActive : T.tiaText }}>{resetLabel}</span>
-          <PinWiringSelect value={rung.resetAddr} onChange={onChangeResetAddr} options={addrOptions} symbols={symbols} />
+
+        {/* Helper text outside box — PV/CV */}
+        <div style={{ position: "absolute", bottom: -18, left: 0, fontSize: 11, lineHeight: 1, color: T.tiaBlue, whiteSpace: "nowrap" }}>
+          PV:{rung.preset}
         </div>
-        {/* Helper text outside box — mismo patrón que TiaTonBox para PT/ET */}
-        <div style={{ position: "absolute", bottom: -19, left: 0, fontSize: 12, lineHeight: 1, color: T.tiaBlue }}>PV:{rung.preset}</div>
-        <div style={{ position: "absolute", bottom: -19, right: 0, fontSize: 12, lineHeight: 1, color: T.tiaText }}>CV:{count}</div>
+        <div style={{ position: "absolute", bottom: -18, right: 0, fontSize: 11, lineHeight: 1, color: T.tiaText, whiteSpace: "nowrap" }}>
+          CV:{count}
+        </div>
       </div>
       <TiaLine active={active} size={8} />
     </div>

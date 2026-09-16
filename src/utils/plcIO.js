@@ -13,10 +13,11 @@ export function collectUsedAddresses(rungs) {
   const set = new Set();
   rungs.forEach((rung) => {
     collectContactAddrs(rung.logic, set);
-    // Rama R1 de un bloque SR/RS: sus contactos son direcciones reales
-    // (se leen cada scan) igual que los de rung.logic, aunque vivan en un
-    // array aparte.
+    // Rama R1 de un bloque SR/RS y rama de reset de un contador (CTU/CTD/CTUD):
+    // sus contactos son direcciones reales (se leen cada scan) igual que los
+    // de rung.logic, aunque vivan en un array aparte.
     collectContactAddrs(rung.logicR || [], set);
+    collectContactAddrs(rung.logicReset || [], set);
     // Un rung "call" conserva un outAddr heredado/ignorado (ver TiaSegment)
     // — no es una dirección realmente escrita, no debe marcarse "en uso".
     if (rung.outType !== "call") {

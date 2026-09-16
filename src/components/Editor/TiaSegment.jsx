@@ -35,26 +35,36 @@ const OUT_TYPES = [
 ];
 
 const isSrFamily = (outType) => outType === "sr" || outType === "rs";
+const isCounterFamily = (outType) => outType === "ctu" || outType === "ctd" || outType === "ctud";
+const isDualBranchFamily = (outType) => isSrFamily(outType) || isCounterFamily(outType);
 
 // Fábrica de acciones de edición del árbol lógico, parametrizada por el
 // campo del rung sobre el que operan ("logic" para la red normal / la
-// entrada S del bloque SR, "logicR" para la entrada R1) — los helpers de
+// entrada S del bloque SR / CU del contador, "logicR" para la entrada R1,
+// "logicReset" para la entrada R/LD del contador) — los helpers de
 // ladderTree.js ya son puros sobre un array de nodos, así que no hace
 // falta duplicarlos, solo indicar a cuál de los dos escribir.
 function makeActions(rung, onChange, field) {
+  const getList = () => {
+    if (rung[field] !== undefined) return rung[field] || [];
+    if (field === "logicReset" && rung.resetAddr) {
+      return [{ kind: "contact", id: `rst-${rung.id}`, addr: rung.resetAddr, neg: false }];
+    }
+    return [];
+  };
   return {
-    totalContacts: () => countContacts(rung[field]),
-    addContact: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newContactNode()]) }),
-    addCompare: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newCompareNode()]) }),
-    addParallel: (containerId) => onChange({ ...rung, [field]: mapContainer(rung[field], containerId, (nodes) => [...nodes, newParallelNode()]) }),
-    insertContact: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newContactNode()) }),
-    insertCompare: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newCompareNode()) }),
-    insertParallel: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(rung[field], containerId, index, newParallelNode()) }),
-    moveNode: (nodeId, containerId, index) => onChange({ ...rung, [field]: moveNode(rung[field], nodeId, containerId, index) }),
-    removeNode: (nodeId) => onChange({ ...rung, [field]: removeNodeEverywhere(rung[field], nodeId) }),
-    updateContact: (contactId, patch) => onChange({ ...rung, [field]: updateContactEverywhere(rung[field], contactId, patch) }),
-    addBranch: (parallelId) => onChange({ ...rung, [field]: addBranchToParallel(rung[field], parallelId) }),
-    removeBranch: (parallelId, branchId) => onChange({ ...rung, [field]: removeBranchFromParallel(rung[field], parallelId, branchId) }),
+    totalContacts: () => countContacts(getList()),
+    addContact: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newContactNode()]) }),
+    addCompare: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newCompareNode()]) }),
+    addParallel: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newParallelNode()]) }),
+    insertContact: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newContactNode()) }),
+    insertCompare: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newCompareNode()) }),
+    insertParallel: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newParallelNode()) }),
+    moveNode: (nodeId, containerId, index) => onChange({ ...rung, [field]: moveNode(getList(), nodeId, containerId, index) }),
+    removeNode: (nodeId) => onChange({ ...rung, [field]: removeNodeEverywhere(getList(), nodeId) }),
+    updateContact: (contactId, patch) => onChange({ ...rung, [field]: updateContactEverywhere(getList(), contactId, patch) }),
+    addBranch: (parallelId) => onChange({ ...rung, [field]: addBranchToParallel(getList(), parallelId) }),
+    removeBranch: (parallelId, branchId) => onChange({ ...rung, [field]: removeBranchFromParallel(getList(), parallelId, branchId) }),
   };
 }
 
@@ -108,8 +118,10 @@ function useLogicDnd(actions) {
 export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDelete, symbols, addrOptions, analogAddrOptions, outputAddrOptions, blocks = [], currentBlockId }) {
   const actionsS = makeActions(rung, onChange, "logic");
   const actionsR = makeActions(rung, onChange, "logicR");
+  const actionsReset = makeActions(rung, onChange, "logicReset");
   const dndS = useLogicDnd(actionsS);
   const dndR = useLogicDnd(actionsR);
+  const dndReset = useLogicDnd(actionsReset);
 
   // Cambia la instrucción de salida del rung. Al entrar en la familia
   // SR/RS por primera vez inicializa logicR (red de R1, vacía hasta
@@ -117,11 +129,20 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
   // estaba en esa familia (p.ej. en "rs"), un clic repetido en el botón
   // "SR" de la paleta no debe resetear la prioridad elegida: eso solo lo
   // hace el toggle de la propia caja (ver TiaSrBox.onToggle más abajo).
+  // Para contadores (CTU/CTD/CTUD), inicializa su rama logicReset para
+  // poder resetearlos mediante contactos.
   const changeOutType = (newType) => {
     if (newType === "sr" && isSrFamily(rung.outType)) return;
     const patch = { ...rung, outType: newType };
     if (newType === "sr" && !rung.logicR) patch.logicR = [newContactNode()];
-    if ((newType === "ctu" || newType === "ctd" || newType === "ctud") && !rung.preset) patch.preset = 5;
+    if (newType === "ctu" || newType === "ctd" || newType === "ctud") {
+      if (!patch.preset) patch.preset = 5;
+      if (patch.logicReset === undefined) {
+        patch.logicReset = patch.resetAddr
+          ? [{ ...newContactNode(), addr: patch.resetAddr }]
+          : [newContactNode()];
+      }
+    }
     if (newType === "call" && (!patch.calls || patch.calls.length === 0)) {
       patch.calls = [{ id: "c0", callTarget: rung.callTarget || null, paramWiring: rung.paramWiring || {} }];
     }
@@ -156,7 +177,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
     },
   };
 
-  // Flujo de corriente que llega a la salida (o, en un bloque SR, a cada
+  // Flujo de corriente que llega a la salida (o, en un bloque SR o contador, a cada
   // uno de sus dos pines de entrada).
   let flowToOut = true;
   if (rung.logic && rung.logic.length > 0) {
@@ -169,6 +190,14 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
   let flowR = true;
   (rung.logicR || []).forEach((n) => {
     flowR = flowR && evalResult?.states?.[n.id]?.state;
+  });
+
+  const counterResetNodes = rung.logicReset !== undefined
+    ? (rung.logicReset || [])
+    : (rung.resetAddr ? [{ kind: "contact", id: `rst-${rung.id}`, addr: rung.resetAddr, neg: false }] : []);
+  let flowReset = counterResetNodes.length > 0;
+  counterResetNodes.forEach((n) => {
+    flowReset = flowReset && evalResult?.states?.[n.id]?.state;
   });
 
   const availableCallTargets = validCallTargets(blocks, currentBlockId);
@@ -301,34 +330,42 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
       {/* Rung Logic Area: flex-start, igual que LogicSeries — así la fila
           crece de forma natural para acomodar un bloque paralelo alto, sin
           necesidad de reservar espacio a mano. */}
-      {isSrFamily(rung.outType) ? (
-        /* Bloque SR/RS combinado: a diferencia de cualquier otra
-           instrucción (una sola red de entrada → una salida), este tiene
-           DOS redes independientes (S y R1) confluyendo en la misma caja
-           — así que en vez de una fila, son dos apiladas, cada una con su
-           propio riel+lógica+línea de entrada, y la caja SR centrada a la
-           derecha abarcando ambas. */
+      {isDualBranchFamily(rung.outType) ? (
+        /* Bloque de dos ramas: SR/RS combinado (S y R1) o Contadores CTU/CTD/CTUD (CU/CD y R/LD).
+           DOS redes independientes confluyendo en la misma caja: cada una con su propio
+           riel + lógica + línea de entrada, y la caja correspondiente a la derecha. */
         <div style={{ padding: "20px 10px", display: "flex", alignItems: "center", overflowX: "auto" }}>
           <div style={{ width: 4, backgroundColor: T.tiaLine, alignSelf: "stretch", marginRight: 4 }} />
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
-            {/* Fila S */}
+            {/* Fila 1: S (SR/RS) o CU/CD (Contador) */}
             <div style={{ display: "flex", alignItems: "flex-start" }}>
               <LogicSeries containerId="root" nodes={rung.logic} states={evalResult?.states || {}} actions={actionsS} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dndS} />
               <div style={{ flex: 1, minWidth: 20, height: 30, display: "flex", alignItems: "center" }}>
                 <div style={{ width: "100%", height: 3, backgroundColor: flowToOut ? T.tiaLineActive : T.tiaLine }} />
               </div>
             </div>
-            {/* Fila R1 */}
+            {/* Fila 2: R1 (SR/RS) o R/LD (Contador) */}
             <div style={{ display: "flex", alignItems: "flex-start" }}>
-              <LogicSeries containerId="root" nodes={rung.logicR || []} states={evalResult?.states || {}} actions={actionsR} depth={0} flowIn={true} symbols={symbols} addrOptions={addrOptions} analogAddrOptions={analogAddrOptions} dnd={dndR} />
+              <LogicSeries
+                containerId="root"
+                nodes={isSrFamily(rung.outType) ? (rung.logicR || []) : counterResetNodes}
+                states={evalResult?.states || {}}
+                actions={isSrFamily(rung.outType) ? actionsR : actionsReset}
+                depth={0}
+                flowIn={true}
+                symbols={symbols}
+                addrOptions={addrOptions}
+                analogAddrOptions={analogAddrOptions}
+                dnd={isSrFamily(rung.outType) ? dndR : dndReset}
+              />
               <div style={{ flex: 1, minWidth: 20, height: 30, display: "flex", alignItems: "center" }}>
-                <div style={{ width: "100%", height: 3, backgroundColor: flowR ? T.tiaLineActive : T.tiaLine }} />
+                <div style={{ width: "100%", height: 3, backgroundColor: (isSrFamily(rung.outType) ? flowR : flowReset) ? T.tiaLineActive : T.tiaLine }} />
               </div>
             </div>
           </div>
 
-          {/* Caja SR + salida, misma zona de aterrizaje para arrastrar un
+          {/* Caja SR / Contador + salida, misma zona de aterrizaje para arrastrar un
               tipo de salida distinto (ver outTypeDnd.drop). */}
           <div
             style={{ position: "relative", display: "flex", alignItems: "center", marginRight: 8 }}
@@ -345,13 +382,32 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
                 }}
               />
             )}
-            <TiaSrBox
-              sFlow={flowToOut}
-              rFlow={flowR}
-              active={evalResult?.outputState}
-              priority={rung.outType}
-              onToggle={() => onChange({ ...rung, outType: rung.outType === "sr" ? "rs" : "sr" })}
-            />
+            {isSrFamily(rung.outType) ? (
+              <TiaSrBox
+                sFlow={flowToOut}
+                rFlow={flowR}
+                active={evalResult?.outputState}
+                priority={rung.outType}
+                onToggle={() => onChange({ ...rung, outType: rung.outType === "sr" ? "rs" : "sr" })}
+              />
+            ) : (
+              <TiaCounterBox
+                rung={rung}
+                onChangeCdAddr={(v) => onChange({ ...rung, cdAddr: v })}
+                onChangeLoadAddr={(v) => onChange({ ...rung, loadAddr: v })}
+                onChangeQdAddr={(v) => onChange({ ...rung, qdAddr: v })}
+                addrOptions={addrOptions}
+                outputAddrOptions={outputAddrOptions}
+                symbols={symbols}
+                active={evalResult?.outputState}
+                flowIn={flowToOut}
+                flowReset={flowReset}
+                count={evalResult?.counterValue}
+                qu={evalResult?.quState}
+                qd={evalResult?.qdState}
+                mem={evalResult?.mem}
+              />
+            )}
             <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={outputAddrOptions} isOut={true} symbols={symbols} />
           </div>
 
@@ -479,23 +535,6 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
               </div>
             ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
-            ) : rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud" ? (
-               <TiaCounterBox
-                 rung={rung}
-                 onChangeResetAddr={(v) => onChange({ ...rung, resetAddr: v })}
-                 onChangeCdAddr={(v) => onChange({ ...rung, cdAddr: v })}
-                 onChangeLoadAddr={(v) => onChange({ ...rung, loadAddr: v })}
-                 onChangeQdAddr={(v) => onChange({ ...rung, qdAddr: v })}
-                 addrOptions={addrOptions}
-                 outputAddrOptions={outputAddrOptions}
-                 symbols={symbols}
-                 active={evalResult?.outputState}
-                 flowIn={flowToOut}
-                 count={evalResult?.counterValue}
-                 qu={evalResult?.quState}
-                 qd={evalResult?.qdState}
-                 mem={evalResult?.mem}
-               />
             ) : rung.outType === "set" || rung.outType === "reset" ? (
                <TiaSetReset
                  active={evalResult?.outputState}
