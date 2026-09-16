@@ -90,20 +90,21 @@ export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, on
         border: `3px solid ${color}`,
         backgroundColor: "#FFF",
         width: addr.startsWith("CV:") ? 174 : 78,
-        height: 50,
+        height: 68,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        padding: "2px 4px",
+        padding: "3px 4px",
         position: "relative",
         boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+        boxSizing: "border-box",
       }}>
         {sparking && <span className="dw-spark" />}
         <select
           value={addr}
           onChange={(e) => onChangeAddr(e.target.value)}
-          title={`Entrada analógica o CV del contador a comparar: ${addrOptions.find((a) => a.addr === addr)?.label || addr}`}
-          style={{ minWidth: 0, width: "100%", fontSize: 10, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", padding: 0 }}
+          title={`Entrada analógica o CV del contador a comparar: ${addrOptions.find((a) => (typeof a === "string" ? a : a.addr) === addr)?.label || addr}`}
+          style={{ minWidth: 0, width: "100%", height: 18, fontSize: 11, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", padding: 0, margin: 0, outline: "none", cursor: "pointer" }}
         >
           {!addrOptions.some((a) => (typeof a === "string" ? a : a.addr) === addr) && (
             <option value={addr}>Contador no disponible</option>
@@ -118,7 +119,7 @@ export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, on
           title="Clic para cambiar el operador de comparación"
           style={{
             cursor: "pointer", textAlign: "center", fontSize: 13, fontWeight: "bold", color: T.tiaText,
-            borderTop: `1px solid ${T.tiaLine}`, borderBottom: `1px solid ${T.tiaLine}`, lineHeight: 1.6,
+            borderTop: `1px solid ${T.tiaLine}`, borderBottom: `1px solid ${T.tiaLine}`, padding: "2px 0", lineHeight: 1.2,
           }}
         >
           {op}
@@ -128,7 +129,7 @@ export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, on
           value={value}
           onChange={(e) => onChangeValue(Number(e.target.value) || 0)}
           title="Valor constante de la comparación"
-          style={{ fontSize: 11, fontFamily: T.mono, color: T.tiaText, border: "none", background: "transparent", textAlign: "center", width: "100%", padding: 0 }}
+          style={{ height: 18, fontSize: 12, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", width: "100%", padding: 0, margin: 0, outline: "none" }}
         />
       </div>
       <TiaLine active={active} size={8} />
