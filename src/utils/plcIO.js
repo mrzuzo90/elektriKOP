@@ -1,4 +1,4 @@
-import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR } from "./constants";
+import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR, ANALOG_OUT_ADDR } from "./constants";
 
 // Direcciones I/Q/IW realmente referenciadas en un segmento (contactos,
 // comparadores + su propia salida), usado para no mostrar en "Proceso
@@ -45,7 +45,7 @@ export function collectUsedAddresses(rungs) {
     if (rung.loadAddr) set.add(rung.loadAddr);
     if (rung.qdAddr) set.add(rung.qdAddr);
   });
-  return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...ANALOG_ADDR].filter((a) => set.has(a));
+  return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...ANALOG_ADDR, ...ANALOG_OUT_ADDR].filter((a) => set.has(a));
 }
 
 // Convierte el estado "físico" de cada entrada (¿está el pulsador pulsado?,

@@ -5,21 +5,27 @@
 // siguiente. Por defecto {} para no romper las llamadas existentes que no
 // usan flancos.
 // Comparador numérico (CMP): a diferencia de un contacto, no lee un bit
-// sino el valor de una entrada analógica (IW) o de un contador (CV) contra una
-// constante — Number(...) || 0 porque antes del primer scan (o si la
-// dirección aún no está en mem) no hay valor físico todavía, y "sin señal"
-// debe leerse como 0, no como NaN propagándose por toda la comparación.
+// sino el valor de una entrada analógica (IW/QW), de un contador (CV) o de un
+// temporizador (ET/PT) contra una constante — Number(...) || 0 porque antes del
+// primer scan (o si la dirección aún no está en mem) no hay valor físico
+// todavía, y "sin señal" debe leerse como 0, no como NaN propagándose por toda la
+// comparación.
 function evalCompare(node, mem) {
-  // Un contador borrado o convertido a otra instrucción no equivale a CV=0.
-  if (node.addr?.startsWith("CV:") && !Number.isFinite(mem[node.addr])) return false;
+  // Un contador o temporizador borrado o convertido a otra instrucción no equivale a 0.
+  const isDynamic =
+    node.addr?.startsWith("CV:") ||
+    node.addr?.startsWith("ET:") ||
+    node.addr?.startsWith("PT:");
+  if (isDynamic && !Number.isFinite(mem[node.addr])) return false;
   const raw = Number(mem[node.addr]) || 0;
+  const EPS = 1e-4;
   switch (node.op) {
-    case ">=": return raw >= node.value;
-    case "<=": return raw <= node.value;
-    case "==": return raw === node.value;
-    case "<>": return raw !== node.value;
-    case "<": return raw < node.value;
-    case ">": return raw > node.value;
+    case ">=": return raw >= node.value || Math.abs(raw - node.value) < EPS;
+    case "<=": return raw <= node.value || Math.abs(raw - node.value) < EPS;
+    case "==": return Math.abs(raw - node.value) < EPS;
+    case "<>": return Math.abs(raw - node.value) >= EPS;
+    case "<": return raw < node.value && Math.abs(raw - node.value) >= EPS;
+    case ">": return raw > node.value && Math.abs(raw - node.value) >= EPS;
     default: return false;
   }
 }

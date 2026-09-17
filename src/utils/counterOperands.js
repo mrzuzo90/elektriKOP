@@ -6,3 +6,18 @@ export function counterOperands(rungs) {
       : []
   );
 }
+
+export function timerOperands(rungs) {
+  return rungs.flatMap((rung, index) =>
+    ["ton", "tof", "tp"].includes(rung.outType)
+      ? [
+          { id: rung.id, addr: `ET:${rung.id}`, label: `ET · ${index + 1}: ${rung.title || rung.outType.toUpperCase()}` },
+          { id: rung.id, addr: `PT:${rung.id}`, label: `PT · ${index + 1}: ${rung.title || rung.outType.toUpperCase()}` },
+        ]
+      : []
+  );
+}
+
+export function comparatorOperands(rungs) {
+  return [...counterOperands(rungs), ...timerOperands(rungs)];
+}

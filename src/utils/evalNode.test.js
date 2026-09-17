@@ -61,6 +61,22 @@ describe("evalNode", () => {
     expect(evalNode(compare("IW0", ">=", 1), {})).toBe(false);
   });
 
+  it("un comparador evalúa variables de tiempo ET y PT con soporte de decimales", () => {
+    expect(evalNode(compare("ET:t1", ">=", 2.5), { "ET:t1": 2.5 })).toBe(true);
+    expect(evalNode(compare("ET:t1", ">=", 2.5), { "ET:t1": 2.4 })).toBe(false);
+    expect(evalNode(compare("PT:t1", "==", 5), { "PT:t1": 5 })).toBe(true);
+    // Absorción de imprecisiones de coma flotante en segundos (0.1 + 0.2)
+    expect(evalNode(compare("ET:t1", "==", 0.3), { "ET:t1": 0.1 + 0.2 })).toBe(true);
+    expect(evalNode(compare("ET:t1", "<>", 0.3), { "ET:t1": 0.1 + 0.2 })).toBe(false);
+  });
+
+  it("un temporizador o contador no disponible en mem evalúa a false sin asumir 0", () => {
+    expect(evalNode(compare("ET:deleted", "==", 0), {})).toBe(false);
+    expect(evalNode(compare("ET:deleted", "<=", 0), {})).toBe(false);
+    expect(evalNode(compare("PT:deleted", "==", 0), {})).toBe(false);
+    expect(evalNode(compare("CV:deleted", "==", 0), {})).toBe(false);
+  });
+
   it("un nodo paralelo es true si al menos una rama pasa (OR)", () => {
     const node = parallel("p1", [
       branch("b1", [contact("I0.0")]),

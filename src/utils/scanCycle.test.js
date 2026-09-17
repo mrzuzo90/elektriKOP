@@ -1168,3 +1168,146 @@ describe("rama de contactos de reset/carga del contador", () => {
     expect(result.timers["main:counter"].count).toBe(3);
   });
 });
+
+describe("comparadores de variables de tiempo (ET y PT) de temporizadores", () => {
+  const cmpTimerRung = (id = "cmp", addr = "ET:timer", op = ">=", value = 0.2, outAddr = "Q0.1") => ({
+    id, outType: "coil", outAddr,
+    logic: [{ kind: "compare", id: `${id}-node`, addr, op, value }],
+  });
+
+  it("activa una bobina cuando el ET de un TON alcanza un valor intermedio antes del preset", () => {
+    const blocks = mainBlocks([
+      contactRung("timer", "I0.0", "Q0.0", "ton", { preset: 0.5 }),
+      cmpTimerRung("cmp", "ET:timer", ">=", 0.2, "Q0.1"),
+    ]);
+
+    // Tick 1: I0.0=true -> ET = 0.1s
+    let state = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(state.outputs["Q0.0"]).toBe(false); // TON aún no llega a 0.5
+    expect(state.outputs["Q0.1"]).toBe(false); // 0.1 < 0.2
+    expect(state.lastFrameByBlock.main["ET:timer"]).toBe(0.1);
+
+    // Tick 2: I0.0=true -> ET = 0.2s
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers);
+    expect(state.outputs["Q0.0"]).toBe(false);
+    expect(state.outputs["Q0.1"]).toBe(true);  // 0.2 >= 0.2 (activado antes de que termine el TON)
+    expect(state.lastFrameByBlock.main["ET:timer"]).toBe(0.2);
+
+    // Avanzar hasta superar preset (0.5s)
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers); // 0.3s
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers); // 0.4s
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers); // 0.5s
+    expect(state.outputs["Q0.0"]).toBe(true);  // TON completado
+    expect(state.outputs["Q0.1"]).toBe(true);
+
+    // Corte de entrada (I0.0=false) -> TON resetea ET a 0
+    state = computeScanTick(blocks, { "I0.0": false }, state.timers);
+    expect(state.outputs["Q0.0"]).toBe(false);
+    expect(state.outputs["Q0.1"]).toBe(false);
+    expect(state.lastFrameByBlock.main["ET:timer"]).toBe(0);
+  });
+
+  it("evalúa ET en temporizador TOF durante el retardo a la desconexión", () => {
+    const blocks = mainBlocks([
+      contactRung("timer", "I0.0", "Q0.0", "tof", { preset: 0.3 }),
+      cmpTimerRung("cmp", "ET:timer", "<=", 0.1, "Q0.1"),
+    ]);
+    // Inicial energizado: ET=0
+    let state = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(true); // ET=0 <= 0.1
+
+    // Flanco de bajada: I0.0=false -> Tick 1: ET = 0.1s
+    state = computeScanTick(blocks, { "I0.0": false }, state.timers);
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(true); // ET=0.1 <= 0.1
+
+    // Tick 2: ET = 0.2s
+    state = computeScanTick(blocks, { "I0.0": false }, state.timers);
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(false); // ET=0.2 > 0.1
+  });
+
+  it("evalúa ET en temporizador TP durante el pulso", () => {
+    const blocks = mainBlocks([
+      contactRung("timer", "I0.0", "Q0.0", "tp", { preset: 0.4 }),
+      cmpTimerRung("cmp", "ET:timer", ">=", 0.2, "Q0.1"),
+    ]);
+    // Disparo con flanco de subida: Tick 1 -> elapsed = 0.1
+    let state = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(false); // 0.1 < 0.2
+
+    // Tick 2 -> elapsed = 0.2
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers);
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(true);  // 0.2 >= 0.2
+  });
+
+  it("evalúa PT del temporizador contra una constante", () => {
+    const blocks = mainBlocks([
+      contactRung("timer", "I0.0", "Q0.0", "ton", { preset: 3.5 }),
+      cmpTimerRung("cmp", "PT:timer", "==", 3.5, "Q0.1"),
+    ]);
+    const state = computeScanTick(blocks, {}, {});
+    expect(state.outputs["Q0.1"]).toBe(true);
+    expect(state.lastFrameByBlock.main["PT:timer"]).toBe(3.5);
+  });
+
+  it("lee el ET previo si el comparador está antes del temporizador", () => {
+    const blocks = mainBlocks([
+      cmpTimerRung("cmp", "ET:timer", ">=", 0.1, "Q0.1"),
+      contactRung("timer", "I0.0", "Q0.0", "ton", { preset: 0.5 }),
+    ]);
+    // En el primer tick (arranque en frío), el comparador ve ET=0 previo -> false
+    let state = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(state.outputs["Q0.1"]).toBe(false);
+
+    // En el segundo tick, el comparador ve ET=0.1 del tick previo -> true
+    state = computeScanTick(blocks, { "I0.0": true }, state.timers);
+    expect(state.outputs["Q0.1"]).toBe(true);
+  });
+
+  it("una referencia a un temporizador eliminado no cumple ni igualdad a cero ni desigualdad", () => {
+    for (const op of ["==", "<>"]) {
+      const state = computeScanTick(mainBlocks([cmpTimerRung("cmp", "ET:deleted", op, op === "==" ? 0 : 2)]), {}, {});
+      expect(state.outputs["Q0.1"]).toBe(false);
+    }
+  });
+
+  it("mantiene ET independiente para dos llamadas al mismo bloque FC", () => {
+    const fc = {
+      id: "fc",
+      kind: "fc",
+      interface: { in: [{ id: "in" }], out: [{ id: "out" }] },
+      rungs: [
+        contactRung("t", "#in", "M0.0", "ton", { preset: 0.5 }),
+        {
+          id: "cmp",
+          outType: "coil",
+          outAddr: "#out",
+          logic: [{ kind: "compare", id: "cmp-node", addr: "ET:t", op: ">=", value: 0.2 }],
+        },
+      ],
+    };
+    const call = (id, input, output) => ({
+      id,
+      logic: [],
+      outType: "call",
+      callTarget: "fc",
+      paramWiring: { in: input, out: output },
+    });
+    // Llamada 'a' recibe I0.0=true (cuenta tiempo), llamada 'b' recibe I0.1=false (en reposo)
+    const blocks = mainBlocks([call("a", "I0.0", "Q0.0"), call("b", "I0.1", "Q0.1")], [fc]);
+
+    // Tick 1
+    let state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, {});
+    expect(state.outputs["Q0.0"]).toBe(false);
+    expect(state.outputs["Q0.1"]).toBe(false);
+
+    // Tick 2 -> llamada 'a' llega a ET=0.2 (Q0.0 = true), pero llamada 'b' sigue en 0 (Q0.1 = false)
+    state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, state.timers, state.mem, "main", state.localParams);
+    expect(state.outputs["Q0.0"]).toBe(true);
+    expect(state.outputs["Q0.1"]).toBe(false);
+  });
+});

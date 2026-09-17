@@ -83,13 +83,14 @@ export function TiaContact({ neg, edge, stateObj }) {
 export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, onChangeAddr, onCycleOp, onChangeValue }) {
   const color = active && flowIn ? T.tiaLineActive : T.tiaLine;
   const sparking = useSpark(active && flowIn);
+  const isSpecial = addr.startsWith("CV:") || addr.startsWith("ET:") || addr.startsWith("PT:");
   return (
     <div style={{ display: "flex", alignItems: "flex-start" }}>
       <TiaLine active={flowIn} size={8} />
       <div style={{
         border: `3px solid ${color}`,
         backgroundColor: "#FFF",
-        width: addr.startsWith("CV:") ? 174 : 78,
+        width: isSpecial ? 174 : 78,
         height: 68,
         display: "flex",
         flexDirection: "column",
@@ -103,11 +104,17 @@ export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, on
         <select
           value={addr}
           onChange={(e) => onChangeAddr(e.target.value)}
-          title={`Entrada analógica o CV del contador a comparar: ${addrOptions.find((a) => (typeof a === "string" ? a : a.addr) === addr)?.label || addr}`}
+          title={`Variable u operando a comparar: ${addrOptions.find((a) => (typeof a === "string" ? a : a.addr) === addr)?.label || addr}`}
           style={{ minWidth: 0, width: "100%", height: 18, fontSize: 11, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", padding: 0, margin: 0, outline: "none", cursor: "pointer" }}
         >
           {!addrOptions.some((a) => (typeof a === "string" ? a : a.addr) === addr) && (
-            <option value={addr}>Contador no disponible</option>
+            <option value={addr}>
+              {addr.startsWith("ET:") || addr.startsWith("PT:")
+                ? "Temporizador no disponible"
+                : addr.startsWith("CV:")
+                  ? "Contador no disponible"
+                  : "Variable no disponible"}
+            </option>
           )}
           {addrOptions.map((a) => {
             const optionAddr = typeof a === "string" ? a : a.addr;
@@ -126,8 +133,9 @@ export function TiaCompareBox({ addr, op, value, active, flowIn, addrOptions, on
         </div>
         <input
           type="number"
+          step="any"
           value={value}
-          onChange={(e) => onChangeValue(Number(e.target.value) || 0)}
+          onChange={(e) => onChangeValue(e.target.value === "" ? 0 : Number(e.target.value))}
           title="Valor constante de la comparación"
           style={{ height: 18, fontSize: 12, fontFamily: T.mono, fontWeight: "bold", color: T.tiaText, border: "none", background: "transparent", textAlign: "center", width: "100%", padding: 0, margin: 0, outline: "none" }}
         />

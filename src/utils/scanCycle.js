@@ -1,6 +1,6 @@
 import { OUTPUT_ADDR, MARK_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
 import { evalSeries } from "./evalNode";
-import { counterOperands } from "./counterOperands";
+import { counterOperands, timerOperands } from "./counterOperands";
 
 // Ejecuta un ciclo de scan completo: evalúa cada segmento en orden sobre la
 // memoria combinada (entradas + salidas previas) y escribe su salida en esa
@@ -55,8 +55,22 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
     const counterMem = Object.fromEntries(counterOperands(block.rungs).map(({ addr, id }) =>
       [addr, prevTimers[`${pathPrefix}:${id}`]?.count ?? 0]
     ));
+    const timerMem = Object.fromEntries(timerOperands(block.rungs).map(({ addr, id }) => {
+      const r = block.rungs.find((rg) => rg.id === id);
+      if (addr.startsWith("PT:")) return [addr, r?.preset ?? 0];
+      const raw = prevTimers[`${pathPrefix}:${id}`];
+      let prevEl = 0;
+      if (r?.outType === "ton") {
+        prevEl = typeof raw === "number" ? raw : (raw?.elapsed ?? 0);
+      } else if (r?.outType === "tof") {
+        prevEl = typeof raw === "number" ? raw : (raw?.elapsed ?? (r?.preset ?? 0));
+      } else if (r?.outType === "tp") {
+        prevEl = typeof raw?.elapsed === "number" ? raw.elapsed : (r?.preset ?? 0);
+      }
+      return [addr, prevEl];
+    }));
     block.rungs.forEach((rung) => {
-      const readMem = { ...nextMem, ...localParams, ...counterMem };
+      const readMem = { ...nextMem, ...localParams, ...counterMem, ...timerMem };
       // prevMem para flancos P/N: memoria física previa + valores previos de
       // ESTE sitio de llamada (mismo concepto que prevScanMem, pero para los
       // #param efímeros, que de otro modo nunca detectarían una transición).
@@ -169,7 +183,10 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
           elapsed = prevElapsed + SCAN_MS / 1000; // flanco de bajada o ya contando: sigue la cuenta
           if (elapsed > rung.preset) elapsed = rung.preset;
         }
+        elapsed = Math.round(elapsed * 1000) / 1000;
         nextTimers[timerKey] = elapsed;
+        timerMem[`ET:${rung.id}`] = elapsed;
+        timerMem[`PT:${rung.id}`] = rung.preset ?? 0;
         write(rung.outAddr, combined || elapsed < rung.preset);
       } else if (rung.outType === "tp") {
         // Pulso: un flanco de subida en la entrada dispara "preset" segundos
@@ -180,7 +197,10 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         let elapsed = rising ? 0 : prevState.elapsed;
         const pulseActive = elapsed < rung.preset;
         if (pulseActive) elapsed = Math.min(elapsed + SCAN_MS / 1000, rung.preset);
+        elapsed = Math.round(elapsed * 1000) / 1000;
         nextTimers[timerKey] = { elapsed, prevCombined: combined };
+        timerMem[`ET:${rung.id}`] = elapsed;
+        timerMem[`PT:${rung.id}`] = rung.preset ?? 0;
         write(rung.outAddr, pulseActive);
       } else if (rung.outType === "ctu" || rung.outType === "ctd" || rung.outType === "ctud") {
         // Contadores: CTU (cuenta arriba), CTD (cuenta abajo) y CTUD (bidireccional).
@@ -278,11 +298,14 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
         const prevElapsed = prevTimers[timerKey] || 0;
         let elapsed = combined ? prevElapsed + SCAN_MS / 1000 : 0;
         if (elapsed > rung.preset) elapsed = rung.preset;
+        elapsed = Math.round(elapsed * 1000) / 1000;
         nextTimers[timerKey] = elapsed;
+        timerMem[`ET:${rung.id}`] = elapsed;
+        timerMem[`PT:${rung.id}`] = rung.preset ?? 0;
         write(rung.outAddr, elapsed >= rung.preset);
       }
     });
-    lastFrameByBlock[blockId] = { ...localParams, ...counterMem };
+    lastFrameByBlock[blockId] = { ...localParams, ...counterMem, ...timerMem };
   }
 
   runBlock(mainBlockId, {}, {}, mainBlockId, 0);

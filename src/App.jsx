@@ -5,9 +5,10 @@ import {
   OUTPUT_ADDR,
   MARK_ADDR,
   ANALOG_ADDR,
+  ANALOG_OUT_ADDR,
   MAX_RUNGS,
 } from "./utils/constants";
-import { counterOperands } from "./utils/counterOperands";
+import { counterOperands, timerOperands } from "./utils/counterOperands";
 import { computeStates } from "./utils/evalNode";
 import {
   applyWiring,
@@ -870,9 +871,31 @@ export default function PlcEmulator() {
                       ...sim.analogOutputs,
                       ...frame,
                     };
-                    // Solo referencias vigentes; antes del primer scan CV empieza en cero.
-                    Object.keys(mem).filter((addr) => addr.startsWith("CV:")).forEach((addr) => delete mem[addr]);
+                    // Solo referencias vigentes; antes del primer scan CV/ET/PT empiezan en valores seguros.
+                    Object.keys(mem).filter((addr) => addr.startsWith("CV:") || addr.startsWith("ET:") || addr.startsWith("PT:")).forEach((addr) => delete mem[addr]);
                     counterOperands(activeBlock.rungs).forEach(({ addr }) => { mem[addr] = frame[addr] ?? 0; });
+                    timerOperands(activeBlock.rungs).forEach(({ addr, id }) => {
+                      if (addr.startsWith("PT:")) {
+                        const r = activeBlock.rungs.find((rg) => rg.id === id);
+                        mem[addr] = r?.preset ?? 0;
+                      } else {
+                        if (frame[addr] !== undefined) {
+                          mem[addr] = frame[addr];
+                        } else {
+                          const r = activeBlock.rungs.find((rg) => rg.id === id);
+                          const rawTimer = timerValueFor(sim.timerDisplay, activeBlock.id, id);
+                          if (r?.outType === "ton") {
+                            mem[addr] = typeof rawTimer === "number" ? rawTimer : (rawTimer?.elapsed ?? 0);
+                          } else if (r?.outType === "tof") {
+                            mem[addr] = typeof rawTimer === "number" ? rawTimer : (rawTimer?.elapsed ?? (r?.preset ?? 0));
+                          } else if (r?.outType === "tp") {
+                            mem[addr] = typeof rawTimer?.elapsed === "number" ? rawTimer.elapsed : (r?.preset ?? 0);
+                          } else {
+                            mem[addr] = 0;
+                          }
+                        }
+                      }
+                    });
                     const states = computeStates(rung.logic, mem, sim.prevMem);
                     if (rung.outType === "sr" || rung.outType === "rs") {
                       computeStates(rung.logicR || [], mem, sim.prevMem, states);
@@ -896,7 +919,12 @@ export default function PlcEmulator() {
                         canDelete={activeBlock.rungs.length > 1}
                         symbols={symbolsForEditor}
                         addrOptions={contactAddrOptions}
-                        analogAddrOptions={[...ANALOG_ADDR, ...counterOperands(activeBlock.rungs)]}
+                        analogAddrOptions={[
+                          ...ANALOG_ADDR,
+                          ...ANALOG_OUT_ADDR,
+                          ...counterOperands(activeBlock.rungs),
+                          ...timerOperands(activeBlock.rungs),
+                        ]}
                         outputAddrOptions={outputAddrOptions}
                         blocks={project.blocks}
                         currentBlockId={activeBlock.id}
