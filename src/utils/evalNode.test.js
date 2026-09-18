@@ -110,6 +110,17 @@ describe("evalSeries", () => {
     expect(evalSeries(nodes, { "I0.0": false, "I0.1": true, "I0.2": true })).toBe(false);
     expect(evalSeries(nodes, { "I0.0": true, "I0.1": false, "I0.2": false })).toBe(false);
   });
+
+  it("el nodo NOT invierte el RLO acumulado en la serie", () => {
+    const notNode = { kind: "not", id: "not-1" };
+    // I0.0 AND NOT => si I0.0=true, sale false; si I0.0=false, sale true
+    expect(evalSeries([contact("I0.0"), notNode], { "I0.0": true })).toBe(false);
+    expect(evalSeries([contact("I0.0"), notNode], { "I0.0": false })).toBe(true);
+
+    // NOT intermedio: (NOT I0.0) AND I0.1
+    expect(evalSeries([contact("I0.0"), notNode, contact("I0.1")], { "I0.0": false, "I0.1": true })).toBe(true);
+    expect(evalSeries([contact("I0.0"), notNode, contact("I0.1")], { "I0.0": true, "I0.1": true })).toBe(false);
+  });
 });
 
 describe("computeStates", () => {
@@ -119,6 +130,16 @@ describe("computeStates", () => {
     expect(states[nodes[0].id]).toEqual({ state: false, flowIn: true });
     // El segundo contacto sí puede estar activo (state:true) pero no le llega corriente (flowIn:false)
     expect(states[nodes[1].id]).toEqual({ state: true, flowIn: false });
+  });
+
+  it("el nodo NOT invierte flowOut correctamente", () => {
+    const notNode = { kind: "not", id: "not-1" };
+    const nodes = [contact("I0.0"), notNode];
+    const statesWhenOff = computeStates(nodes, { "I0.0": false }, {});
+    expect(statesWhenOff["not-1"]).toEqual({ state: true, flowIn: false, flowOut: true });
+
+    const statesWhenOn = computeStates(nodes, { "I0.0": true }, {});
+    expect(statesWhenOn["not-1"]).toEqual({ state: true, flowIn: true, flowOut: false });
   });
 
   it("registra también el estado de las ramas dentro de un paralelo", () => {

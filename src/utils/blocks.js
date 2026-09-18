@@ -16,9 +16,9 @@ import { genBlockId, genParamId, newRung } from "./ladderTree";
 // necesidad de gestionar un DB de instancia a mano como en TIA Portal real.
 export function newBlock(kind = "fc", name) {
   return {
-    id: kind === "main" ? "main" : genBlockId(),
-    kind, // "main" | "fc" | "fb"
-    name: name ?? (kind === "main" ? "Main" : kind === "fb" ? "FB" : "FC"),
+    id: kind === "main" ? "main" : kind === "startup" ? "startup" : genBlockId(),
+    kind, // "main" | "startup" | "fc" | "fb"
+    name: name ?? (kind === "main" ? "Main" : kind === "startup" ? "Startup" : kind === "fb" ? "FB" : "FC"),
     rungs: [newRung(0)],
     interface: kind === "fb" ? { in: [], out: [], static: [] } : { in: [], out: [] },
   };
@@ -38,6 +38,10 @@ export function nextFbName(blocks) {
 }
 
 export function addBlock(blocks, kind = "fc") {
+  if (kind === "startup") {
+    if (blocks.some((b) => b.kind === "startup" || b.id === "startup")) return blocks;
+    return [...blocks, newBlock("startup", "Startup")];
+  }
   return [...blocks, newBlock(kind, kind === "fb" ? nextFbName(blocks) : nextFcName(blocks))];
 }
 

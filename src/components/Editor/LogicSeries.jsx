@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { T, CMP_OPS } from "../../utils/constants";
-import { TiaLine, TiaContact, TiaCompareBox } from "./TiaGraphics";
+import { TiaLine, TiaContact, TiaCompareBox, TiaNot } from "./TiaGraphics";
 import { TiaSelect, TiaMiniBtn } from "./TiaControls";
 import { BRANCH_H, BRANCH_GAP, STEP } from "./parallelGeometry";
 
@@ -97,6 +97,11 @@ function TailSlot({ containerId, nodes, depth, actions, dnd, energized }) {
           title="Añadir contacto (o arrastrar hasta cualquier posición del esquema)"
         >+C</TiaMiniBtn>
         <TiaMiniBtn
+          onClick={() => actions.addNot(containerId)} disabled={atLimit}
+          draggable={!atLimit} onDragStart={dnd.startNewDrag("not")} onDragEnd={dnd.endDrag}
+          title="Añadir inversor de flujo lógico NOT (o arrastrar hasta cualquier posición del esquema)"
+        >+NOT</TiaMiniBtn>
+        <TiaMiniBtn
           onClick={() => actions.addCompare(containerId)} disabled={atLimit}
           draggable={!atLimit} onDragStart={dnd.startNewDrag("compare")} onDragEnd={dnd.endDrag}
           title="Añadir comparador numérico sobre una entrada analógica o el CV de un contador (o arrastrar hasta cualquier posición del esquema)"
@@ -126,7 +131,8 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
       {nodes.map((n, idx) => {
         const nodeState = states[n.id];
         const prevFlow = currentFlow;
-        currentFlow = currentFlow && nodeState?.state;
+        const isNot = n.kind === "not";
+        currentFlow = isNot ? !prevFlow : currentFlow && nodeState?.state;
 
         return (
           <React.Fragment key={n.id}>
@@ -157,6 +163,22 @@ export function LogicSeries({ containerId, nodes, states, actions, depth, flowIn
                   // contacto (y solo asomando un poco a la derecha, donde sí
                   // sobra hueco horizontal) no invade la fila vecina.
                   <button onClick={() => actions.removeNode(n.id)} title="Eliminar contacto" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
+                )}
+              </div>
+            ) : n.kind === "not" ? (
+              <div
+                draggable
+                onDragStart={dnd.startNodeDrag(n.id)}
+                onDragEnd={dnd.endDrag}
+                style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", margin: "0 4px", cursor: "grab" }}
+              >
+                <span
+                  style={{ position: "absolute", top: 8, left: -11, fontSize: 11, lineHeight: 1, color: "#AAA", userSelect: "none" }}
+                  title="Arrastrar para mover este inversor NOT"
+                >⠿</span>
+                <TiaNot flowIn={prevFlow} flowOut={currentFlow} />
+                {(nodes.length > 1 || containerId === "root") && (
+                  <button onClick={() => actions.removeNode(n.id)} title="Eliminar inversor NOT" style={{ position: "absolute", top: 8, right: -10, fontSize: 10, lineHeight: 1, color: "red", border: "none", background: "none", cursor: "pointer", padding: 0 }}>✕</button>
                 )}
               </div>
             ) : n.kind === "compare" ? (

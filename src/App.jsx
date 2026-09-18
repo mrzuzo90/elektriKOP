@@ -7,6 +7,7 @@ import {
   ANALOG_ADDR,
   ANALOG_OUT_ADDR,
   MAX_RUNGS,
+  DEFAULT_SYSTEM_SYMBOLS,
 } from "./utils/constants";
 import { counterOperands, timerOperands } from "./utils/counterOperands";
 import { computeStates } from "./utils/evalNode";
@@ -236,6 +237,7 @@ export default function PlcEmulator() {
   const localStatic = isFb ? activeBlock.interface.static || [] : [];
   const localParams = [...localIn, ...localOut, ...localStatic];
   const symbolsForEditor = {
+    ...DEFAULT_SYSTEM_SYMBOLS,
     ...project.symbols,
     ...Object.fromEntries(localParams.map((p) => [`#${p.id}`, p.name])),
   };

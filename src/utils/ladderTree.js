@@ -9,6 +9,9 @@ export function newContactNode() {
 export function newCompareNode() {
   return { kind: "compare", id: genId(), addr: "IW0", op: ">=", value: 50 };
 }
+export function newNotNode() {
+  return { kind: "not", id: genId() };
+}
 export function newBranch() {
   return { id: genId(), nodes: [newContactNode()] };
 }

@@ -183,14 +183,29 @@ export function useSimulation({
       });
     }
 
+    const scanContext = {
+      scanCount,
+      isFirstScan: scanCount === 0,
+      elapsedTimeMs: scanCount * SCAN_MS,
+    };
+
     const {
       outputs: nextOutputs,
       marks: nextMarks,
+      analogOutputs: nextAnalogOutputs,
       timers: nextTimerDisplay,
       mem: nextMem,
       localParams: nextLocalParams,
       lastFrameByBlock,
-    } = computeScanTick(blocksRef.current, mem, timersRef.current, scanMemRef.current, "main", localParamsRef.current);
+    } = computeScanTick(
+      blocksRef.current,
+      mem,
+      timersRef.current,
+      scanMemRef.current,
+      "main",
+      localParamsRef.current,
+      scanContext
+    );
 
     // Si una salida física o marca está forzada, mantener el forzado activo
     if (forcesRef.current && typeof forcesRef.current === "object") {
@@ -208,6 +223,10 @@ export function useSimulation({
 
     setOutputs(nextOutputs);
     setMarks(nextMarks);
+    if (nextAnalogOutputs) {
+      setAnalogOutputs(nextAnalogOutputs);
+      analogOutputsRef.current = nextAnalogOutputs;
+    }
     setTimerDisplay(nextTimerDisplay);
     setPrevMem(nextMem);
     setLastCallFrames(lastFrameByBlock);
@@ -243,10 +262,13 @@ export function useSimulation({
     }
   };
 
+  const runScanTickRef = useRef(runScanTick);
+  runScanTickRef.current = runScanTick;
+
   // Scan Cycle
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(runScanTick, SCAN_MS);
+    const id = setInterval(() => runScanTickRef.current(), SCAN_MS);
     return () => clearInterval(id);
   }, [running]);
 

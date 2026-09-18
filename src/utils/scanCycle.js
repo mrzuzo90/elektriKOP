@@ -1,4 +1,4 @@
-import { OUTPUT_ADDR, MARK_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
+import { OUTPUT_ADDR, MARK_ADDR, ANALOG_OUT_ADDR, SCAN_MS, MAX_CALL_DEPTH } from "./constants";
 import { evalSeries } from "./evalNode";
 import { counterOperands, timerOperands } from "./counterOperands";
 
@@ -9,40 +9,31 @@ import { counterOperands, timerOperands } from "./counterOperands";
 // que en un PLC real. Pura (sin refs ni estado de React) para poder
 // testearla de forma aislada; useSimulation la envuelve con el estado del
 // hook.
-//
-// prevScanMem es la memoria final (nextMem) tal cual quedó al terminar el
-// ciclo ANTERIOR — no `mem` de este ciclo, que ya trae los valores actuales
-// de las entradas y sería idéntico a nextMem para cualquier dirección que
-// ningún segmento haya escrito todavía. Sin esa distinción, un contacto de
-// flanco P/N nunca vería una transición real entre un ciclo y el siguiente.
-// El llamador debe guardar el `mem` devuelto y pasarlo como prevScanMem en
-// la siguiente llamada (así lo hacen useSimulation.js y challengeRunner.js).
-//
-// Una única memoria física compartida (nextMem, I+Q) recorre todo el árbol
-// de llamadas entre bloques sin copiarse/aislarse — así un FC que escribe
-// una dirección global directamente se refleja globalmente sin caso
-// especial. Solo los parámetros locales ("#paramId") de la interfaz de un FC
-// viven en un objeto `localParams` efímero, uno por sitio de llamada, que se
-// descarta al terminar ese scan tick (un FC no tiene memoria de instancia
-// persistente — esa es justo la diferencia con un FB, fuera de alcance).
-//
-// La única excepción a esa falta de memoria son los timers (TON/TOF/TP) y
-// los flancos P/N sobre un parámetro local: para que dos sitios de llamada
-// al mismo FC mantengan cuentas de tiempo y detección de flanco
-// independientes, se namespacean por la ruta de llamada completa hasta ese
-// rung ("main:7>fc1:3" = rung 3 de fc1, llamado desde el rung 7 de main),
-// no por su id a secas. prevLocalParams sigue exactamente el mismo patrón
-// que prevTimers/prevScanMem: el llamador guarda el `localParams` devuelto y
-// lo pasa como prevLocalParams en el siguiente tick.
-export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainBlockId = "main", prevLocalParams = {}) {
+export function computeScanTick(
+  blocks,
+  mem,
+  prevTimers,
+  prevScanMem = {},
+  mainBlockId = "main",
+  prevLocalParams = {},
+  scanContext = {}
+) {
   const nextMem = { ...mem };
+
+  // Actualizar Marcas de Sistema y de Reloj (Siemens S7-1200 MB1)
+  const scanCount = scanContext.scanCount ?? 0;
+  const isFirstScan = scanContext.isFirstScan ?? (scanCount === 0 && Object.keys(prevScanMem).length === 0);
+  const elapsedTimeMs = scanContext.elapsedTimeMs ?? (scanCount * SCAN_MS);
+
+  nextMem["M1.0"] = !!isFirstScan;
+  nextMem["M1.2"] = true;
+  nextMem["M1.3"] = false;
+  nextMem["M1.5"] = (elapsedTimeMs % 2000) < 1000;
+  nextMem["M1.6"] = (elapsedTimeMs % 500) < 250;
+  nextMem["M1.7"] = (elapsedTimeMs % 1000) < 500;
+
   const nextTimers = {};
   const nextLocalParams = {};
-  // Último marco (valores IN/OUT) con el que se ejecutó cada bloque este
-  // tick, indexado por blockId — cuando un FC tiene varios sitios de
-  // llamada activos en el mismo ciclo, el último en ejecutarse gana (ver
-  // decisión de diseño: simulador didáctico, no depurador multi-instancia).
-  // Lo usa App.jsx para pintar el flujo dentro del FC que se está editando.
   const lastFrameByBlock = {};
   const blockById = new Map(blocks.map((b) => [b.id, b]));
 
@@ -60,7 +51,7 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
       if (addr.startsWith("PT:")) return [addr, r?.preset ?? 0];
       const raw = prevTimers[`${pathPrefix}:${id}`];
       let prevEl = 0;
-      if (r?.outType === "ton") {
+      if (r?.outType === "ton" || r?.outType === "tonr") {
         prevEl = typeof raw === "number" ? raw : (raw?.elapsed ?? 0);
       } else if (r?.outType === "tof") {
         prevEl = typeof raw === "number" ? raw : (raw?.elapsed ?? (r?.preset ?? 0));
@@ -293,6 +284,49 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
           }
         }
         counterMem[`CV:${rung.id}`] = count;
+      } else if (rung.outType === "tonr") {
+        // Retentive On-delay (TONR): acumula tiempo cuando IN (combined) está a 1,
+        // retiene el tiempo cuando IN pasa a 0, y solo se resetea con logicReset / resetAddr.
+        const prevElapsed = prevTimers[timerKey] ?? 0;
+        const resetVal =
+          rung.logicReset !== undefined
+            ? evalSeries(rung.logicReset || [], readMem, readPrevMem)
+            : (rung.resetAddr ? !!readMem[rung.resetAddr] : false);
+
+        let elapsed = prevElapsed;
+        if (resetVal) {
+          elapsed = 0;
+        } else if (combined) {
+          elapsed = Math.min(prevElapsed + SCAN_MS / 1000, rung.preset ?? 5);
+        }
+        elapsed = Math.round(elapsed * 1000) / 1000;
+        nextTimers[timerKey] = elapsed;
+        timerMem[`ET:${rung.id}`] = elapsed;
+        timerMem[`PT:${rung.id}`] = rung.preset ?? 5;
+        write(rung.outAddr, elapsed >= (rung.preset ?? 5));
+      } else if (rung.outType === "move") {
+        // Bloque MOVE de TIA Portal: si EN (combined) es true, transfiere IN a OUT
+        if (combined) {
+          let inVal = 0;
+          if (rung.inAddr && rung.inAddr !== "const") {
+            inVal = Number(readMem[rung.inAddr]) || 0;
+          } else {
+            inVal = Number(rung.inVal ?? rung.preset ?? 0);
+          }
+          write(rung.outAddr, inVal);
+        }
+      } else if (rung.outType === "add" || rung.outType === "sub") {
+        // Bloques matemáticos ADD / SUB
+        if (combined) {
+          const v1 = (rung.in1Addr && rung.in1Addr !== "const")
+            ? (Number(readMem[rung.in1Addr]) || 0)
+            : Number(rung.in1Val ?? 0);
+          const v2 = (rung.in2Addr && rung.in2Addr !== "const")
+            ? (Number(readMem[rung.in2Addr]) || 0)
+            : Number(rung.in2Val ?? 0);
+          const res = rung.outType === "add" ? (v1 + v2) : (v1 - v2);
+          write(rung.outAddr, res);
+        }
       } else {
         // ton
         const prevElapsed = prevTimers[timerKey] || 0;
@@ -308,13 +342,17 @@ export function computeScanTick(blocks, mem, prevTimers, prevScanMem = {}, mainB
     lastFrameByBlock[blockId] = { ...localParams, ...counterMem, ...timerMem };
   }
 
+  // Si es el primer ciclo de scan (isFirstScan) y existe un bloque Startup [OB100],
+  // se ejecuta una única vez antes de OB1 (Main)
+  const startupBlock = blocks.find((b) => b.kind === "startup" || b.id === "startup" || b.name === "Startup");
+  if (isFirstScan && startupBlock) {
+    runBlock(startupBlock.id, {}, {}, startupBlock.id, 0);
+  }
+
   runBlock(mainBlockId, {}, {}, mainBlockId, 0);
 
   const outputs = Object.fromEntries(OUTPUT_ADDR.map((a) => [a, !!nextMem[a]]));
-  // Marcas (M): igual que las salidas Q, necesitan persistir de un scan al
-  // siguiente — se devuelven aparte (no mezcladas en `outputs`) para no
-  // arriesgar a los consumidores que asumen que `outputs` tiene exactamente
-  // las 10 claves de OUTPUT_ADDR (HMI, ProcessPanel, detección de conflictos).
   const marks = Object.fromEntries(MARK_ADDR.map((a) => [a, !!nextMem[a]]));
-  return { outputs, marks, timers: nextTimers, mem: nextMem, localParams: nextLocalParams, lastFrameByBlock };
+  const analogOutputs = Object.fromEntries(ANALOG_OUT_ADDR.map((a) => [a, Number(nextMem[a]) || 0]));
+  return { outputs, marks, analogOutputs, timers: nextTimers, mem: nextMem, localParams: nextLocalParams, lastFrameByBlock };
 }

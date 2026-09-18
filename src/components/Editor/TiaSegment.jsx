@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { T } from "../../utils/constants";
 import {
   newContactNode,
+  newNotNode,
   newCompareNode,
   newParallelNode,
   countContacts,
@@ -13,7 +14,7 @@ import {
   insertNodeAt,
   moveNode,
 } from "../../utils/ladderTree";
-import { TiaCoil, TiaSetReset, TiaTonBox, TiaSrBox } from "./TiaGraphics";
+import { TiaCoil, TiaSetReset, TiaTonBox, TiaSrBox, TiaTonrBox, TiaMoveBox, TiaMathBox } from "./TiaGraphics";
 import { TiaSelect, TiaInstructionBtn } from "./TiaControls";
 import { LogicSeries } from "./LogicSeries";
 import TiaCallBox from "./TiaCallBox";
@@ -26,17 +27,22 @@ const OUT_TYPES = [
   { value: "reset", label: "Reset", sub: "-(R)-" },
   { value: "sr", label: "SR", sub: "S / R1" },
   { value: "ton", label: "Temp", sub: "TON" },
+  { value: "tonr", label: "Temp", sub: "TONR" },
   { value: "tof", label: "Temp", sub: "TOF" },
   { value: "tp", label: "Temp", sub: "TP" },
   { value: "ctu", label: "Cont.", sub: "CTU" },
   { value: "ctd", label: "Cont.", sub: "CTD" },
   { value: "ctud", label: "Cont.", sub: "CTUD" },
+  { value: "move", label: "Mover", sub: "MOVE" },
+  { value: "add", label: "Suma", sub: "ADD" },
+  { value: "sub", label: "Resta", sub: "SUB" },
   { value: "call", label: "Llamar", sub: "CALL" },
 ];
 
 const isSrFamily = (outType) => outType === "sr" || outType === "rs";
 const isCounterFamily = (outType) => outType === "ctu" || outType === "ctd" || outType === "ctud";
-const isDualBranchFamily = (outType) => isSrFamily(outType) || isCounterFamily(outType);
+const isTonrFamily = (outType) => outType === "tonr";
+const isDualBranchFamily = (outType) => isSrFamily(outType) || isCounterFamily(outType) || isTonrFamily(outType);
 
 // Fábrica de acciones de edición del árbol lógico, parametrizada por el
 // campo del rung sobre el que operan ("logic" para la red normal / la
@@ -55,9 +61,11 @@ function makeActions(rung, onChange, field) {
   return {
     totalContacts: () => countContacts(getList()),
     addContact: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newContactNode()]) }),
+    addNot: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newNotNode()]) }),
     addCompare: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newCompareNode()]) }),
     addParallel: (containerId) => onChange({ ...rung, [field]: mapContainer(getList(), containerId, (nodes) => [...nodes, newParallelNode()]) }),
     insertContact: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newContactNode()) }),
+    insertNot: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newNotNode()) }),
     insertCompare: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newCompareNode()) }),
     insertParallel: (containerId, index) => onChange({ ...rung, [field]: insertNodeAt(getList(), containerId, index, newParallelNode()) }),
     moveNode: (nodeId, containerId, index) => onChange({ ...rung, [field]: moveNode(getList(), nodeId, containerId, index) }),
@@ -72,12 +80,13 @@ function makeActions(rung, onChange, field) {
 // insertar contacto o paralelo nuevo). Se instancia una vez por red —
 // TiaSegment siempre crea dos (S y R1) para poder tener hooks
 // incondicionales, aunque solo un bloque SR/RS use la segunda.
-// kind ("contact" | "compare" | "parallel") -> { dragKind, insertAction } —
+// kind ("contact" | "not" | "compare" | "parallel") -> { dragKind, insertAction } —
 // única fuente de verdad para qué botón/drag corresponde a qué acción de
 // inserción, así que añadir un tipo nuevo de nodo arrastrable (como
 // "compare") no obliga a tocar cada rama de active/startNewDrag/dropAt.
 const NEW_NODE_KINDS = {
   contact: { dragKind: "new-contact", insert: "insertContact" },
+  not: { dragKind: "new-not", insert: "insertNot" },
   compare: { dragKind: "new-compare", insert: "insertCompare" },
   parallel: { dragKind: "new-parallel", insert: "insertParallel" },
 };
@@ -135,13 +144,25 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
     if (newType === "sr" && isSrFamily(rung.outType)) return;
     const patch = { ...rung, outType: newType };
     if (newType === "sr" && !rung.logicR) patch.logicR = [newContactNode()];
-    if (newType === "ctu" || newType === "ctd" || newType === "ctud") {
+    if (newType === "ctu" || newType === "ctd" || newType === "ctud" || newType === "tonr") {
       if (!patch.preset) patch.preset = 5;
       if (patch.logicReset === undefined) {
         patch.logicReset = patch.resetAddr
           ? [{ ...newContactNode(), addr: patch.resetAddr }]
           : [newContactNode()];
       }
+    }
+    if (newType === "move") {
+      if (!patch.inAddr) patch.inAddr = "const";
+      if (patch.inVal === undefined) patch.inVal = 50;
+      if (!patch.outAddr) patch.outAddr = "QW0";
+    }
+    if (newType === "add" || newType === "sub") {
+      if (!patch.in1Addr) patch.in1Addr = "const";
+      if (patch.in1Val === undefined) patch.in1Val = 5;
+      if (!patch.in2Addr) patch.in2Addr = "const";
+      if (patch.in2Val === undefined) patch.in2Val = 5;
+      if (!patch.outAddr) patch.outAddr = "QW0";
     }
     if (newType === "call" && (!patch.calls || patch.calls.length === 0)) {
       patch.calls = [{ id: "c0", callTarget: rung.callTarget || null, paramWiring: rung.paramWiring || {} }];
@@ -390,6 +411,14 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
                 priority={rung.outType}
                 onToggle={() => onChange({ ...rung, outType: rung.outType === "sr" ? "rs" : "sr" })}
               />
+            ) : isTonrFamily(rung.outType) ? (
+              <TiaTonrBox
+                inFlow={flowToOut}
+                rFlow={flowReset}
+                active={evalResult?.outputState}
+                preset={rung.preset ?? 5}
+                elapsed={evalResult?.timerElapsed}
+              />
             ) : (
               <TiaCounterBox
                 rung={rung}
@@ -535,6 +564,35 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
               </div>
             ) : rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp" ? (
                <TiaTonBox active={evalResult?.outputState} flowIn={flowToOut} preset={rung.preset} elapsed={evalResult?.timerElapsed} label={rung.outType.toUpperCase()} />
+            ) : rung.outType === "move" ? (
+               <TiaMoveBox
+                 flowIn={flowToOut}
+                 inAddr={rung.inAddr}
+                 inVal={rung.inVal}
+                 outAddr={rung.outAddr}
+                 onChangeInAddr={(v) => onChange({ ...rung, inAddr: v })}
+                 onChangeInVal={(v) => onChange({ ...rung, inVal: v })}
+                 onChangeOutAddr={(v) => onChange({ ...rung, outAddr: v })}
+                 addrOptions={analogAddrOptions}
+                 outputAddrOptions={["QW0", ...outputAddrOptions]}
+               />
+            ) : rung.outType === "add" || rung.outType === "sub" ? (
+               <TiaMathBox
+                 type={rung.outType}
+                 flowIn={flowToOut}
+                 in1Addr={rung.in1Addr}
+                 in1Val={rung.in1Val}
+                 in2Addr={rung.in2Addr}
+                 in2Val={rung.in2Val}
+                 outAddr={rung.outAddr}
+                 onChangeIn1Addr={(v) => onChange({ ...rung, in1Addr: v })}
+                 onChangeIn1Val={(v) => onChange({ ...rung, in1Val: v })}
+                 onChangeIn2Addr={(v) => onChange({ ...rung, in2Addr: v })}
+                 onChangeIn2Val={(v) => onChange({ ...rung, in2Val: v })}
+                 onChangeOutAddr={(v) => onChange({ ...rung, outAddr: v })}
+                 addrOptions={analogAddrOptions}
+                 outputAddrOptions={["QW0", ...outputAddrOptions]}
+               />
             ) : rung.outType === "set" || rung.outType === "reset" ? (
                <TiaSetReset
                  active={evalResult?.outputState}
@@ -545,7 +603,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
             ) : (
                <TiaCoil active={evalResult?.outputState} flowIn={flowToOut} />
             )}
-            {rung.outType !== "call" && (
+            {rung.outType !== "call" && rung.outType !== "move" && rung.outType !== "add" && rung.outType !== "sub" && (
               <TiaSelect value={rung.outAddr} onChange={(v) => onChange({ ...rung, outAddr: v })} options={outputAddrOptions} isOut={true} symbols={symbols} />
             )}
           </div>
@@ -573,7 +631,7 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
                title={`${t.label} ${t.sub} — clic para elegir, o arrastrar hasta la salida del segmento`}
             />
          ))}
-         {(rung.outType === "ton" || rung.outType === "tof" || rung.outType === "tp") && (
+         {(rung.outType === "ton" || rung.outType === "tonr" || rung.outType === "tof" || rung.outType === "tp") && (
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                <span style={{color: T.tiaText}}>PT (segs):</span>
                <input

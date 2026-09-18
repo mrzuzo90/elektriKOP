@@ -67,10 +67,11 @@ describe("computeScanTick — marcas (M)", () => {
     expect(tick2.outputs["Q0.0"]).toBe(true);
   });
 
-  it("una marca NO usada nunca aparece en `marks` como true (arranca a false)", () => {
+  it("una marca de usuario (MB0) NO usada nunca aparece en `marks` como true (arranca a false)", () => {
     const blocks = mainBlocks([contactRung("r1", "I0.0", "Q0.0", "coil")]);
     const { marks } = computeScanTick(blocks, { "I0.0": true }, {});
-    expect(Object.values(marks).every((v) => v === false)).toBe(true);
+    const userMarks = ["M0.0", "M0.1", "M0.2", "M0.3", "M0.4", "M0.5", "M0.6", "M0.7"].map((a) => marks[a]);
+    expect(userMarks.every((v) => v === false)).toBe(true);
   });
 });
 
@@ -1309,5 +1310,188 @@ describe("comparadores de variables de tiempo (ET y PT) de temporizadores", () =
     state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, state.timers, state.mem, "main", state.localParams);
     expect(state.outputs["Q0.0"]).toBe(true);
     expect(state.outputs["Q0.1"]).toBe(false);
+  });
+});
+
+describe("computeScanTick — Marcas de sistema y de ciclo (S7-1200)", () => {
+  it("FirstScan (M1.0) está a true solo en el primer scan", () => {
+    const blocks = mainBlocks([contactRung("r1", "M1.0", "Q0.0", "coil")]);
+    // Scan 1 (primer scan)
+    const s1 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 0, isFirstScan: true });
+    expect(s1.marks["M1.0"]).toBe(true);
+    expect(s1.outputs["Q0.0"]).toBe(true);
+
+    // Scan 2 (ciclo normal)
+    const s2 = computeScanTick(blocks, s1.mem, s1.timers, s1.mem, "main", s1.localParams, { scanCount: 1, isFirstScan: false });
+    expect(s2.marks["M1.0"]).toBe(false);
+    expect(s2.outputs["Q0.0"]).toBe(false);
+  });
+
+  it("AlwaysTRUE (M1.2) es true y AlwaysFALSE (M1.3) es false", () => {
+    const blocks = mainBlocks([]);
+    const { marks } = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 5 });
+    expect(marks["M1.2"]).toBe(true);
+    expect(marks["M1.3"]).toBe(false);
+  });
+
+  it("Clock_1Hz (M1.7) oscila cada 1000ms (500ms ON / 500ms OFF)", () => {
+    const blocks = mainBlocks([]);
+    // t = 0ms (inicio de ciclo 1s) -> ON
+    const t0 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 0, elapsedTimeMs: 0 });
+    expect(t0.marks["M1.7"]).toBe(true);
+
+    // t = 400ms -> ON
+    const t400 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 4, elapsedTimeMs: 400 });
+    expect(t400.marks["M1.7"]).toBe(true);
+
+    // t = 600ms -> OFF
+    const t600 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 6, elapsedTimeMs: 600 });
+    expect(t600.marks["M1.7"]).toBe(false);
+
+    // t = 1000ms -> ON de nuevo
+    const t1000 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 10, elapsedTimeMs: 1000 });
+    expect(t1000.marks["M1.7"]).toBe(true);
+  });
+});
+
+describe("computeScanTick — Bloque Startup [OB100]", () => {
+  it("ejecuta OB100 exclusivamente en el primer ciclo de scan", () => {
+    const startupBlock = {
+      id: "startup",
+      kind: "startup",
+      name: "Startup",
+      rungs: [{ id: "st-1", outType: "set", outAddr: "M0.0", logic: [] }],
+    };
+    // En Main hay un reset de M0.0 activado por I0.0
+    const mainBlock = {
+      id: "main",
+      kind: "main",
+      name: "Main",
+      rungs: [{ id: "m-1", outType: "reset", outAddr: "M0.0", logic: [{ kind: "contact", id: "c1", addr: "I0.0", neg: false }] }],
+    };
+
+    const blocks = [mainBlock, startupBlock];
+
+    // Scan 1 (Arranque con I0.0 = false): Startup corre y hace Set M0.0
+    const s1 = computeScanTick(blocks, {}, {}, {}, "main", {}, { scanCount: 0, isFirstScan: true });
+    expect(s1.marks["M0.0"]).toBe(true);
+
+    // Scan 2: I0.0 = true resetea M0.0 en Main. Startup NO debe volver a correr
+    const s2 = computeScanTick(blocks, { ...s1.mem, "I0.0": true }, s1.timers, s1.mem, "main", s1.localParams, { scanCount: 1, isFirstScan: false });
+    expect(s2.marks["M0.0"]).toBe(false);
+
+    // Scan 3: I0.0 vuelve a false. Como Startup no corre, M0.0 se queda en false
+    const s3 = computeScanTick(blocks, { ...s2.mem, "I0.0": false }, s2.timers, s2.mem, "main", s2.localParams, { scanCount: 2, isFirstScan: false });
+    expect(s3.marks["M0.0"]).toBe(false);
+  });
+});
+
+describe("computeScanTick — Instrucción MOVE", () => {
+  it("transfiere un valor constante a la salida cuando EN es true", () => {
+    const moveRung = {
+      id: "m1",
+      outType: "move",
+      inAddr: "const",
+      inVal: 75,
+      outAddr: "QW0",
+      logic: [{ kind: "contact", id: "c1", addr: "I0.0", neg: false }],
+    };
+    const blocks = mainBlocks([moveRung]);
+
+    // EN = false -> no modifica QW0 (queda en 0)
+    const sOff = computeScanTick(blocks, { "I0.0": false, QW0: 0 }, {});
+    expect(sOff.analogOutputs["QW0"]).toBe(0);
+
+    // EN = true -> escribe 75 en QW0
+    const sOn = computeScanTick(blocks, { "I0.0": true, QW0: 0 }, {});
+    expect(sOn.analogOutputs["QW0"]).toBe(75);
+  });
+
+  it("transfiere el valor de otra variable analógica (IW0)", () => {
+    const moveRung = {
+      id: "m2",
+      outType: "move",
+      inAddr: "IW0",
+      outAddr: "QW0",
+      logic: [],
+    };
+    const blocks = mainBlocks([moveRung]);
+    const { analogOutputs } = computeScanTick(blocks, { IW0: 82 }, {});
+    expect(analogOutputs["QW0"]).toBe(82);
+  });
+});
+
+describe("computeScanTick — Temporizador retentivo TONR", () => {
+  it("acumula tiempo, retiene al desactivarse la entrada, y se resetea con R", () => {
+    const tonrRung = {
+      id: "t1",
+      outType: "tonr",
+      preset: 0.3,
+      outAddr: "Q0.0",
+      logic: [{ kind: "contact", id: "cin", addr: "I0.0", neg: false }],
+      logicReset: [{ kind: "contact", id: "crst", addr: "I0.1", neg: false }],
+    };
+    const blocks = mainBlocks([tonrRung]);
+
+    // Scan 1: I0.0 = true -> cuenta 0.1s
+    let state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, {});
+    expect(state.timers["main:t1"]).toBe(0.1);
+    expect(state.outputs["Q0.0"]).toBe(false);
+
+    // Scan 2: I0.0 = false -> RETENCIÓN: mantiene 0.1s (no vuelve a 0)
+    state = computeScanTick(blocks, { "I0.0": false, "I0.1": false }, state.timers, state.mem);
+    expect(state.timers["main:t1"]).toBe(0.1);
+    expect(state.outputs["Q0.0"]).toBe(false);
+
+    // Scan 3 y 4: I0.0 = true reanuda la cuenta hasta 0.3s -> activa salida
+    state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, state.timers, state.mem);
+    expect(state.timers["main:t1"]).toBe(0.2);
+    state = computeScanTick(blocks, { "I0.0": true, "I0.1": false }, state.timers, state.mem);
+    expect(state.timers["main:t1"]).toBe(0.3);
+    expect(state.outputs["Q0.0"]).toBe(true);
+
+    // Scan 5: I0.1 = true (Reset) -> reinicia acumulador a 0 y desactiva salida
+    state = computeScanTick(blocks, { "I0.0": false, "I0.1": true }, state.timers, state.mem);
+    expect(state.timers["main:t1"]).toBe(0);
+    expect(state.outputs["Q0.0"]).toBe(false);
+  });
+});
+
+describe("computeScanTick — Operaciones matemáticas ADD y SUB", () => {
+  it("ADD suma los dos operandos y escribe el resultado en destino", () => {
+    const addRung = {
+      id: "add1",
+      outType: "add",
+      in1Addr: "const",
+      in1Val: 20,
+      in2Addr: "const",
+      in2Val: 35,
+      outAddr: "QW0",
+      logic: [{ kind: "contact", id: "c1", addr: "I0.0", neg: false }],
+    };
+    const blocks = mainBlocks([addRung]);
+
+    // EN = false
+    const sOff = computeScanTick(blocks, { "I0.0": false }, {});
+    expect(sOff.analogOutputs["QW0"]).toBe(0);
+
+    // EN = true -> 20 + 35 = 55
+    const sOn = computeScanTick(blocks, { "I0.0": true }, {});
+    expect(sOn.analogOutputs["QW0"]).toBe(55);
+  });
+
+  it("SUB resta los dos operandos", () => {
+    const subRung = {
+      id: "sub1",
+      outType: "sub",
+      in1Addr: "IW0",
+      in2Addr: "const",
+      in2Val: 15,
+      outAddr: "QW0",
+      logic: [],
+    };
+    const blocks = mainBlocks([subRung]);
+    const { analogOutputs } = computeScanTick(blocks, { IW0: 100 }, {});
+    expect(analogOutputs["QW0"]).toBe(85);
   });
 });

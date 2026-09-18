@@ -44,6 +44,9 @@ export function collectUsedAddresses(rungs) {
     if (rung.cdAddr) set.add(rung.cdAddr);
     if (rung.loadAddr) set.add(rung.loadAddr);
     if (rung.qdAddr) set.add(rung.qdAddr);
+    if (rung.inAddr && rung.inAddr !== "const") set.add(rung.inAddr);
+    if (rung.in1Addr && rung.in1Addr !== "const") set.add(rung.in1Addr);
+    if (rung.in2Addr && rung.in2Addr !== "const") set.add(rung.in2Addr);
   });
   return [...INPUT_ADDR, ...OUTPUT_ADDR, ...MARK_ADDR, ...ANALOG_ADDR, ...ANALOG_OUT_ADDR].filter((a) => set.has(a));
 }
@@ -83,9 +86,9 @@ export function collectOutputConflicts(rungs) {
   });
   return Object.entries(byAddr).filter(([, idxs]) => {
     if (idxs.length < 2) return false;
-    // Solo avisamos si hay una bobina directa, un temporizador (TON/TOF/TP),
+    // Solo avisamos si hay una bobina directa, un temporizador (TON/TONR/TOF/TP),
     // un contador (CTU/CTD/CTUD) o un bloque SR/RS compartiendo la dirección con algo más.
-    return idxs.some((i) => ["coil", "ton", "tof", "tp", "sr", "rs", "ctu", "ctd", "ctud"].includes(rungs[i].outType));
+    return idxs.some((i) => ["coil", "ton", "tonr", "tof", "tp", "sr", "rs", "ctu", "ctd", "ctud"].includes(rungs[i].outType));
   });
 }
 

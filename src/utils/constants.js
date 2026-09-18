@@ -47,6 +47,21 @@ export const OUTPUT_ADDR = ["Q0.0", "Q0.1", "Q0.2", "Q0.3", "Q0.4", "Q0.5", "Q0.
 // banderas de secuencia sin tener que seguir gastando una Q libre como
 // apaño (patrón que ya aparecía en el ejercicio del semáforo).
 export const MARK_ADDR = ["M0.0", "M0.1", "M0.2", "M0.3", "M0.4", "M0.5", "M0.6", "M0.7", "M1.0", "M1.1", "M1.2", "M1.3", "M1.4", "M1.5", "M1.6", "M1.7"];
+
+// Marcas de sistema y de ciclo (S7-1200 Clock & System Memory Bits)
+// Byte MB1 reservado por defecto para emular las funciones estándar de Siemens
+export const SYSTEM_MARKS = {
+  "M1.0": { symbol: "FirstScan", desc: "1 solo ciclo en arranque" },
+  "M1.2": { symbol: "AlwaysTRUE", desc: "Siempre a 1 (TRUE)" },
+  "M1.3": { symbol: "AlwaysFALSE", desc: "Siempre a 0 (FALSE)" },
+  "M1.5": { symbol: "Clock_0.5Hz", desc: "Reloj 0.5 Hz (período 2.0s)" },
+  "M1.6": { symbol: "Clock_2Hz", desc: "Reloj 2.0 Hz (período 0.5s)" },
+  "M1.7": { symbol: "Clock_1Hz", desc: "Reloj 1.0 Hz (período 1.0s)" },
+};
+
+export const DEFAULT_SYSTEM_SYMBOLS = Object.fromEntries(
+  Object.entries(SYSTEM_MARKS).map(([addr, meta]) => [addr, meta.symbol])
+);
 // Entrada analógica (IW, "input word"): a diferencia de I/Q/M, su valor no
 // es un bit sino un número (0-100, como el porcentaje de un sensor de nivel
 // o temperatura simulado) — la controla un slider en Proceso simulado en

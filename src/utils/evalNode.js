@@ -37,20 +37,35 @@ export function evalNode(node, mem, prevMem = {}) {
     return node.neg ? !raw : raw;
   }
   if (node.kind === "compare") return evalCompare(node, mem);
+  if (node.kind === "not") return true;
   return node.branches.some((b) => evalSeries(b.nodes, mem, prevMem));
 }
 export function evalSeries(nodes, mem, prevMem = {}) {
   if (nodes.length === 0) return false;
-  return nodes.every((n) => evalNode(n, mem, prevMem));
+  let rlo = true;
+  for (const n of nodes) {
+    if (n.kind === "not") {
+      rlo = !rlo;
+    } else {
+      rlo = rlo && evalNode(n, mem, prevMem);
+    }
+  }
+  return rlo;
 }
 export function computeStates(nodes, mem, prevMem = {}, out = {}) {
   let accFlow = true; // Para pintar líneas verdes hasta donde llegue la corriente
   nodes.forEach((n) => {
-    const nodeState = evalNode(n, mem, prevMem);
-    out[n.id] = { state: nodeState, flowIn: accFlow };
-    accFlow = accFlow && nodeState;
-    if (n.kind === "parallel") {
-      n.branches.forEach((b) => computeStates(b.nodes, mem, prevMem, out));
+    if (n.kind === "not") {
+      const nextFlow = !accFlow;
+      out[n.id] = { state: true, flowIn: accFlow, flowOut: nextFlow };
+      accFlow = nextFlow;
+    } else {
+      const nodeState = evalNode(n, mem, prevMem);
+      out[n.id] = { state: nodeState, flowIn: accFlow };
+      accFlow = accFlow && nodeState;
+      if (n.kind === "parallel") {
+        n.branches.forEach((b) => computeStates(b.nodes, mem, prevMem, out));
+      }
     }
   });
   return out;

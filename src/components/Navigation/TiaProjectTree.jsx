@@ -123,6 +123,10 @@ export default function TiaProjectTree({
                     {blocks.map((b) => {
                       const isAct =
                         workspaceView === "program" && activeBlockId === b.id;
+                      const badge =
+                        b.kind === "main" ? "🟢" : b.kind === "startup" ? "🏁" : b.kind === "fb" ? "🟦" : "🟨";
+                      const tag =
+                        b.kind === "main" ? "OB1" : b.kind === "startup" ? "OB100" : b.kind.toUpperCase();
                       return (
                         <div
                           key={b.id}
@@ -131,13 +135,11 @@ export default function TiaProjectTree({
                             onSelectBlock(b.id);
                           }}
                           style={itemStyle(isAct)}
-                          title={`${b.name} [${b.kind === "main" ? "OB1" : b.kind.toUpperCase()}]`}
+                          title={`${b.name} [${tag}]`}
                         >
+                          <span>{badge}</span>
                           <span>
-                            {b.kind === "main" ? "🟢" : b.kind === "fb" ? "🟦" : "🟨"}
-                          </span>
-                          <span>
-                            {b.name} [{b.kind === "main" ? "OB1" : b.kind.toUpperCase()}]
+                            {b.name} [{tag}]
                           </span>
                         </div>
                       );

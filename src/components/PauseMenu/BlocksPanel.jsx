@@ -154,6 +154,22 @@ export default function BlocksPanel({ blocks, onAddBlock, onRenameBlock, onRemov
       <div style={{ marginTop: 10 }}>
         <PixelBtn small color="dwGrey" onClick={() => onAddBlock("fb")}>+ Nuevo FB</PixelBtn>
       </div>
+
+      <div style={{ marginTop: 16 }}>
+        <span style={{ display: "block", fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Bloque de arranque (OB100)</span>
+        {!blocks.some((b) => b.kind === "startup" || b.id === "startup") ? (
+          <div style={{ marginTop: 6 }}>
+            <p style={{ fontSize: 12, color: "#AAA", margin: "0 0 6px 0" }}>
+              Se ejecuta exactamente una vez al arrancar la CPU (STOP → RUN), ideal para inicializaciones y condiciones de partida.
+            </p>
+            <PixelBtn small color="dwGrey" onClick={() => onAddBlock("startup")}>+ Añadir Startup [OB100]</PixelBtn>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: T.tiaLineActive, marginTop: 4 }}>
+            🏁 Bloque Startup [OB100] activo en el proyecto.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

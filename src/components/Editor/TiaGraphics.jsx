@@ -75,6 +75,47 @@ export function TiaContact({ neg, edge, stateObj }) {
   );
 }
 
+export function TiaNot({ flowIn, flowOut }) {
+  const inColor = flowIn ? T.tiaLineActive : T.tiaLine;
+  const outColor = flowOut ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(flowOut);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <TiaLine active={flowIn} size={8} />
+      <div style={{ position: "relative" }}>
+        {sparking && <span className="dw-spark" />}
+        <svg width="34" height="30" viewBox="0 0 34 30" style={{ overflow: "visible", display: "block" }}>
+          <line x1="0" y1="15" x2="6" y2="15" stroke={inColor} strokeWidth="3" strokeLinecap="square" />
+          <rect
+            x="6"
+            y="5"
+            width="22"
+            height="20"
+            fill="#FFF"
+            stroke={outColor}
+            strokeWidth="2"
+            rx="1"
+          />
+          <text
+            x="17"
+            y="18.5"
+            textAnchor="middle"
+            fontSize="9"
+            fontWeight="900"
+            fill={T.tiaText}
+            fontFamily="Arial, sans-serif"
+          >
+            NOT
+          </text>
+          <line x1="28" y1="15" x2="34" y2="15" stroke={outColor} strokeWidth="3" strokeLinecap="square" />
+        </svg>
+      </div>
+      <TiaLine active={flowOut} size={8} />
+    </div>
+  );
+}
+
 // Comparador numérico (CMP): a diferencia de un TiaContact, no alterna
 // NA/NC/flanco con un clic — lleva 3 controles propios dentro de la misma
 // caja (dirección analógica, operador que sí cicla con un clic, y valor
@@ -276,6 +317,206 @@ export function TiaTonBox({ active, flowIn, preset, elapsed, label = "TON" }) {
         <div style={{ position: "absolute", bottom: -19, right: 0, fontSize: 12, lineHeight: 1, color: T.tiaText }}>{(elapsed || 0).toFixed(1)}s</div>
       </div>
       <TiaLine active={color === T.tiaLineActive} size={8} />
+    </div>
+  );
+}
+
+export function TiaTonrBox({ inFlow, rFlow, active, preset, elapsed }) {
+  const color = active ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(active);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch" }}>
+      <div
+        style={{
+          position: "relative",
+          border: `3px solid ${color}`,
+          backgroundColor: "#FFF",
+          width: 74,
+          height: 68,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "3px 5px",
+          boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+          boxSizing: "border-box",
+        }}
+      >
+        {sparking && <span className="dw-spark" />}
+        <div style={{ fontSize: 11, fontWeight: "bold", textAlign: "center", borderBottom: `1px solid ${color}`, color: T.tiaText, lineHeight: 1.1 }}>
+          TONR
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1.1, color: inFlow ? T.tiaLineActive : T.tiaText }}>
+          <span>IN</span>
+          <span style={{ color: active ? T.tiaLineActive : T.tiaText }}>Q</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, lineHeight: 1.1, color: rFlow ? T.tiaLineActive : T.tiaText }}>
+          <span>R</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, lineHeight: 1, borderTop: `1px solid ${T.tiaLine}`, paddingTop: 2 }}>
+          <span style={{ color: T.tiaBlue }}>{preset}s</span>
+          <span style={{ color: T.tiaText }}>{(elapsed || 0).toFixed(1)}s</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function TiaMoveBox({ flowIn, inAddr, inVal, outAddr, onChangeInAddr, onChangeInVal, onChangeOutAddr, addrOptions = [], outputAddrOptions = [] }) {
+  const color = flowIn ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(flowIn);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
+      <TiaLine active={flowIn} size={8} />
+      <div
+        style={{
+          position: "relative",
+          border: `3px solid ${color}`,
+          backgroundColor: "#FFF",
+          width: 116,
+          height: 68,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "3px 4px",
+          boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+          boxSizing: "border-box",
+        }}
+      >
+        {sparking && <span className="dw-spark" />}
+        <div style={{ fontSize: 11, fontWeight: "bold", textAlign: "center", borderBottom: `1px solid ${color}`, color: T.tiaText, lineHeight: 1.2 }}>
+          MOVE
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10 }}>
+          <span style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>EN</span>
+          <span style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>ENO</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 4, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", width: "48%" }}>
+            <span style={{ fontSize: 8, color: "#777", textTransform: "uppercase" }}>IN</span>
+            <select
+              value={inAddr || "const"}
+              onChange={(e) => onChangeInAddr(e.target.value)}
+              style={{ fontSize: 10, fontFamily: T.mono, width: "100%", padding: 0, margin: 0, border: "1px solid #CCC", background: "#FFF" }}
+            >
+              <option value="const">Val</option>
+              {addrOptions.map((o) => {
+                const a = typeof o === "string" ? o : o.addr;
+                const l = typeof o === "string" ? o : o.label;
+                return <option key={a} value={a}>{l}</option>;
+              })}
+            </select>
+            {(!inAddr || inAddr === "const") && (
+              <input
+                type="number"
+                value={inVal ?? 0}
+                onChange={(e) => onChangeInVal(Number(e.target.value) || 0)}
+                style={{ width: "100%", fontSize: 10, fontFamily: T.mono, textAlign: "center", marginTop: 2, border: "1px solid #DDD" }}
+              />
+            )}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", width: "48%" }}>
+            <span style={{ fontSize: 8, color: "#777", textTransform: "uppercase", textAlign: "right" }}>OUT1</span>
+            <select
+              value={outAddr || "QW0"}
+              onChange={(e) => onChangeOutAddr(e.target.value)}
+              style={{ fontSize: 10, fontFamily: T.mono, width: "100%", padding: 0, margin: 0, border: "1px solid #CCC", background: "#FFF" }}
+            >
+              {outputAddrOptions.map((o) => {
+                const a = typeof o === "string" ? o : o.addr;
+                const l = typeof o === "string" ? o : o.label;
+                return <option key={a} value={a}>{l}</option>;
+              })}
+            </select>
+          </div>
+        </div>
+      </div>
+      <TiaLine active={flowIn} size={8} />
+    </div>
+  );
+}
+
+export function TiaMathBox({ type = "add", flowIn, in1Addr, in1Val, in2Addr, in2Val, outAddr, onChangeIn1Addr, onChangeIn1Val, onChangeIn2Addr, onChangeIn2Val, onChangeOutAddr, addrOptions = [], outputAddrOptions = [] }) {
+  const color = flowIn ? T.tiaLineActive : T.tiaLine;
+  const sparking = useSpark(flowIn);
+  const label = type === "add" ? "ADD" : "SUB";
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
+      <TiaLine active={flowIn} size={8} />
+      <div
+        style={{
+          position: "relative",
+          border: `3px solid ${color}`,
+          backgroundColor: "#FFF",
+          width: 120,
+          height: 74,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "3px 4px",
+          boxShadow: `2px 2px 0px 0px rgba(0,0,0,0.15)`,
+          boxSizing: "border-box",
+        }}
+      >
+        {sparking && <span className="dw-spark" />}
+        <div style={{ fontSize: 11, fontWeight: "bold", textAlign: "center", borderBottom: `1px solid ${color}`, color: T.tiaText, lineHeight: 1.2 }}>
+          {label}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9 }}>
+          <span style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>EN</span>
+          <span style={{ color: flowIn ? T.tiaLineActive : T.tiaText }}>ENO</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 3, fontSize: 9 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, width: "50%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 8 }}>1:</span>
+              {(!in1Addr || in1Addr === "const") && (
+                <input
+                  type="number" value={in1Val ?? 0}
+                  onChange={(e) => onChangeIn1Val(Number(e.target.value) || 0)}
+                  style={{ width: 30, fontSize: 9, fontFamily: T.mono, padding: 0 }}
+                />
+              )}
+              <select
+                value={in1Addr || "const"}
+                onChange={(e) => onChangeIn1Addr(e.target.value)}
+                style={{ fontSize: 9, fontFamily: T.mono, width: (!in1Addr || in1Addr === "const") ? 20 : "100%", padding: 0 }}
+              >
+                <option value="const">#</option>
+                {addrOptions.map((o) => <option key={typeof o === "string" ? o : o.addr} value={typeof o === "string" ? o : o.addr}>{typeof o === "string" ? o : o.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 8 }}>2:</span>
+              {(!in2Addr || in2Addr === "const") && (
+                <input
+                  type="number" value={in2Val ?? 0}
+                  onChange={(e) => onChangeIn2Val(Number(e.target.value) || 0)}
+                  style={{ width: 30, fontSize: 9, fontFamily: T.mono, padding: 0 }}
+                />
+              )}
+              <select
+                value={in2Addr || "const"}
+                onChange={(e) => onChangeIn2Addr(e.target.value)}
+                style={{ fontSize: 9, fontFamily: T.mono, width: (!in2Addr || in2Addr === "const") ? 20 : "100%", padding: 0 }}
+              >
+                <option value="const">#</option>
+                {addrOptions.map((o) => <option key={typeof o === "string" ? o : o.addr} value={typeof o === "string" ? o : o.addr}>{typeof o === "string" ? o : o.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", width: "48%", justifyContent: "center" }}>
+            <span style={{ fontSize: 8, color: "#777", textAlign: "right" }}>OUT</span>
+            <select
+              value={outAddr || "QW0"}
+              onChange={(e) => onChangeOutAddr(e.target.value)}
+              style={{ fontSize: 9, fontFamily: T.mono, width: "100%", padding: 0 }}
+            >
+              {outputAddrOptions.map((o) => <option key={typeof o === "string" ? o : o.addr} value={typeof o === "string" ? o : o.addr}>{typeof o === "string" ? o : o.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      <TiaLine active={flowIn} size={8} />
     </div>
   );
 }
