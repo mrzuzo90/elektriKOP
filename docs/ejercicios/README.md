@@ -30,7 +30,7 @@ con ElektriKOP. Cada carpeta tiene:
 
 ## Progresión pensada
 
-Los siete ejercicios están diseñados para construirse uno sobre otro:
+Los ocho ejercicios están diseñados para construirse uno sobre otro:
 
 - El **Ejercicio 1** enseña el enclavamiento con un contacto NC *lógico*
   (dibujado en el segmento) sobre un pulsador cableado NA por defecto — la
@@ -47,22 +47,22 @@ Los siete ejercicios están diseñados para construirse uno sobre otro:
   lógica idéntica para dos máquinas iguales, la escribes una vez y la llamas
   dos veces, comprobando que cada llamada mantiene su propio temporizador
   interno de forma independiente.
-- El **Ejercicio 5** cierra el conjunto de instrucciones básicas con el
-  **contador CTU** y las **marcas (M)**: sustituye el apaño de usar una `Q`
-  libre como bandera interna (visto en el Ejercicio 2) por una marca de
-  verdad, y la usa para interbloquear un motor — el mismo patrón que
-  cualquier condición interna (fallo detectado, lote completo, etc.) usaría
-  en un programa real.
-- El **Ejercicio 6** da el segundo gran salto: de trabajar solo con bits
-  (0/1) a trabajar con un **valor numérico real** (una entrada analógica
+- El **Ejercicio 5** profundiza con el **contador CTU** y las **marcas (M)**:
+  sustituye el apaño de usar una `Q` libre como bandera interna (visto en el
+  Ejercicio 2) por una marca de verdad, y la usa para interbloquear un motor
+  — el mismo patrón que cualquier condición interna (fallo detectado, lote
+  completo, etc.) usaría en un programa real.
+- El **Ejercicio 6** da el salto al control analógico: de trabajar solo con
+  bits (0/1) a trabajar con un **valor numérico real** (una entrada analógica
   `IW`) mediante la instrucción **comparador (CMP)**, combinándola con el
   enclavamiento marcha/paro y las marcas ya vistas en ejercicios anteriores.
-- El **Ejercicio 7** cierra el conjunto con los **bloques FB**: la pieza que
-  se dejó fuera a propósito al construir los FC del Ejercicio 4 — memoria
-  **STATIC** propia por sitio de llamada, que persiste entre ciclos de scan
-  sin necesidad de una marca global ni de gestionar un DB de instancia a
-  mano. El enunciado explica en detalle por qué un FC no puede resolver este
-  ejercicio.
+- El **Ejercicio 7** introduce los **bloques FB**: memoria **STATIC** propia
+  por sitio de llamada, que persiste entre ciclos de scan sin necesidad de una
+  marca global ni de gestionar un DB de instancia a mano. El enunciado explica
+  en detalle por qué un FC no puede resolver este ejercicio.
+- El **Ejercicio 8** trabaja con el **contador bidireccional CTUD**, gestionando
+  un aforo de garaje con cálculo de plazas libres, barreras de entrada/salida y
+  señales de telemetría hacia supervisión externa.
 
 ## ¿Tienes un ejercicio propio?
 

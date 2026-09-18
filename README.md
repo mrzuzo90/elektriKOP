@@ -1,8 +1,8 @@
 # ElektriKOP
 
-**Emulador de lógica de escalera (KOP) para estudiantes de automatización industrial — 100% en español, gratuito y de código abierto.**
+**Emulador de lógica de escalera (KOP / Ladder) para estudiantes de automatización industrial — 100% en español, gratuito y de código abierto.**
 
-![Licencia](https://img.shields.io/badge/licencia-MIT-yellow) ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-orange) ![Hecho con](https://img.shields.io/badge/hecho%20con-React-blue)
+![Licencia](https://img.shields.io/badge/licencia-MIT-yellow) ![Versión](https://img.shields.io/badge/versión-2.0%20Arcade-brightgreen) ![Tests](https://img.shields.io/badge/tests-209%20passing-success) ![Hecho con](https://img.shields.io/badge/hecho%20con-React%2019-blue)
 
 ### 🔗 [Pruébalo ahora en kop.elektrizia.com](https://kop.elektrizia.com) — sin instalar nada
 
@@ -10,158 +10,211 @@
 
 ## ¿Qué es ElektriKOP?
 
-ElektriKOP es un simulador visual de lógica de escalera (KOP / Ladder Diagram) inspirado en el entorno de programación de un PLC Siemens S7-1200. Permite montar segmentos de automatización — contactos, bobinas, temporizadores, enclavamientos — y ver en tiempo real cómo fluye la corriente por el circuito, sin necesitar TIA Portal, licencias, ni hardware real.
+ElektriKOP es un simulador visual interactivo de lógica de escalera (KOP / Ladder Diagram) inspirado fielmente en el entorno de programación de un PLC **Siemens SIMATIC S7-1200** y **TIA Portal**. Permite diseñar segmentos de automatización completos —contactos, bloques lógicos, temporizadores, contadores, operaciones numéricas, subrutinas FC/FB y pantallas HMI— visualizando en tiempo real el flujo de corriente (RLO) por el circuito sin requerir costosas licencias, potentes ordenadores con Windows ni hardware físico.
 
-Está pensado para **estudiantes de ciclos de automatización y electricidad** (como el certificado de profesionalidad ELEE0109), profesores que quieran una herramienta de apoyo en clase, o cualquiera que quiera entender cómo piensa un PLC antes de sentarse delante del software industrial de verdad.
+Está especialmente diseñado para **estudiantes de ciclos formativos de Formación Profesional** (Automatización y Robótica Industrial, Mecatrónica, Mantenimiento Electrónico, Instalaciones Electrotécnicas) y certificados de profesionalidad (como **ELEE0109**), profesores técnicos que buscan una herramienta ágil para el aula, y cualquier persona que desee comprender la lógica de control antes de enfrentarse al software industrial real.
 
 ## Por qué existe
 
-TIA Portal es el estándar de la industria, pero tiene barreras de entrada reales para un estudiante:
+TIA Portal es el estándar indiscutible de la industria, pero impone importantes barreras de acceso:
+- Licencias comerciales o de campus limitadas.
+- Instalaciones pesadas (~40 GB) y soporte exclusivo para sistemas Windows.
+- Curva de aprendizaje empinada para alumnos que dan sus primeros pasos en lógica cableada y programada.
 
-- Licencia de pago (o de campus, con acceso limitado).
-- Solo corre en Windows — un dolor de cabeza en Mac o Linux.
-- La curva de entrada es alta si lo primero que ves es el software completo, con todas sus opciones.
+ElektriKOP no busca sustituir a TIA Portal en una planta real, sino ser su **compañero pedagógico ideal**: un espacio donde equivocarte sin riesgo, entender por qué falla un enclavamiento, conectar con un gemelo digital 3D y ganar intuición sólida sobre la ejecución cíclica de un autómata.
 
-ElektriKOP no sustituye a TIA Portal — es un compañero de estudio: un sitio donde equivocarte gratis, entender por qué un circuito no enclava, y coger intuición sobre lógica de escalera antes de enfrentarte al programa real.
+---
 
-## Características
+## 📚 Documentación y Guías
 
-**Editor KOP**
-- Segmentos con contactos en serie y en paralelo (ramas anidadas, sin límite artificial de profundidad).
-- Contactos NA / NC / flanco positivo (P) / flanco negativo (N), conmutables con un clic.
-- Bobina directa, SET, RESET, **bloque SR/RS combinado** y **contadores CTU/CTD/CTUD** (con su propia rama de entrada de reset/carga mediante contactos), temporizadores TON/TOF/TP — elegibles con clic o **arrastrando** el tipo de instrucción hasta la salida del segmento.
-- **Arrastrar y soltar** dentro del esquema: inserta contactos/bloques paralelos en cualquier posición, o mueve uno ya colocado a otra rama, con zonas de aterrizaje visuales mientras arrastras.
-- Visualización en tiempo real del flujo de corriente por el circuito, como en TIA Portal.
-- Detección de direcciones de salida duplicadas entre segmentos (evita bugs típicos de principiante).
+- 📖 [**Guía Didáctica de Funciones TIA Portal**](docs/guia-tia-portal-elektrikop.md) — Explicación pedagógica de NOT, marcas de reloj/sistema (MB1), Startup [OB100], MOVE, TONR, operaciones matemáticas y casos de uso industrial.
+- 🖥️ [**Manual del Diseñador HMI**](docs/hmi/README.md) — Creación de pantallas táctiles industriales con chasis Siemens SIMATIC, bargraphs, pilotos y variables enlazadas.
+- 🏭 [**Puente con Factory I/O**](bridge/README.md) — Conexión WebSocket ⇄ Modbus TCP para controlar escenas 3D industriales reales y modo Mock para macOS/Linux.
+- 🎯 [**Ejercicios y Desafíos Prácticos**](docs/ejercicios/README.md) — 8 proyectos progresivos resueltos con enunciados didácticos y ficheros importables.
 
-**Bloques FC y FB**
-- Además de Main [OB1], crea bloques de función (FC) o bloques de función con memoria (FB) adicionales con su propia interfaz de parámetros — funciones reutilizables, igual que en TIA Portal.
-- Llama a un FC/FB desde Main o desde otro FC/FB con la instrucción **Llamar**, cableando cada parámetro a una dirección física o a otro parámetro propio. La UI nunca deja crear un ciclo de llamadas.
-- Dos sitios de llamada al mismo bloque mantienen temporizadores, contadores y contactos de flanco (P/N) internos totalmente independientes entre sí.
-- Un FC no tiene memoria propia: sus parámetros IN/OUT se recalculan enteros en cada llamada. Un **FB** añade una tercera categoría de parámetro, **STATIC**, que sí persiste entre ciclos de scan — memoria de instancia propia por sitio de llamada, sin necesidad de gestionar un DB de instancia a mano.
+---
 
-**Comparadores (CMP) y entrada analógica**
-- **Comparador numérico**: instrucción "+CMP" en el esquema (junto a "+C"), con entrada analógica o CV de un contador del bloque actual, operador (`>=`, `<=`, `==`, `<>`, `<`, `>` — cicla con un clic, igual que NA/NC en un contacto) y valor constante editable.
-- **Comparar un contador**: añade `+CMP`, selecciona `CV · número: nombre del segmento`, pulsa el operador hasta `==` y escribe el valor (por ejemplo, `5`). Con una bobina normal, la salida vale 1 solo cuando CV es 5 y vuelve a 0 para los demás valores. Coloca el comparador después del contador para leer su valor actualizado en ese mismo ciclo. Dentro de FC/FB, lee el contador de esa llamada.
-- **Entrada analógica (`IW0`)**: a diferencia de una `I` normal, su valor no es un bit sino un número (0-100) — se controla con un slider en Proceso simulado, y solo un comparador puede leerla.
+## Características Principales
 
-**Contadores y marcas (M)**
-- **CTU** (cuenta arriba), **CTD** (cuenta abajo) y **CTUD** (bidireccional arriba/abajo): rail principal = pulso de cuenta (detecta flanco de subida), rail secundario = reset/carga accionable mediante contactos lógicos (NA, NC, flancos, comparadores), pines adicionales cableables en CTUD (CD, QD, LD), valor preestablecido (PV) configurable y valor actual (CV) visible en la propia caja.
-- **16 marcas internas** (`M0.0`–`M1.7`): memoria auxiliar sin dispositivo físico asociado, para banderas de secuencia o interbloqueos — sustituye el apaño de usar una `Q` libre como marca. Se nombran igual que cualquier dirección en la Tabla de variables, con un punto de estado en vivo mientras corre la simulación.
-- Un contador dentro de un bloque FC llamado desde varios sitios mantiene su cuenta totalmente independiente en cada sitio de llamada (mismo mecanismo que ya usan los temporizadores).
+### 1. Editor KOP y Motor de Scan Industrial
+- **Topología libre**: Segmentos con contactos en serie y en paralelo anidados sin límite artificial de profundidad.
+- **Tipos de contacto**: Normalmente Abierto (NA), Normalmente Cerrado (NC), Detección de Flanco Positivo (P) y Flanco Negativo (N), alternables con un solo clic.
+- **Inversor de flujo lógico `--[NOT]--`**: Invierte el Resultado de la Operación Lógica (RLO) acumulado en cualquier punto del segmento o tras una red en paralelo.
+- **Bobinas y biestables**: Bobina directa `( )`, SET `(S)`, RESET `(R)` y **bloque combinado SR / RS** con prioridad configurable (dominancia de Set o Reset) y ramas de entrada independientes.
+- **Temporizadores IEC**: `TON` (retardo a la conexión), `TOF` (retardo a la desconexión), `TP` (pulso) y **`TONR` (retentivo/acumulador pausable)** con entrada secundaria de Reset.
+- **Contadores IEC**: `CTU` (adelante), `CTD` (atrás) y **`CTUD` (bidireccional)** con pines CU, CD, QU, QD y rama de contactos lógicos para Reset y Carga.
+- **Operaciones numéricas**:
+  - Bloque **`MOVE`** para transferir constantes o valores de variables hacia salidas analógicas o memorias.
+  - Bloques aritméticos **`ADD`** (suma) y **`SUB`** (resta) con habilitación lógica `EN`.
+- **Comparadores numéricos (`+CMP`)**: Evalúan magnitudes analógicas (`IW0`), tiempos de temporizadores (`ET`, `PT`) o cuentas (`CV`) con operadores `>`, `<`, `>=`, `<=`, `==` y `<>`.
+- **Flujo de corriente en vivo**: Visualización animada en verde del RLO a lo largo de los conductores y bloques.
+- **Arrastrar y soltar (Drag & Drop)**: Desplaza contactos o cambia salidas arrastrando elementos directamente en el esquema.
 
-**Simulación**
-- 10 entradas digitales (I0.0–I0.9) y 10 salidas digitales (Q0.0–Q0.9).
-- Ciclo de scan automático o **modo paso a paso**, para ver exactamente qué pasa en cada pasada.
-- Contador de ciclos de scan visible en la pantalla del HMI.
+### 2. Arquitectura y Modularidad Siemens
+- **Ciclo Principal: `Main [OB1]`**: Bloque de organización cíclico ejecutado continuamente por el autómata.
+- **Bloque de Arranque: `Startup [OB100]`**: Rutina de inicialización ejecutada una única vez al pasar de STOP a RUN (ideal para inicializar etapas Grafcet, cargar recetas o resetear contadores).
+- **Bloques de Función (FC)**: Funciones modulares con interfaz IN/OUT, llamables desde Main u otros FCs sin retención de estado entre llamadas.
+- **Bloques de Función con Memoria (FB)**: Bloques con interfaz enriquecida que soportan parámetros **STATIC** (memoria de instancia propia persistente entre ciclos para cada sitio de llamada, sin requerir DBs manuales).
+- **Independencia de instancias**: Múltiples llamadas al mismo bloque mantienen temporizadores, contadores y flancos internos completamente aislados.
 
-**Panel HMI**
-- Interruptores, pulsadores momentáneos y una seta de PARO con enclavamiento — los tres tipos de entrada más habituales en campo.
-- Pantalla LCD retro con estado del sistema y temporizadores activos.
-- **Atajos de teclado**: las teclas `0`-`9` activan/desactivan las entradas físicas sin necesidad de ratón (`0`→I0.0 ... `8`→I1.0, `9`→I1.1) — un pulsador se mantiene activo mientras mantienes la tecla, igual que con el ratón.
+### 3. Memoria, E/S y Señales Analógicas
+- **E/S Físicas Digitales**: 10 entradas digitales (`I0.0`–`I0.9`) y 10 salidas digitales (`Q0.0`–`Q0.9`).
+- **Cableado Físico NA/NC**: Configuración de sensores normalmente abiertos o normalmente cerrados a nivel de borna real (p. ej. setas de emergencia o finales de carrera NC), distinguiendo el cableado físico del contacto lógico en el programa.
+- **Memoria de Marcas (M)**:
+  - **`MB0` (`M0.0` a `M0.7`)**: Marcas internas de usuario para etapas, memorias auxiliares e interbloqueos.
+  - **`MB1` (Marcas de Sistema y Reloj Siemens)**:
+    - `M1.0` (`FirstScan`): Activo exclusivamente durante el primer scan.
+    - `M1.2` (`AlwaysTRUE`): Siempre a 1 lógico.
+    - `M1.3` (`AlwaysFALSE`): Siempre a 0 lógico.
+    - `M1.5` (`Clock_0.5Hz`): Señal oscilante de 2 segundos (balizas lentas).
+    - `M1.6` (`Clock_2Hz`): Señal oscilante rápida de 0.5 segundos (preavisos o alarmas críticas).
+    - `M1.7` (`Clock_1Hz`): Señal oscilante de 1 segundo para luces de aviso y señalización.
+- **Señales Analógicas**:
+  - Entrada analógica **`IW0`** (0–100) ajustable desde el simulador.
+  - Salida analógica **`QW0`** para consignas numéricas o variadores de velocidad.
 
-**Cableado físico NA/NC**
-- Cada entrada puede marcarse como normalmente abierta o normalmente cerrada a nivel de dispositivo físico (por ejemplo, un termostato NC), independientemente del contacto que uses en el segmento — igual que en una instalación real.
+### 4. Diseñador y Visualizador HMI (Siemens SIMATIC)
+- **Pantallas HMI Multiventana**: Entorno de diseño visual WYSIWYG para crear cuadros de mando de operador.
+- **Chasis Industrial SIMATIC**: Pantalla enmarcada en una carcasa retro inspirada en los terminales **Siemens SIMATIC KTP-600** con tornillos de fijación, LEDs de hardware (PWR, RUN, ALARM) y botones táctiles funcionales F1–F4.
+- **Componentes con enlace directo (Bindings)**:
+  - Pulsadores momentáneos y conmutadores biestables vinculados a entradas/marcas.
+  - Lámparas piloto con personalización de color y **modo alarma parpadeante**.
+  - Visualizadores de temporizadores en tiempo real (progreso gráfico, `ET` transcurrido y `PT` consigna).
+  - Visualizadores de contadores con barra de llenado (`CV` / `PV`).
+  - **Bargraph analógico Siemens**: Indicador de nivel analógico horizontal o vertical con escalas configurables.
 
-**Proceso simulado**
-- Asigna a cada dirección un dispositivo visual animado: pulsador, interruptor de palanca, seta de PARO, sensor, motor, cinta transportadora, lámpara, alarma, puerta o temporizador.
-- Vive en la barra lateral derecha, con iconos grandes (dos por fila) y su propio scroll — se queda visible mientras navegas por los segmentos, en vez de perderse de vista al hacer scroll por el editor.
-- Solo se muestran las direcciones que estás usando de verdad en tus segmentos.
-- Aviso sonoro (silenciable) cuando se activa una alarma.
+### 5. Gemelo Digital 3D: Conexión con Factory I/O
+- **Puente Industrial (`bridge/`)**: Servidor ligero Node.js que traduce comunicaciones **WebSocket ⇄ Modbus TCP (Puerto 502)**.
+- **Control de Plantas 3D**: Conecta ElektriKOP con el simulador 3D industrial **Factory I/O** para controlar cintas transportadoras, barreras, clasificadores por altura o células de paletizado.
+- **Modo Simulación (Mock)**: ¿No tienes Windows ni Factory I/O instalado? El puente incluye un gemelo digital por software que simula una cinta con sensor óptico y telemetría en vivo, compatible con macOS y Linux.
 
-**Menú de pausa**
-- Se abre pulsando el logo "ElektriKOP" de la barra izquierda — como el menú de pausa de un videojuego, agrupa las acciones que no son la interacción constante del editor:
-  - **Proyecto**: renombrar, exportar/importar en JSON, o limpiar todo.
-  - **Tabla de variables**: asigna nombres simbólicos a tus direcciones (por ejemplo, `I0.2` → `Marcha_M1`). Puedes nombrar una dirección **antes incluso de usarla** en el editor con el botón "+ Añadir variable" — no hace falta esperar a colocar el contacto o la bobina.
-  - **Modo Desafío**: comprueba automáticamente si tu solución a uno de los [ejercicios propuestos](docs/ejercicios/) se comporta como debe, ciclo a ciclo — valida el resultado, no cómo has dibujado el circuito, así que cualquier forma correcta de resolverlo vale. Un distintivo flotante (✅/❌) queda visible junto al logo tras comprobar, aunque cierres el menú.
+### 6. Diagnóstico y Herramientas de Campo
+- **Búfer de Diagnóstico (Diagnostic Buffer)**: Visor de eventos cronológico similar al de TIA Portal que registra arranques de OB100, transiciones RUN/STOP y fallos de proceso.
+- **Tabla de Observación y Forzado (Watch & Force Table)**: Monitorea todas las variables del PLC y fuerza valores lógicos o analógicos directamente para labores de puesta en marcha.
+- **Bastidor Siemens S7-1200**: Representación gráfica del autómata con regleteros de conexión iluminados y LEDs de estado de CPU (RUN/STOP, ERROR, MAINT).
 
-**Deshacer/rehacer y autoguardado**
-- Ctrl+Z / Ctrl+Shift+Z (o los botones ⟲/⟳) para deshacer y rehacer, hasta 50 pasos.
-- El proyecto se autoguarda solo en el navegador — cerrar o recargar la pestaña por accidente ya no significa perder el trabajo.
+### 7. Proceso Simulado y HMI Rápido
+- **Gemelo 2D en barra lateral**: Visualización inmediata de actuadores asignados a las variables (motores, cintas, cilindros neumáticos, puertas, alarmas sonoras).
+- **Atajos de teclado instantáneos**: Pulsa las teclas `0` a `9` para activar o mantener pulsadas las entradas físicas sin soltar el ratón del editor de contactos.
+
+### 8. Modo Desafío y Gestión de Proyectos
+- **Autocorrección de Retos**: Valida automáticamente si tu circuito cumple con las especificaciones de comportamiento esperadas ciclo a ciclo, sin imponer una única forma de cablear el circuito.
+- **Tabla de Variables Simbólicas**: Asigna nombres descriptivos (p. ej. `Marcha_Cinta`, `Sensor_Nivel`) antes o durante el diseño.
+- **Autoguardado y Seguridad**: Autoguardado continuo cada 800 ms en el almacenamiento local del navegador, historial de Deshacer / Rehacer de 50 pasos (Ctrl+Z / Ctrl+Y), exportación e importación JSON y generación de enlaces directos para compartir circuitos completos por URL.
+
+---
 
 ## Capturas
 
 ![Editor KOP con el Proceso simulado y el panel HMI](docs/images/editor.png)
 
-## Instalación
+---
 
-La forma más rápida de usar ElektriKOP es entrar directamente en **[kop.elektrizia.com](https://kop.elektrizia.com)** — no hace falta clonar el repo, instalar nada, ni saber nada de React. Se ejecuta entero en tu navegador, no envía datos a ningún servidor, y tu proyecto se autoguarda localmente en tu propio navegador.
+## Cómo Empezar
 
-Si prefieres ejecutarlo en local (por ejemplo, para modificar el código):
+### Uso Inmediato en la Web
+Entra en **[kop.elektrizia.com](https://kop.elektrizia.com)** desde cualquier navegador moderno (Chrome, Firefox, Safari, Edge en Windows, Mac, Linux o tablets). No requiere instalación ni registros; todo se ejecuta en local en tu navegador.
 
-ElektriKOP es un componente de React sin dependencias de backend. Para ejecutarlo en local:
+### Instalación en Local
+
+Si deseas clonar el proyecto para desarrollo o uso sin conexión:
 
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/mrzuzo90/elektriKOP.git
 cd elektriKOP
+
+# 2. Instalar dependencias
 npm install
+
+# 3. Iniciar servidor de desarrollo Vite
 npm run dev
 ```
 
-Abre `http://localhost:5173` (o el puerto que indique tu terminal) y listo.
+Abre `http://localhost:5173` en tu navegador.
 
-> Si vienes de un proyecto React ya existente, también puedes copiar la carpeta `src/` completa a tu propio proyecto — solo necesita React y `@fontsource/silkscreen` (la tipografía retro, autoalojada: se empaqueta con el build, sin llamadas a servicios externos en tiempo de ejecución).
+Para ejecutar los tests automatizados y comprobar la integridad del código:
+```bash
+npm test         # Ejecuta la suite de pruebas unitarias con Vitest (209 tests)
+npm run lint     # Comprueba el código con oxlint (0 warnings)
+npm run build    # Genera el bundle optimizado de producción en dist/
+```
 
-## Cómo usar
+---
 
-1. **Añade un segmento** con el botón correspondiente en el editor.
-2. **Añade contactos** en serie (`+C`), en paralelo (`+P`) o un **comparador** (`+CMP`, sobre `IW0` o el CV de un contador) — con clic para añadir al final, o arrastrándolos hasta cualquier posición del esquema — y elige su dirección (I, Q o IW) en el desplegable.
-3. Haz clic sobre un contacto para alternar entre normalmente abierto (NA), normalmente cerrado (NC), flanco positivo (P) y flanco negativo (N).
-4. Elige el tipo de salida del segmento (bobina directa, SET, RESET, SR/RS, TON, TOF, TP, CTU, CTD o CTUD) con clic, o arrastrándolo desde la barra inferior hasta la salida del segmento. Tanto el bloque SR/RS como los contadores (CTU/CTD/CTUD) disponen de su propia rama secundaria para actuar sobre Reset o Carga mediante contactos.
-5. Pulsa **RUN** para simular, o **1 CICLO** para avanzar el scan paso a paso.
-6. Usa el **Panel HMI** para activar tus entradas — interruptores, pulsadores o la seta de PARO, según cómo las hayas configurado en el **Proceso simulado** (barra derecha) — o el teclado (`0`-`9`) si no quieres soltar el ratón del editor.
-7. Pulsa el logo **ElektriKOP** (arriba a la izquierda) para abrir el **menú de pausa**: ahí puedes renombrar el proyecto, exportar/importar en JSON, nombrar variables y comprobar tu solución en Modo Desafío. Nada de esto es imprescindible en el día a día — tu proyecto se autoguarda solo, y siempre puedes deshacer con Ctrl+Z si te equivocas.
-8. Si estás resolviendo uno de los [ejercicios propuestos](docs/ejercicios/), abre el menú, entra en **Modo Desafío**, elige el ejercicio y pulsa **Comprobar** — el resultado queda visible en un distintivo junto al logo aunque cierres el menú.
+## Guía Rápida de Uso
 
-## Ejercicios propuestos
+1. **Añadir Segmentos**: Haz clic en **+ Segmento** en el bloque activo (`Main [OB1]`).
+2. **Cablear Lógica**: Inserta contactos en serie (`+C`), ramas en paralelo (`+P`), inversores (`+NOT`) o comparadores analógicos (`+CMP`).
+3. **Configurar Contactos**: Haz clic sobre cualquier contacto para conmutar entre NA, NC, flanco P o flanco N.
+4. **Definir Salidas**: Selecciona en el extremo derecho el tipo de instrucción: Bobina directa, SET, RESET, biestable SR/RS, temporizadores (TON, TOF, TP, TONR), contadores (CTU, CTD, CTUD) o bloques de cálculo (MOVE, ADD, SUB).
+5. **Simular**:
+   - Pulsa **RUN** para scan continuo (100 ms).
+   - O pulsa **1 CICLO** para avanzar paso a paso y observar la propagación del RLO en cada escaneo.
+6. **Actuar sobre las Entradas**: Interactúa mediante los botones del HMI, los dispositivos del Proceso Simulado o usando las teclas numéricas `0`–`9`.
+7. **Diseñar Pantallas HMI**: Abre la vista **HMI**, pulsa **Editar HMI** y coloca pilotos, displays y barras vinculados a tus marcas o salidas.
+8. **Conectar con Factory I/O**: Inicia el puente en `bridge/` (`npm start` o `npm run mock`) y conecta desde el panel lateral para controlar escenas 3D.
 
-En [`docs/ejercicios/`](docs/ejercicios/) encontrarás ejercicios de dificultad creciente, cada uno con su enunciado y un `.json` con la solución listo para importar:
+---
 
-1. [Marcha/Paro con enclavamiento](docs/ejercicios/01-marcha-paro-enclavamiento/enunciado.md) ⭐
-2. [Semáforo con temporizadores](docs/ejercicios/02-semaforo-temporizadores/enunciado.md) ⭐⭐
-3. [Puerta automática con finales de carrera](docs/ejercicios/03-puerta-automatica-finales-carrera/enunciado.md) ⭐⭐⭐
-4. [Dos cintas transportadoras con arranque temporizado (bloque FC)](docs/ejercicios/04-cintas-transportadoras-fc/enunciado.md) ⭐⭐⭐
-5. [Contador de piezas con marca interna](docs/ejercicios/05-contador-piezas-marca/enunciado.md) ⭐⭐
-6. [Tanque con sensor analógico y comparadores](docs/ejercicios/06-tanque-nivel-comparador/enunciado.md) ⭐⭐⭐
-7. [Alternador con bloque FB (memoria STATIC)](docs/ejercicios/07-alternador-fb-static/enunciado.md) ⭐⭐⭐
+## Retos y Ejercicios Propuestos
 
-> Si te animas a crear más ejercicios (propuestos y, ojalá, también resueltos), ¡son bienvenidos como *pull request*!
+En [`docs/ejercicios/`](docs/ejercicios/) se incluye una serie completa de retos graduados por dificultad, acompañados de su enunciado teórico, pistas y solución `.json` oficial:
 
-## Roadmap / ideas futuras
+| # | Ejercicio | Dificultad | Conceptos clave |
+| :-: | :-------- | :--------: | :-------------- |
+| 1 | [Marcha/Paro con enclavamiento](docs/ejercicios/01-marcha-paro-enclavamiento/enunciado.md) | ⭐ | Contactos NA/NC, bobina directa, retroalimentación lógica |
+| 2 | [Semáforo con temporizadores](docs/ejercicios/02-semaforo-temporizadores/enunciado.md) | ⭐⭐ | Temporizadores TON encadenados, fases cíclicas |
+| 3 | [Puerta automática con finales de carrera](docs/ejercicios/03-puerta-automatica-finales-carrera/enunciado.md) | ⭐⭐⭐ | Interbloqueos cruzados, cableado físico NC vs lógica de programa |
+| 4 | [Dos cintas con arranque temporizado (FC)](docs/ejercicios/04-cintas-transportadoras-fc/enunciado.md) | ⭐⭐⭐ | Subrutinas FC modulares, parámetros IN/OUT, llamadas independientes |
+| 5 | [Contador de piezas con marca interna](docs/ejercicios/05-contador-piezas-marca/enunciado.md) | ⭐⭐ | Contador CTU, ramal de reset por contacto, marcas auxiliares de usuario |
+| 6 | [Tanque con sensor analógico y comparadores](docs/ejercicios/06-tanque-nivel-comparador/enunciado.md) | ⭐⭐⭐ | Señales analógicas (IW0), comparadores numéricos (+CMP), control por histéresis |
+| 7 | [Alternador con bloque FB (memoria STATIC)](docs/ejercicios/07-alternador-fb-static/enunciado.md) | ⭐⭐⭐ | Bloques FB, parámetros STATIC con retención por instancia |
+| 8 | [Control de acceso a garaje con CTUD](docs/ejercicios/08-control-acceso-garaje-ctud/enunciado.md) | ⭐⭐ | Contador bidireccional CTUD, entradas CU/CD, aforo y telemetría |
 
-- [x] Ejercicios propuestos y resueltos en `docs/ejercicios/`.
-- [x] Deshacer/rehacer y autoguardado.
-- [x] Modo Desafío: valida automáticamente el resultado esperado de un ejercicio.
-- [x] Más tipos de temporizador (TOF, TP) y contactos de flanco (P/N).
-- [x] Arrastrar y soltar en el editor KOP (insertar y mover contactos/bloques paralelos, elegir el tipo de salida).
-- [x] Menú de pausa: agrupa proyecto, tabla de variables y Modo Desafío fuera del flujo principal del editor.
-- [x] Bloques FC: funciones reutilizables con interfaz IN/OUT, llamables desde Main o desde otro FC.
-- [x] Contadores (CTU/CTD/CTUD) + área de marcas (M) separada de las salidas (Q).
-- [x] Bloque SR/RS combinado (bistable con prioridad invertible entre Set y Reset).
-- [x] Comparadores numéricos (`>=`, `<=`, `==`, `<>`, `<`, `>`) sobre una entrada analógica simulada.
-- [x] Compartir proyectos mediante un enlace, sin necesidad de archivo.
-- [x] Bloques FB (con memoria de instancia propia STATIC, sin gestión manual de DB).
+---
 
-Con esta ronda, ElektriKOP cubre el conjunto básico de instrucciones que se enseña en un ciclo de automatización con S7-1200 (contactos, bobinas, set/reset, comparadores, temporizadores, flancos, contadores, marcas y modularidad con bloques FC/FB). El resto de ideas de esta lista son mejoras posteriores, no huecos del núcleo didáctico.
+## Estado del Proyecto y Roadmap
 
-Si tienes una idea, abre un *issue* — toda sugerencia de un caso de uso real de aula es bienvenida.
+- [x] Motor de scan determinista e independiente (puro JS).
+- [x] Editor visual KOP con contactos NA, NC, flancos P/N y ramas paralelas anidadas.
+- [x] Inversor de flujo lógico `--[NOT]--`.
+- [x] Bobinas directas, SET, RESET y biestable SR/RS con ramas lógicas dedicadas.
+- [x] Temporizadores IEC: TON, TOF, TP y retentivo TONR con pin de reset.
+- [x] Contadores IEC: CTU, CTD y CTUD bidireccional con ramal de reset/carga.
+- [x] Comparadores numéricos analógicos y sobre variables de tiempo/conteo.
+- [x] Operaciones numéricas MOVE, ADD y SUB con habilitación EN/ENO.
+- [x] Bloque de organización de arranque `Startup [OB100]`.
+- [x] Modularidad industrial con bloques FC y bloques FB (variables STATIC).
+- [x] Marcas de memoria de usuario (MB0) y marcas de reloj/sistema Siemens (MB1).
+- [x] Salida analógica QW0 y entrada analógica IW0.
+- [x] Diseñador y runtime HMI completo con chasis SIMATIC KTP-600 y componentes vivos.
+- [x] Puente WebSocket ⇄ Modbus TCP para gemelos digitales en Factory I/O (con modo Mock).
+- [x] Búfer de diagnóstico y tabla de observación y forzado (Watch & Force Table).
+- [x] Modo Desafío con autograding algorítmico ciclo a ciclo.
+- [x] Compartir proyectos mediante URL comprimida sin almacenamiento en servidor.
+- [x] Suite de 209 tests unitarios automatizados.
+
+### Líneas futuras de investigación / mejoras abiertas:
+- [ ] Exportador de lógica a texto estructurado (SCL / IEC 61131-3 Structured Text).
+- [ ] Soporte táctil optimizado para tablets educativas en arrastrar y soltar.
+- [ ] Tour interactivo guiado para nuevos estudiantes.
+
+---
 
 ## Contribuir
 
-Las contribuciones son bienvenidas, especialmente:
+¡Las aportaciones de la comunidad son bienvenidas! Si eres profesor, estudiante o profesional del sector:
+- Comparte nuevos enunciados y retos industriales para `docs/ejercicios/`.
+- Propón mejoras de usabilidad en el editor o reporte de casos borde en la simulación.
+- Abre un *Pull Request* o inicia una discusión en los *Issues* de GitHub.
 
-- Más ejercicios (propuestos y, si puede ser, también resueltos) para `docs/ejercicios/`.
-- Corrección de errores de lógica en la simulación.
-- Traducciones (el proyecto nació en español, pero un `README.en.md` sería estupendo).
-
-Para contribuir código: haz un *fork*, crea una rama descriptiva, y abre un *pull request* explicando el cambio.
+---
 
 ## Licencia
 
-Este proyecto está bajo licencia MIT — úsalo, modifícalo y compártelo libremente, incluso en tus propias clases o formaciones.
+Este proyecto se distribuye bajo la **Licencia MIT**. Es libre para su uso en aulas, institutos, centros de formación técnica y proyectos personales.
 
 ## Autor
 
-Creado por **Zuzo** ([@mrzuzo90](https://github.com/mrzuzo90)) mientras cursaba el certificado de profesionalidad ELEE0109, como herramienta de estudio propia que terminó mereciendo ser compartida.
-
-Si esta herramienta te sirve en clase, en un curso que impartas, o simplemente te resultó útil para entender lógica de escalera, un ⭐ en el repo o un comentario en el *issue tracker* siempre alegra el día.
+Creado y mantenido por **Zuzo** ([@mrzuzo90](https://github.com/mrzuzo90)) a partir del estudio práctico del certificado de profesionalidad ELEE0109, con el firme compromiso de ofrecer recursos didácticos abiertos, accesibles y de calidad para la formación técnica en automatización.
