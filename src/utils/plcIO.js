@@ -4,9 +4,13 @@ import { INPUT_ADDR, OUTPUT_ADDR, MARK_ADDR, ANALOG_ADDR, ANALOG_OUT_ADDR } from
 // comparadores + su propia salida), usado para no mostrar en "Proceso
 // simulado" direcciones que no se usan en ningún sitio todavía.
 function collectContactAddrs(nodes, set) {
+  if (!Array.isArray(nodes)) return;
   nodes.forEach((n) => {
-    if (n.kind === "contact" || n.kind === "compare") set.add(n.addr);
-    else n.branches.forEach((b) => collectContactAddrs(b.nodes, set));
+    if (n.kind === "contact" || n.kind === "compare") {
+      if (n.addr) set.add(n.addr);
+    } else if (n.kind === "parallel" && Array.isArray(n.branches)) {
+      n.branches.forEach((b) => collectContactAddrs(b.nodes, set));
+    }
   });
 }
 export function collectUsedAddresses(rungs) {

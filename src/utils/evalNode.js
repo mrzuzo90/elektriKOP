@@ -38,7 +38,10 @@ export function evalNode(node, mem, prevMem = {}) {
   }
   if (node.kind === "compare") return evalCompare(node, mem);
   if (node.kind === "not") return true;
-  return node.branches.some((b) => evalSeries(b.nodes, mem, prevMem));
+  if (node.kind === "parallel" && Array.isArray(node.branches)) {
+    return node.branches.some((b) => evalSeries(b.nodes, mem, prevMem));
+  }
+  return false;
 }
 export function evalSeries(nodes, mem, prevMem = {}) {
   if (nodes.length === 0) return false;
@@ -63,8 +66,11 @@ export function computeStates(nodes, mem, prevMem = {}, out = {}) {
       const nodeState = evalNode(n, mem, prevMem);
       out[n.id] = { state: nodeState, flowIn: accFlow };
       accFlow = accFlow && nodeState;
-      if (n.kind === "parallel") {
-        n.branches.forEach((b) => computeStates(b.nodes, mem, prevMem, out));
+      if (n.kind === "parallel" && Array.isArray(n.branches)) {
+        n.branches.forEach((b) => {
+          computeStates(b.nodes, mem, prevMem, out);
+          out[b.id] = { flowOut: accFlow && evalSeries(b.nodes, mem, prevMem) };
+        });
       }
     }
   });

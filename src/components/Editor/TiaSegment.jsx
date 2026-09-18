@@ -203,14 +203,22 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
   let flowToOut = true;
   if (rung.logic && rung.logic.length > 0) {
     rung.logic.forEach((n) => {
-      flowToOut = flowToOut && evalResult?.states?.[n.id]?.state;
+      if (n.kind === "not") {
+        flowToOut = !flowToOut;
+      } else {
+        flowToOut = flowToOut && evalResult?.states?.[n.id]?.state;
+      }
     });
   } else {
     flowToOut = true;
   }
   let flowR = true;
   (rung.logicR || []).forEach((n) => {
-    flowR = flowR && evalResult?.states?.[n.id]?.state;
+    if (n.kind === "not") {
+      flowR = !flowR;
+    } else {
+      flowR = flowR && evalResult?.states?.[n.id]?.state;
+    }
   });
 
   const counterResetNodes = rung.logicReset !== undefined
@@ -218,7 +226,11 @@ export default function TiaSegment({ rung, onChange, onDelete, evalResult, canDe
     : (rung.resetAddr ? [{ kind: "contact", id: `rst-${rung.id}`, addr: rung.resetAddr, neg: false }] : []);
   let flowReset = counterResetNodes.length > 0;
   counterResetNodes.forEach((n) => {
-    flowReset = flowReset && evalResult?.states?.[n.id]?.state;
+    if (n.kind === "not") {
+      flowReset = !flowReset;
+    } else {
+      flowReset = flowReset && evalResult?.states?.[n.id]?.state;
+    }
   });
 
   const availableCallTargets = validCallTargets(blocks, currentBlockId);

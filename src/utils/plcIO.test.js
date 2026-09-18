@@ -108,6 +108,44 @@ describe("collectUsedAddresses con marcas (M)", () => {
     ];
     expect(collectUsedAddresses(rungs)).toContain("IW0");
   });
+
+  it("no falla y recoge contactos correctamente cuando hay nodos NOT en serie o en ramas paralelas", () => {
+    const rungs = [
+      {
+        id: 0,
+        title: "0",
+        comment: "",
+        logic: [
+          { kind: "contact", id: "c1", addr: "I0.0", neg: false },
+          { kind: "not", id: "not1" },
+          {
+            kind: "parallel",
+            id: "p1",
+            branches: [
+              {
+                id: "b1",
+                nodes: [
+                  { kind: "not", id: "not2" },
+                  { kind: "contact", id: "c2", addr: "I0.1", neg: false },
+                ],
+              },
+              {
+                id: "b2",
+                nodes: [{ kind: "not", id: "not3" }],
+              },
+            ],
+          },
+        ],
+        outAddr: "Q0.0",
+        outType: "coil",
+        preset: 2,
+      },
+    ];
+    const used = collectUsedAddresses(rungs);
+    expect(used).toContain("I0.0");
+    expect(used).toContain("I0.1");
+    expect(used).toContain("Q0.0");
+  });
 });
 
 describe("collectOutputConflicts con rungs 'call'", () => {
