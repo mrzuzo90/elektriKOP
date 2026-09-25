@@ -18,7 +18,7 @@ const WS_PORT = parseInt(getArgValue("--port", process.env.WS_PORT || "8080"), 1
 const MODBUS_HOST = getArgValue("--modbus-host", process.env.MODBUS_HOST || "127.0.0.1");
 const MODBUS_PORT = parseInt(getArgValue("--modbus-port", process.env.MODBUS_PORT || "502"), 10);
 const MODBUS_UNIT_ID = parseInt(getArgValue("--unit-id", process.env.MODBUS_UNIT_ID || "1"), 10);
-const POLL_INTERVAL = parseInt(getArgValue("--poll", process.env.POLL_INTERVAL || "50"), 10);
+const POLL_INTERVAL = parseInt(getArgValue("--poll", process.env.POLL_INTERVAL || "100"), 10);
 
 const INPUT_ADDRS = ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6", "I0.7", "I1.0", "I1.1"];
 const OUTPUT_ADDRS = ["Q0.0", "Q0.1", "Q0.2", "Q0.3", "Q0.4", "Q0.5", "Q0.6", "Q0.7", "Q1.0", "Q1.1"];
@@ -344,9 +344,45 @@ if (isMock) {
 // ============================================================================
 const modbusClient = new ModbusRTU();
 let isPolling = false;
+let modbusBusy = false;
+let pollIntervalTimer = null;
+let reconnectTimer = null;
+
+function onModbusError(err, context = "") {
+  console.warn(`⚠️ [Modbus] Error ${context}: ${err.message}`);
+  // Si el puerto está cerrado o hay timeout fatal, cerrar socket y reconectar limpiamente
+  if (err.message.includes("Port Not Open") || err.message.includes("Timed out") || err.message.includes("ECONNRESET") || err.message.includes("ETIMEDOUT")) {
+    if (!isModbusConnected) return;
+    isModbusConnected = false;
+    console.warn("🔄 [Modbus] Conexión perdida con Factory I/O. Reconectando en 3s...");
+    if (pollIntervalTimer) {
+      clearInterval(pollIntervalTimer);
+      pollIntervalTimer = null;
+    }
+    try {
+      if (modbusClient.isOpen) modbusClient.close();
+    } catch {
+      // ignore
+    }
+    broadcast({
+      type: "status",
+      isMock: false,
+      modbusConnected: false,
+      modbusTarget: `${MODBUS_HOST}:${MODBUS_PORT}`,
+      activeClients: wss.clients.size,
+    });
+    if (!reconnectTimer) {
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        startModbusConnection();
+      }, 3000);
+    }
+  }
+}
 
 async function writeOutputsToModbus(outputs, analogOutputs = {}) {
-  if (!isModbusConnected) return;
+  if (!isModbusConnected || modbusBusy) return;
+  modbusBusy = true;
   try {
     const coilValues = OUTPUT_ADDRS.map((addr) => Boolean(outputs[addr]));
     // Escribe las 10 salidas digitales en los Coils 0..9 de Factory I/O
@@ -362,18 +398,19 @@ async function writeOutputsToModbus(outputs, analogOutputs = {}) {
       }
     }
   } catch (err) {
-    console.error("⚠️ [Modbus] Error escribiendo salidas (Coils):", err.message);
+    onModbusError(err, "escribiendo salidas");
+  } finally {
+    modbusBusy = false;
   }
 }
 
 async function pollModbusInputs() {
-  if (!isModbusConnected || isPolling) return;
+  if (!isModbusConnected || isPolling || modbusBusy) return;
   isPolling = true;
+  modbusBusy = true;
 
   try {
     // 1. Leer las 10 Entradas Discretas de Factory I/O (Discrete Inputs 0..9)
-    // En Factory I/O Modbus TCP Server:
-    // Los sensores y pulsadores conectados a "Discrete Inputs" empiezan en la dirección 0.
     const discreteResult = await modbusClient.readDiscreteInputs(0, INPUT_ADDRS.length);
     let inputsChanged = false;
 
@@ -403,6 +440,8 @@ async function pollModbusInputs() {
     }
 
     if (inputsChanged) {
+      const activeInputs = Object.entries(currentInputs).filter(([_, v]) => v).map(([k]) => k).join(", ") || "Todas OFF";
+      console.log(`📥 [Factory I/O -> Entradas] Cambio detectado: ${activeInputs}`);
       broadcast({
         type: "sync_inputs",
         inputs: currentInputs,
@@ -410,20 +449,32 @@ async function pollModbusInputs() {
       });
     }
   } catch (err) {
-    console.error("⚠️ [Modbus] Error en lectura de entradas:", err.message);
+    onModbusError(err, "leyendo entradas");
   } finally {
     isPolling = false;
+    modbusBusy = false;
   }
 }
 
 async function startModbusConnection() {
   if (isMock) return;
 
+  if (pollIntervalTimer) {
+    clearInterval(pollIntervalTimer);
+    pollIntervalTimer = null;
+  }
+
   console.log(`⏳ [Modbus] Intentando conectar a Factory I/O en ${MODBUS_HOST}:${MODBUS_PORT}...`);
   try {
+    try {
+      if (modbusClient.isOpen) modbusClient.close();
+    } catch {
+      // ignore
+    }
+
     await modbusClient.connectTCP(MODBUS_HOST, { port: MODBUS_PORT });
     modbusClient.setID(MODBUS_UNIT_ID);
-    modbusClient.setTimeout(1000);
+    modbusClient.setTimeout(2000);
     isModbusConnected = true;
     console.log(`✅ [Modbus] ¡Conectado con éxito a Factory I/O (${MODBUS_HOST}:${MODBUS_PORT})!`);
 
@@ -436,7 +487,7 @@ async function startModbusConnection() {
     });
 
     // Iniciar bucle de muestreo de entradas
-    setInterval(pollModbusInputs, POLL_INTERVAL);
+    pollIntervalTimer = setInterval(pollModbusInputs, POLL_INTERVAL);
   } catch (err) {
     isModbusConnected = false;
     console.warn(`❌ [Modbus] No se pudo conectar: ${err.message}. Reintentando en 3s...`);
@@ -447,7 +498,12 @@ async function startModbusConnection() {
       modbusTarget: `${MODBUS_HOST}:${MODBUS_PORT}`,
       activeClients: wss.clients.size,
     });
-    setTimeout(startModbusConnection, 3000);
+    if (!reconnectTimer) {
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        startModbusConnection();
+      }, 3000);
+    }
   }
 }
 
@@ -459,6 +515,8 @@ if (!isMock) {
 process.on("SIGINT", () => {
   console.log("\nCerrando puente ElektriKOP ⇄ Factory I/O...");
   if (mockInterval) clearInterval(mockInterval);
+  if (pollIntervalTimer) clearInterval(pollIntervalTimer);
+  if (reconnectTimer) clearTimeout(reconnectTimer);
   wss.close();
   if (modbusClient.isOpen) modbusClient.close();
   process.exit(0);
