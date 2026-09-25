@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">ElektriKOP: del contacto a la cinta transportadora</title>
+  <desc id="desc">Un ciclo animado muestra la entrada I0.0, el flujo de corriente por un segmento KOP, la salida Q0.0 y una cinta que se pone en marcha.</desc>
+  <style>
+    text { font-family: "Courier New", monospace; font-weight: 700; }
+    .step-input { animation: input-on 8s infinite; }
+    .step-flow { animation: flow-on 8s infinite; }
+    .step-output { animation: output-on 8s infinite; }
+    .flow-line { stroke-dasharray: 18 12; animation: current 0.7s linear infinite; }
+    .belt-stripes { animation: belt 0.65s linear infinite; }
+    .box { animation: box-move 8s linear infinite; }
+    .caption-one { animation: caption-one 8s infinite; }
+    .caption-two { animation: caption-two 8s infinite; }
+    .caption-three { animation: caption-three 8s infinite; }
+    @keyframes input-on { 0%, 12% { opacity: 0; } 16%, 82% { opacity: 1; } 86%, 100% { opacity: 0; } }
+    @keyframes flow-on { 0%, 32% { opacity: 0; } 37%, 82% { opacity: 1; } 86%, 100% { opacity: 0; } }
+    @keyframes output-on { 0%, 52% { opacity: 0; } 57%, 82% { opacity: 1; } 86%, 100% { opacity: 0; } }
+    @keyframes current { to { stroke-dashoffset: -30; } }
+    @keyframes belt { to { transform: translateX(26px); } }
+    @keyframes box-move { 0%, 56% { transform: translateX(0); } 82%, 100% { transform: translateX(76px); } }
+    @keyframes caption-one { 0%, 25% { opacity: 1; } 30%, 100% { opacity: 0; } }
+    @keyframes caption-two { 0%, 29% { opacity: 0; } 34%, 52% { opacity: 1; } 57%, 100% { opacity: 0; } }
+    @keyframes caption-three { 0%, 56% { opacity: 0; } 61%, 82% { opacity: 1; } 87%, 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .step-input, .step-flow, .step-output, .caption-three { animation: none; opacity: 1; }
+      .caption-one, .caption-two { animation: none; opacity: 0; }
+      .flow-line, .belt-stripes, .box { animation: none; }
+    }
+  </style>
+
+  <rect width="960" height="360" fill="#111111"/>
+  <rect x="8" y="8" width="944" height="344" fill="#1e1e1e" stroke="#fece2f" stroke-width="4"/>
+  <path d="M20 20h20 M20 20v20 M940 20h-20 M940 20v20 M20 340h20 M20 340v-20 M940 340h-20 M940 340v-20" fill="none" stroke="#fece2f" stroke-width="5"/>
+  <text x="32" y="45" fill="#fece2f" font-size="24">ELEKTRIKOP</text>
+  <text x="32" y="66" fill="#c9c9c9" font-size="12">APRENDE LOGICA KOP JUGANDO CON EL SCAN</text>
+  <rect x="758" y="24" width="174" height="42" fill="#333333" stroke="#666666" stroke-width="2"/>
+  <circle cx="778" cy="45" r="7" fill="#00b000"/>
+  <text x="796" y="50" fill="#ffffff" font-size="15">OB1  |  RUN</text>
+
+  <rect x="32" y="91" width="170" height="204" fill="#333333" stroke="#6b6b6b" stroke-width="3"/>
+  <rect x="32" y="91" width="170" height="29" fill="#fece2f"/>
+  <text x="45" y="111" fill="#111111" font-size="15">01 / ENTRADA</text>
+  <text x="48" y="157" fill="#ffffff" font-size="21">I0.0</text>
+  <text x="48" y="181" fill="#bdbdbd" font-size="12">PULSADOR MARCHA</text>
+  <rect x="69" y="205" width="95" height="48" fill="#151515" stroke="#888888" stroke-width="3"/>
+  <rect x="78" y="211" width="77" height="33" fill="#555555"/>
+  <g class="step-input" opacity="0">
+    <rect x="78" y="211" width="77" height="33" fill="#00b000"/>
+    <circle cx="176" cy="151" r="7" fill="#00ff00"/>
+    <text x="94" y="233" fill="#ffffff" font-size="14">ON</text>
+  </g>
+  <text x="48" y="277" fill="#fece2f" font-size="12">ACTIVA I0.0</text>
+
+  <rect x="218" y="91" width="494" height="204" fill="#f0f2f5" stroke="#bac3ca" stroke-width="3"/>
+  <rect x="218" y="91" width="494" height="29" fill="#e3e7eb"/>
+  <text x="231" y="111" fill="#27343f" font-size="15">02 / SEGMENTO KOP</text>
+  <text x="637" y="111" fill="#5c666c" font-size="12">MAIN [OB1]</text>
+  <path d="M248 149v105 M248 201h138 M442 201h146 M632 201h50 M682 149v105" fill="none" stroke="#27343f" stroke-width="5"/>
+  <path d="M386 179v44 M442 179v44" fill="none" stroke="#27343f" stroke-width="5"/>
+  <path d="M602 179c-20 8-20 36 0 44 M620 179c20 8 20 36 0 44" fill="none" stroke="#27343f" stroke-width="5"/>
+  <text x="382" y="165" fill="#27343f" font-size="15">I0.0</text>
+  <text x="592" y="165" fill="#27343f" font-size="15">Q0.0</text>
+  <g class="step-input" opacity="0">
+    <path d="M386 201h56" fill="none" stroke="#00b000" stroke-width="4"/>
+  </g>
+  <g class="step-flow" opacity="0">
+    <path d="M248 201h138 M442 201h146 M632 201h50" fill="none" stroke="#00b000" stroke-width="7"/>
+    <path class="flow-line" d="M248 201h138 M442 201h146 M632 201h50" fill="none" stroke="#aaff7a" stroke-width="3"/>
+    <text x="354" y="269" fill="#008c00" font-size="15">RLO = 1  /  CORRIENTE ACTIVA</text>
+  </g>
+  <g class="step-output" opacity="0">
+    <circle cx="611" cy="201" r="6" fill="#00b000"/>
+    <rect x="571" y="235" width="83" height="24" fill="#00b000"/>
+    <text x="583" y="252" fill="#ffffff" font-size="12">Q0.0 ON</text>
+  </g>
+
+  <rect x="728" y="91" width="204" height="204" fill="#27343f" stroke="#5c666c" stroke-width="3"/>
+  <rect x="728" y="91" width="204" height="29" fill="#0099cc"/>
+  <text x="742" y="111" fill="#ffffff" font-size="15">03 / PROCESO</text>
+  <text x="741" y="151" fill="#ffffff" font-size="16">CINTA</text>
+  <rect x="746" y="224" width="169" height="30" rx="14" fill="#111111" stroke="#7b858b" stroke-width="4"/>
+  <g class="step-output" opacity="0">
+    <clipPath id="belt-clip"><rect x="751" y="228" width="159" height="22" rx="10"/></clipPath>
+    <g clip-path="url(#belt-clip)" fill="#fece2f" class="belt-stripes">
+      <path d="M735 228h9l-10 22h-9z M761 228h9l-10 22h-9z M787 228h9l-10 22h-9z M813 228h9l-10 22h-9z M839 228h9l-10 22h-9z M865 228h9l-10 22h-9z M891 228h9l-10 22h-9z M917 228h9l-10 22h-9z"/>
+    </g>
+    <circle cx="904" cy="152" r="7" fill="#00ff00"/>
+    <text x="742" y="278" fill="#aaff7a" font-size="12">MOTOR EN MARCHA</text>
+  </g>
+  <g class="box"><rect x="765" y="193" width="34" height="29" fill="#fece2f" stroke="#111111" stroke-width="3"/><path d="M765 204h34 M782 193v29" stroke="#c59b15" stroke-width="2"/></g>
+
+  <rect x="32" y="306" width="900" height="31" fill="#111111" stroke="#545454" stroke-width="2"/>
+  <text class="caption-one" x="48" y="327" fill="#fece2f" font-size="15">RETO 01: PULSA MARCHA PARA ACTIVAR LA CINTA</text>
+  <text class="caption-two" x="48" y="327" fill="#fece2f" font-size="15" opacity="0">ENTRADA ACTIVA  &gt;  EL SCAN RECORRE EL SEGMENTO</text>
+  <text class="caption-three" x="48" y="327" fill="#aaff7a" font-size="15" opacity="0">SALIDA Q0.0 ACTIVA  &gt;  LA CINTA SE MUEVE</text>
+</svg>

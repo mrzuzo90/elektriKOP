@@ -1,18 +1,38 @@
 # ElektriKOP
 
-**Emulador de lógica de escalera (KOP / Ladder) para estudiantes de automatización industrial — 100% en español, gratuito y de código abierto.**
+**Aprende lógica de escalera (KOP / Ladder) programando y viendo cómo responde un PLC simulado.** Gratis, en español y desde el navegador.
 
-![Licencia](https://img.shields.io/badge/licencia-MIT-yellow) ![Versión](https://img.shields.io/badge/versión-2.0%20Arcade-brightgreen) ![Tests](https://img.shields.io/badge/tests-209%20passing-success) ![Hecho con](https://img.shields.io/badge/hecho%20con-React%2019-blue)
+[▶ Probar ElektriKOP](https://kop.elektrizia.com) · [🎯 Empezar con los retos](docs/ejercicios/README.md) · [📚 Ver las guías](#documentación-y-guías)
 
-### 🔗 [Pruébalo ahora en kop.elektrizia.com](https://kop.elektrizia.com) — sin instalar nada
+![Animación del ciclo KOP: la entrada I0.0 activa el flujo lógico, energiza Q0.0 y pone en marcha una cinta](docs/images/scan-cycle.svg)
 
----
+*De la entrada al proceso: activa `I0.0`, observa el flujo de corriente por el segmento y comprueba cómo `Q0.0` mueve la cinta.*
+
+## Pruébalo en menos de un minuto
+
+1. Abre **[kop.elektrizia.com](https://kop.elektrizia.com)**. No necesitas cuenta ni instalación.
+2. Añade un contacto `I0.0` y una bobina `Q0.0` en `Main [OB1]`.
+3. Pulsa **RUN** y activa la entrada `I0.0` con el botón del simulador o la tecla `0`.
+
+Verás el recorrido lógico en verde y la salida cambiar en tiempo real. Si prefieres empezar con un proyecto preparado, abre los [ejercicios guiados](docs/ejercicios/README.md).
+
+## Así se ve el editor
+
+![Editor KOP con el proceso simulado y el panel HMI](docs/images/editor.png)
+
+## Qué puedes aprender
+
+- **Programar KOP:** contactos, ramas, bobinas, temporizadores, contadores y bloques FC/FB.
+- **Entender el scan:** ejecuta el programa continuamente o avanza un ciclo cada vez para seguir el RLO.
+- **Probar un proceso completo:** entradas y salidas, HMI, retos autocorregidos y conexión opcional con Factory I/O.
 
 ## ¿Qué es ElektriKOP?
 
 ElektriKOP es un simulador visual interactivo de lógica de escalera (KOP / Ladder Diagram) inspirado fielmente en el entorno de programación de un PLC **Siemens SIMATIC S7-1200** y **TIA Portal**. Permite diseñar segmentos de automatización completos —contactos, bloques lógicos, temporizadores, contadores, operaciones numéricas, subrutinas FC/FB y pantallas HMI— visualizando en tiempo real el flujo de corriente (RLO) por el circuito sin requerir costosas licencias, potentes ordenadores con Windows ni hardware físico.
 
 Está especialmente diseñado para **estudiantes de ciclos formativos de Formación Profesional** (Automatización y Robótica Industrial, Mecatrónica, Mantenimiento Electrónico, Instalaciones Electrotécnicas) y certificados de profesionalidad (como **ELEE0109**), profesores técnicos que buscan una herramienta ágil para el aula, y cualquier persona que desee comprender la lógica de control antes de enfrentarse al software industrial real.
+
+---
 
 ## Por qué existe
 
@@ -22,6 +42,48 @@ TIA Portal es el estándar indiscutible de la industria, pero impone importantes
 - Curva de aprendizaje empinada para alumnos que dan sus primeros pasos en lógica cableada y programada.
 
 ElektriKOP no busca sustituir a TIA Portal en una planta real, sino ser su **compañero pedagógico ideal**: un espacio donde equivocarte sin riesgo, entender por qué falla un enclavamiento, conectar con un gemelo digital 3D y ganar intuición sólida sobre la ejecución cíclica de un autómata.
+
+---
+
+## Desarrollo local
+
+Si deseas clonar el proyecto para desarrollo o uso sin conexión:
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/mrzuzo90/elektriKOP.git
+cd elektriKOP
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Iniciar servidor de desarrollo Vite
+npm run dev
+```
+
+Abre `http://localhost:5173` en tu navegador.
+
+Para ejecutar los tests automatizados y comprobar la integridad del código:
+```bash
+npm test         # Ejecuta la suite de pruebas unitarias con Vitest
+npm run lint     # Comprueba el código con oxlint (0 warnings)
+npm run build    # Genera el bundle optimizado de producción en dist/
+```
+
+---
+
+## Guía Rápida de Uso
+
+1. **Añadir Segmentos**: Haz clic en **+ Segmento** en el bloque activo (`Main [OB1]`).
+2. **Cablear Lógica**: Inserta contactos en serie (`+C`), ramas en paralelo (`+P`), inversores (`+NOT`) o comparadores analógicos (`+CMP`).
+3. **Configurar Contactos**: Haz clic sobre cualquier contacto para conmutar entre NA, NC, flanco P o flanco N.
+4. **Definir Salidas**: Selecciona en el extremo derecho el tipo de instrucción: Bobina directa, SET, RESET, biestable SR/RS, temporizadores (TON, TOF, TP, TONR), contadores (CTU, CTD, CTUD) o bloques de cálculo (MOVE, ADD, SUB).
+5. **Simular**:
+   - Pulsa **RUN** para scan continuo (100 ms).
+   - O pulsa **1 CICLO** para avanzar paso a paso y observar la propagación del RLO en cada escaneo.
+6. **Actuar sobre las Entradas**: Interactúa mediante los botones del HMI, los dispositivos del Proceso Simulado o usando las teclas numéricas `0`–`9`.
+7. **Diseñar Pantallas HMI**: Abre la vista **HMI**, pulsa **Editar HMI** y coloca pilotos, displays y barras vinculados a tus marcas o salidas.
+8. **Conectar con Factory I/O**: Inicia el puente en `bridge/` (`npm start` o `npm run mock`) y conecta desde el panel lateral para controlar escenas 3D.
 
 ---
 
@@ -104,59 +166,6 @@ ElektriKOP no busca sustituir a TIA Portal en una planta real, sino ser su **com
 
 ---
 
-## Capturas
-
-![Editor KOP con el Proceso simulado y el panel HMI](docs/images/editor.png)
-
----
-
-## Cómo Empezar
-
-### Uso Inmediato en la Web
-Entra en **[kop.elektrizia.com](https://kop.elektrizia.com)** desde cualquier navegador moderno (Chrome, Firefox, Safari, Edge en Windows, Mac, Linux o tablets). No requiere instalación ni registros; todo se ejecuta en local en tu navegador.
-
-### Instalación en Local
-
-Si deseas clonar el proyecto para desarrollo o uso sin conexión:
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/mrzuzo90/elektriKOP.git
-cd elektriKOP
-
-# 2. Instalar dependencias
-npm install
-
-# 3. Iniciar servidor de desarrollo Vite
-npm run dev
-```
-
-Abre `http://localhost:5173` en tu navegador.
-
-Para ejecutar los tests automatizados y comprobar la integridad del código:
-```bash
-npm test         # Ejecuta la suite de pruebas unitarias con Vitest (209 tests)
-npm run lint     # Comprueba el código con oxlint (0 warnings)
-npm run build    # Genera el bundle optimizado de producción en dist/
-```
-
----
-
-## Guía Rápida de Uso
-
-1. **Añadir Segmentos**: Haz clic en **+ Segmento** en el bloque activo (`Main [OB1]`).
-2. **Cablear Lógica**: Inserta contactos en serie (`+C`), ramas en paralelo (`+P`), inversores (`+NOT`) o comparadores analógicos (`+CMP`).
-3. **Configurar Contactos**: Haz clic sobre cualquier contacto para conmutar entre NA, NC, flanco P o flanco N.
-4. **Definir Salidas**: Selecciona en el extremo derecho el tipo de instrucción: Bobina directa, SET, RESET, biestable SR/RS, temporizadores (TON, TOF, TP, TONR), contadores (CTU, CTD, CTUD) o bloques de cálculo (MOVE, ADD, SUB).
-5. **Simular**:
-   - Pulsa **RUN** para scan continuo (100 ms).
-   - O pulsa **1 CICLO** para avanzar paso a paso y observar la propagación del RLO en cada escaneo.
-6. **Actuar sobre las Entradas**: Interactúa mediante los botones del HMI, los dispositivos del Proceso Simulado o usando las teclas numéricas `0`–`9`.
-7. **Diseñar Pantallas HMI**: Abre la vista **HMI**, pulsa **Editar HMI** y coloca pilotos, displays y barras vinculados a tus marcas o salidas.
-8. **Conectar con Factory I/O**: Inicia el puente en `bridge/` (`npm start` o `npm run mock`) y conecta desde el panel lateral para controlar escenas 3D.
-
----
-
 ## Retos y Ejercicios Propuestos
 
 En [`docs/ejercicios/`](docs/ejercicios/) se incluye una serie completa de retos graduados por dificultad, acompañados de su enunciado teórico, pistas y solución `.json` oficial:
@@ -193,7 +202,6 @@ En [`docs/ejercicios/`](docs/ejercicios/) se incluye una serie completa de retos
 - [x] Búfer de diagnóstico y tabla de observación y forzado (Watch & Force Table).
 - [x] Modo Desafío con autograding algorítmico ciclo a ciclo.
 - [x] Compartir proyectos mediante URL comprimida sin almacenamiento en servidor.
-- [x] Suite de 209 tests unitarios automatizados.
 
 ### Líneas futuras de investigación / mejoras abiertas:
 - [ ] Exportador de lógica a texto estructurado (SCL / IEC 61131-3 Structured Text).
@@ -214,6 +222,8 @@ En [`docs/ejercicios/`](docs/ejercicios/) se incluye una serie completa de retos
 ## Licencia
 
 Este proyecto se distribuye bajo la **Licencia MIT**. Es libre para su uso en aulas, institutos, centros de formación técnica y proyectos personales.
+
+---
 
 ## Autor
 
