@@ -1,0 +1,23 @@
+.process-device__rotor,
+.process-device__hand { transform-origin: 50% 55%; }
+.process-device__rotor { animation: process-rotate 0.75s linear infinite; }
+.process-device__hand { animation: process-rotate 1.1s linear infinite; }
+.process-device__belt { animation: process-belt 0.45s linear infinite; }
+.process-device__box { animation: process-box 2.6s linear infinite; }
+.process-device__glow { animation: process-glow 1s ease-in-out infinite; }
+.process-device__flash { animation: process-flash 0.5s steps(1) infinite; }
+
+@keyframes process-rotate { to { transform: rotate(360deg); } }
+@keyframes process-belt { to { transform: translateX(12px); } }
+@keyframes process-box { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(35px); } }
+@keyframes process-glow { 50% { opacity: 0.45; } }
+@keyframes process-flash { 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .process-device__rotor,
+  .process-device__hand,
+  .process-device__belt,
+  .process-device__box,
+  .process-device__glow,
+  .process-device__flash { animation: none; }
+}

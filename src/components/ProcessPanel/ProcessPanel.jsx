@@ -3,11 +3,8 @@ import { pixelSelectStyle } from "../../styles/pixelStyles";
 import { DeviceIcon } from "./DeviceIcons";
 import { DEVICE_TYPES } from "./deviceTypes";
 
-// Vive en la barra lateral derecha (320px): 2 dispositivos por fila con
-// iconos grandes (64px) — con más de 2 columnas los iconos se quedarían
-// diminutos en ese ancho, y con 1 sola el panel crecería demasiado rápido
-// según se añaden dispositivos, obligando a hacer scroll antes de lo
-// necesario.
+// Vive en la barra lateral derecha (320px): dos escenas por fila mantienen
+// legibles los dispositivos sin alargar demasiado el panel.
 export default function ProcessPanel({ addresses, deviceMap, onChangeType, wiringMap, onChangeWiring, inputs, outputs, analogInputs, onChangeAnalog, visible, onToggle }) {
   return (
     <div style={{ backgroundColor: T.tiaBg, border: `2px solid ${T.dwBlack}`, boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.25)", marginBottom: 20 }}>
@@ -27,7 +24,7 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
         <span style={{ color: "#888", fontSize: 12 }}>{visible ? "▲ ocultar" : "▼ mostrar"}</span>
       </div>
       {visible && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, padding: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, padding: 10 }}>
           {addresses.length === 0 ? (
             <span style={{ gridColumn: "1 / -1", fontSize: 12, color: "#888", fontStyle: "italic" }}>
               Aún no hay direcciones en uso — añade contactos o salidas a un segmento para que aparezcan aquí.
@@ -36,15 +33,14 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
             addresses.map((addr) => {
               // Entrada analógica (IW): antes de la comprobación "empieza
               // por I" de más abajo, porque "IW0" también la cumpliría y se
-              // trataría como un bit digital — un sensor de nivel/temperatura
-              // simulado no tiene NA/NC ni icono de dispositivo, se controla
-              // con un slider numérico (0-100), no un clic on/off.
+              // trataría como un bit digital. Su nivel se controla con un
+              // slider numérico (0-100), sin cableado físico NA/NC.
               if (addr.startsWith("IW")) {
                 const value = analogInputs?.[addr] ?? 0;
                 return (
-                  <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 6, minWidth: 0, background: T.tiaLightBg, border: `1px solid ${T.tiaBorder}` }}>
                     <span style={{ fontSize: 13, color: T.tiaText, fontWeight: "bold" }}>{addr}</span>
-                    <span style={{ fontSize: 32, lineHeight: 1 }} title="Sensor analógico simulado">🌡️</span>
+                    <DeviceIcon type="analog" active={value > 0} value={value} size={112} />
                     <input
                       type="range"
                       min={0}
@@ -63,9 +59,9 @@ export default function ProcessPanel({ addresses, deviceMap, onChangeType, wirin
               const type = deviceMap[addr] || "none";
               const wiring = wiringMap?.[addr] || "NA";
               return (
-                <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div key={addr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 6, minWidth: 0, background: T.tiaLightBg, border: `1px solid ${T.tiaBorder}` }}>
                   <span style={{ fontSize: 13, color: T.tiaText, fontWeight: "bold" }}>{addr}</span>
-                  <DeviceIcon type={type} active={active} size={64} />
+                  <DeviceIcon type={type} active={active} size={112} />
                   <select
                     value={type}
                     title={DEVICE_TYPES.find((d) => d.id === type)?.label}
