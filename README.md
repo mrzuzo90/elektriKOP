@@ -87,7 +87,7 @@ npm run build    # Genera el bundle optimizado de producción en dist/
 
 ---
 
-## 📚 Documentación y Guías
+## Documentación y Guías
 
 - 📖 [**Guía Didáctica de Funciones TIA Portal**](docs/guia-tia-portal-elektrikop.md) — Explicación pedagógica de NOT, marcas de reloj/sistema (MB1), Startup [OB100], MOVE, TONR, operaciones matemáticas y casos de uso industrial.
 - 🖥️ [**Manual del Diseñador HMI**](docs/hmi/README.md) — Creación de pantallas táctiles industriales con chasis Siemens SIMATIC, bargraphs, pilotos y variables enlazadas.
